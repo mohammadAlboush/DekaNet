@@ -1,0 +1,76 @@
+# ============================================================================
+# DOCKERIGNORE - Backend
+# ============================================================================
+# Verhindert dass unnötige Dateien in Docker Image kopiert werden
+# ============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Environment Files (WICHTIG: NIEMALS in Image!)
+.env
+.env.*
+*.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+logs/
+*.log
+
+# Uploads (werden als Volume gemounted)
+uploads/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Migrations (optional - je nach Setup)
+# migrations/
+
+# Development nur
+migrations/README

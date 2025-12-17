@@ -1,0 +1,69 @@
+# ============================================================================
+# BACKEND .GITIGNORE - DigiDekan
+# ============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv
+
+# Environment Files (KRITISCH: NIEMALS committen!)
+.env
+.env.*
+*.env
+!.env.example
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+/var/log/
+
+# Uploads
+uploads/
+/app/uploads/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Flask
+instance/
+.webassets-cache
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Backup Files
+*.bak
+*.backup
+*~

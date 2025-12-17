@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b)",
+      "Bash(findstr:*)",
+      "Bash(npm run dev:*)",
+      "Bash(python:*)",
+      "Bash(sqlite3:*)",
+      "Bash(dir \"C:\\Users\\moham\\OneDrive\\Desktop\\DigiDekan\" /s /b)",
+      "Bash(dir:*)",
+      "Bash(nul)",
+      "Bash(find:*)",
+      "Bash(pip install:*)",
+      "Bash(timeout:*)",
+      "Bash(echo:*)",
+      "Bash(\"C:\\Users\\moham\\OneDrive\\Desktop\\DigiDekan\\backend\\app\\utils\\__init__.py\")",
+      "Bash(npm run build:*)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(flask db:*)",
+      "Bash(npx tsc:*)",
+      "Bash(flask routes:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

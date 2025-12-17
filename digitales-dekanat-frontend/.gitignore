@@ -1,0 +1,61 @@
+# ============================================================================
+# FRONTEND .GITIGNORE - DigiDekan
+# ============================================================================
+
+# Dependencies
+root_files/node_modules/
+node_modules/
+
+# Build Output
+root_files/dist/
+dist/
+
+# Environment Files (KRITISCH: NIEMALS committen!)
+.env
+.env.*
+*.env
+!.env.example
+# AUSNAHME: .env.production ist OK zu committen wenn keine Secrets drin sind
+!root_files/.env.production
+
+# Testing
+root_files/coverage/
+coverage/
+.nyc_output
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Vite
+root_files/.vite/
+.vite/
+root_files/.vite-cache/
+
+# ESLint
+.eslintcache
+
+# TypeScript
+*.tsbuildinfo
+
+# Backup Files
+*.bak
+*.backup
+*~

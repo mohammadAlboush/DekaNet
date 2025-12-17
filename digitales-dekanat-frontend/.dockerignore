@@ -1,0 +1,62 @@
+# ============================================================================
+# DOCKERIGNORE - Frontend
+# ============================================================================
+# Verhindert dass unnötige Dateien in Docker Image kopiert werden
+# ============================================================================
+
+# Dependencies
+root_files/node_modules/
+node_modules/
+
+# Build Output
+root_files/dist/
+dist/
+
+# Environment Files
+.env
+.env.*
+*.env
+# AUSNAHME: .env.production wird gebraucht für Build
+!root_files/.env.production
+
+# Testing
+root_files/coverage/
+coverage/
+.nyc_output
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Development
+.eslintcache
+
+# Vite
+root_files/.vite/
+.vite/

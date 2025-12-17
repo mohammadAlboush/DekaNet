@@ -1,0 +1,12 @@
+# ============================================================================
+# DOCKER .GITIGNORE - DigiDekan
+# ============================================================================
+
+# Environment Files (KRITISCH: NIEMALS committen!)
+.env
+.env.*
+*.env
+!.env.example
+
+# Logs
+*.log

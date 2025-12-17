@@ -1,0 +1,184 @@
+// Mock Service for Testing - Replace with real API calls when backend is ready
+import {
+  PlanungPhase,
+  PhaseSubmissionStatus,
+  ArchiviertePlanung,
+  PhaseHistoryEntry,
+  ProfessorPhaseSubmission,
+  PhaseStatistik
+} from '../types/planungPhase.types';
+
+class MockPlanungPhaseService {
+  private activePhase: PlanungPhase | null = null;
+  private phases: PlanungPhase[] = [];
+  private nextId = 1;
+
+  // Mock active phase
+  async getActivePhase(): Promise<PlanungPhase | null> {
+    return this.activePhase;
+  }
+
+  // Mock start phase
+  async startPhase(data: any): Promise<PlanungPhase> {
+    const newPhase: PlanungPhase = {
+      id: this.nextId++,
+      semester_id: data.semester_id,
+      name: data.name,
+      startdatum: data.startdatum,
+      enddatum: data.enddatum,
+      ist_aktiv: true,
+      anzahl_einreichungen: 0,
+      anzahl_genehmigt: 0,
+      anzahl_abgelehnt: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    this.activePhase = newPhase;
+    this.phases.push(newPhase);
+    console.log('[MockPhaseService] Phase started:', newPhase);
+    return newPhase;
+  }
+
+  // Mock close phase
+  async closePhase(phaseId: number, data: any): Promise<any> {
+    const phase = this.phases.find(p => p.id === phaseId);
+    if (phase) {
+      phase.ist_aktiv = false;
+      phase.geschlossen_am = new Date().toISOString();
+      this.activePhase = null;
+    }
+
+    return {
+      phase: phase,
+      archivierte_planungen: 0,
+      geloeschte_entwuerfe: 0
+    };
+  }
+
+  // Mock submission status
+  async checkSubmissionStatus(professorId?: number): Promise<PhaseSubmissionStatus> {
+    if (!this.activePhase) {
+      return {
+        kann_einreichen: false,
+        grund: 'keine_aktive_phase'
+      };
+    }
+
+    return {
+      kann_einreichen: true,
+      aktive_phase: this.activePhase
+    };
+  }
+
+  // Mock get all phases
+  async getAllPhases(semesterId?: number): Promise<any> {
+    return {
+      phasen: this.phases,
+      total: this.phases.length,
+      aktive_phase: this.activePhase
+    };
+  }
+
+  // Mock phase statistics
+  async getPhaseStatistics(phaseId: number): Promise<PhaseStatistik> {
+    return {
+      phase_id: phaseId,
+      phase_name: 'Test Phase',
+      startdatum: new Date().toISOString(),
+      dauer_tage: 30,
+      professoren_gesamt: 10,
+      professoren_eingereicht: 5,
+      einreichungsquote: 50,
+      genehmigungsquote: 80,
+      durchschnittliche_bearbeitungszeit: 24,
+      top_module: [
+        { modul_name: 'Datenbanken', anzahl: 5 },
+        { modul_name: 'Programmierung', anzahl: 4 }
+      ]
+    };
+  }
+
+  // Mock phase history
+  async getPhaseHistory(professorId?: number): Promise<PhaseHistoryEntry[]> {
+    return [];
+  }
+
+  // Mock archived planungen
+  async getArchivedPlanungen(filter?: any): Promise<any> {
+    return {
+      planungen: [],
+      total: 0,
+      pages: 0
+    };
+  }
+
+  // Stub for other methods
+  async updatePhase(phaseId: number, data: any): Promise<PlanungPhase> {
+    const phase = this.phases.find(p => p.id === phaseId);
+    if (phase) {
+      Object.assign(phase, data);
+      return phase;
+    }
+    throw new Error('Phase not found');
+  }
+
+  async getPhaseSubmissions(phaseId: number): Promise<ProfessorPhaseSubmission[]> {
+    return [];
+  }
+
+  async recordSubmission(planungId: number): Promise<ProfessorPhaseSubmission> {
+    return {
+      professor_id: 1,
+      planungphase_id: this.activePhase?.id || 1,
+      planung_id: planungId,
+      eingereicht_am: new Date().toISOString(),
+      status: 'eingereicht'
+    };
+  }
+
+  async sendReminders(phaseId: number, professorIds?: number[]): Promise<any> {
+    return { gesendet: 0, fehler: 0 };
+  }
+
+  async getArchivedPlanungDetail(archivId: number): Promise<ArchiviertePlanung> {
+    throw new Error('Not implemented');
+  }
+
+  async restoreArchivedPlanung(archivId: number): Promise<any> {
+    return { success: false, planung_id: 0 };
+  }
+
+  async exportArchiv(filter?: any): Promise<Blob> {
+    return new Blob(['Mock Excel Data']);
+  }
+
+  async generatePhaseReport(phaseId: number): Promise<Blob> {
+    return new Blob(['Mock PDF Report']);
+  }
+
+  async getPhaseDashboard(): Promise<any> {
+    return {
+      phase: this.activePhase,
+      einreichungen_heute: 0,
+      offene_reviews: 0,
+      durchschnittliche_bearbeitungszeit: 0,
+      deadline_warnung: false,
+      professoren_ohne_einreichung: []
+    };
+  }
+
+  async getNotificationSettings(): Promise<any> {
+    return {
+      deadline_reminder_days: 3,
+      auto_close_after_deadline: false,
+      send_submission_confirmation: true
+    };
+  }
+
+  async updateNotificationSettings(settings: any): Promise<void> {
+    console.log('[MockPhaseService] Notification settings updated:', settings);
+  }
+}
+
+export default new MockPlanungPhaseService();
