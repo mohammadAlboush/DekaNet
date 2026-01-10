@@ -83,3 +83,10 @@ nul
 *.crt
 secrets/
 credentials/
+
+# Claude AI Files
+.claude/
+
+# AL Language (Business Central) Build Artifacts
+.alpackages/
+.snapshots/

@@ -156,7 +156,36 @@ class DeputatService {
   }
 
   // =========================================================================
-  // IMPORT
+  // SYNC (NEU - Automatische Synchronisation)
+  // =========================================================================
+
+  /**
+   * Synchronisiert Abrechnung mit Planung und Semesteraufträgen
+   * Wird automatisch bei Phasenauswahl aufgerufen
+   */
+  async syncAbrechnung(abrechnungId: number): Promise<{
+    data: Deputatsabrechnung;
+    sync_result: {
+      planung: { hinzugefuegt: number; aktualisiert: number; entfernt: number };
+      auftraege: { hinzugefuegt: number; aktualisiert: number; entfernt: number };
+    };
+  }> {
+    const response = await api.post<{
+      success: boolean;
+      data: Deputatsabrechnung;
+      sync_result: {
+        planung: { hinzugefuegt: number; aktualisiert: number; entfernt: number };
+        auftraege: { hinzugefuegt: number; aktualisiert: number; entfernt: number };
+      };
+    }>(`${this.baseUrl}/${abrechnungId}/sync`);
+    return {
+      data: response.data.data,
+      sync_result: response.data.sync_result
+    };
+  }
+
+  // =========================================================================
+  // IMPORT (Legacy - weiterhin verfügbar)
   // =========================================================================
 
   /**

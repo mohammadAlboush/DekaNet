@@ -20,10 +20,14 @@ import {
   List,
   ListItem,
   ListItemText,
+  Chip,
 } from '@mui/material';
 import {
   CheckCircle,
   Warning,
+  ContentPaste,
+  AcUnit,
+  WbSunny,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -40,6 +44,7 @@ import StepZusammenfassung from '../components/planning/wizard/steps/StepZusamme
 
 // Services & Store
 import planungService from '../services/planungService';
+import templateService, { PlanungsTemplate } from '../services/templateService';
 import usePlanungStore from '../store/planungStore';
 import usePlanungPhaseStore from '../store/planungPhaseStore';
 import { useToastStore } from '../components/common/Toast';
@@ -144,6 +149,13 @@ const WizardView: React.FC = () => {
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+  // Template State
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [availableTemplate, setAvailableTemplate] = useState<PlanungsTemplate | null>(null);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [templateApplied, setTemplateApplied] = useState(false);
+  const [templatePromptShown, setTemplatePromptShown] = useState(false); // Automatische Anzeige
+
   // Load existing planung if editing
   useEffect(() => {
     // Check phase submission status
@@ -220,6 +232,140 @@ const WizardView: React.FC = () => {
       setError(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // =========================================================================
+  // TEMPLATE FUNCTIONS
+  // =========================================================================
+
+  /**
+   * Ermittelt den Semestertyp aus dem Semesterkuerzel
+   */
+  const getSemesterTyp = (): 'winter' | 'sommer' => {
+    if (!semester?.kuerzel) return 'winter';
+    const kuerzel = semester.kuerzel.toLowerCase();
+    if (kuerzel.includes('ws') || kuerzel.includes('winter')) {
+      return 'winter';
+    }
+    return 'sommer';
+  };
+
+  /**
+   * Laedt verfuegbares Template fuer aktuellen Semestertyp
+   */
+  const loadAvailableTemplate = async () => {
+    if (!semester) return;
+
+    try {
+      const semesterTyp = getSemesterTyp();
+      console.log('[Wizard] Loading template for:', semesterTyp);
+
+      const response = await templateService.getTemplateForSemester(semesterTyp);
+      if (response.success && response.data) {
+        setAvailableTemplate(response.data);
+        console.log('[Wizard] Template found:', response.data.name, 'with', response.data.anzahl_module, 'modules');
+      } else {
+        setAvailableTemplate(null);
+        console.log('[Wizard] No template found for', semesterTyp);
+      }
+    } catch (error) {
+      console.error('[Wizard] Error loading template:', error);
+      setAvailableTemplate(null);
+    }
+  };
+
+  // Load template when semester changes
+  useEffect(() => {
+    if (semester && planungId && !templateApplied) {
+      loadAvailableTemplate();
+    }
+  }, [semester, planungId]);
+
+  // Automatischer Template-Dialog nach Schritt 1 (neue Planung)
+  useEffect(() => {
+    const currentModuleCount = geplantModule?.length || 0;
+    // Zeige Dialog automatisch wenn:
+    // 1. Wir auf Schritt 1 (Modulauswahl) sind
+    // 2. Template verfuegbar ist
+    // 3. Noch nicht angewendet wurde
+    // 4. Prompt noch nicht gezeigt wurde
+    // 5. Noch keine Module vorhanden sind
+    if (
+      currentStep === 1 &&
+      availableTemplate &&
+      !templateApplied &&
+      !templatePromptShown &&
+      currentModuleCount === 0 &&
+      planungId
+    ) {
+      // Kurze Verzoegerung damit UI geladen ist
+      const timer = setTimeout(() => {
+        setShowTemplateDialog(true);
+        setTemplatePromptShown(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, availableTemplate, templateApplied, templatePromptShown, geplantModule, planungId]);
+
+  /**
+   * Wendet Template auf aktuelle Planung an
+   */
+  const handleApplyTemplate = async (clearExisting: boolean = false) => {
+    if (!availableTemplate || !planungId) return;
+
+    setApplyingTemplate(true);
+    try {
+      console.log('[Wizard] Applying template:', availableTemplate.id, 'to planung:', planungId);
+
+      const response = await templateService.applyToPlanung(
+        availableTemplate.id,
+        planungId,
+        clearExisting
+      );
+
+      if (response.success) {
+        const { hinzugefuegt, uebersprungen } = response.data;
+
+        // Reload planung to get updated modules
+        const planungResponse = await planungService.getPlanung(planungId);
+        if (planungResponse.success && planungResponse.data) {
+          // Update Wizard mit ALLEN Daten aus der Planung (die vom Template kamen)
+          setWizardData({
+            geplantModule: planungResponse.data.geplante_module || [],
+            wunschFreieTage: planungResponse.data.wunsch_freie_tage || [],
+            anmerkungen: planungResponse.data.anmerkungen || planungResponse.data.notizen || '',
+            raumbedarf: planungResponse.data.raumbedarf || '',
+          });
+        }
+
+        setTemplateApplied(true);
+        setShowTemplateDialog(false);
+
+        // WICHTIG: Nach Template-Anwendung zum nächsten Schritt navigieren
+        // damit die importierten Module sichtbar werden (Schritt 2)
+        nextStep();
+
+        // Zeige detaillierte Erfolgsmeldung
+        const modulInfo = `${hinzugefuegt} Module`;
+        const skipInfo = uebersprungen > 0 ? `, ${uebersprungen} uebersprungen` : '';
+        const wunschTageInfo = availableTemplate.wunsch_freie_tage?.length
+          ? `, ${availableTemplate.wunsch_freie_tage.length} Wunsch-Tage`
+          : '';
+        const extraInfo = (availableTemplate.anmerkungen || availableTemplate.raumbedarf)
+          ? ', Zusatzinfos'
+          : '';
+
+        showToast(
+          `Template angewendet: ${modulInfo}${skipInfo}${wunschTageInfo}${extraInfo}`,
+          'success'
+        );
+      }
+    } catch (error: any) {
+      console.error('[Wizard] Error applying template:', error);
+      showToast(error.message || 'Fehler beim Anwenden des Templates', 'error');
+    } finally {
+      setApplyingTemplate(false);
     }
   };
 
@@ -489,23 +635,92 @@ const WizardView: React.FC = () => {
           <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 1 }} />
         </Box>
 
-        {/* Stats */}
-        {(totalSWS > 0 || moduleCount > 0) && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1, display: 'flex', gap: 3 }}>
+        {/* Stats + Template Button */}
+        <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1, display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
+          {(totalSWS > 0 || moduleCount > 0) && (
+            <>
+              <Typography variant="body2">
+                <strong>Module:</strong> {moduleCount}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Gesamt SWS:</strong> {totalSWS.toFixed(1)} SWS
+              </Typography>
+            </>
+          )}
+
+          {/* Template Button - prominenter nach Schritt 1 */}
+          {availableTemplate && planungId && !templateApplied && currentStep >= 1 && (
+            <Box sx={{ ml: 'auto' }}>
+              <Button
+                variant="contained"
+                color="secondary"
+                size="medium"
+                startIcon={getSemesterTyp() === 'winter' ? <AcUnit /> : <WbSunny />}
+                endIcon={<ContentPaste />}
+                onClick={() => setShowTemplateDialog(true)}
+                disabled={applyingTemplate}
+                sx={{
+                  animation: currentStep === 1 ? 'pulse 2s infinite' : 'none',
+                  '@keyframes pulse': {
+                    '0%': { boxShadow: '0 0 0 0 rgba(156, 39, 176, 0.4)' },
+                    '70%': { boxShadow: '0 0 0 10px rgba(156, 39, 176, 0)' },
+                    '100%': { boxShadow: '0 0 0 0 rgba(156, 39, 176, 0)' },
+                  }
+                }}
+              >
+                Schnellstart: {availableTemplate.anzahl_module} Module laden
+              </Button>
+            </Box>
+          )}
+
+          {/* Template bereits angewendet - Schnellstart Option */}
+          {templateApplied && (
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Chip
+                icon={<CheckCircle />}
+                label="Template geladen"
+                color="success"
+                size="small"
+                variant="outlined"
+              />
+              {/* Schnellstart: Direkt zur Zusammenfassung */}
+              {currentStep < 7 && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  onClick={() => setCurrentStep(7)}
+                  startIcon={<CheckCircle />}
+                >
+                  Direkt zur Zusammenfassung
+                </Button>
+              )}
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => navigate('/templates')}
+              >
+                Templates verwalten
+              </Button>
+            </Box>
+          )}
+        </Box>
+
+        {/* Template angewendet - Info Banner */}
+        {templateApplied && currentStep >= 1 && (
+          <Alert severity="success" sx={{ mt: 2 }} icon={<CheckCircle />}>
             <Typography variant="body2">
-              <strong>Module:</strong> {moduleCount}
+              <strong>Template-Daten geladen!</strong> Alle importierten Daten (Module, Wunsch-Tage, Anmerkungen)
+              können Sie in den folgenden Schritten frei bearbeiten, ergänzen oder löschen.
             </Typography>
-            <Typography variant="body2">
-              <strong>Gesamt SWS:</strong> {totalSWS.toFixed(1)} SWS
-            </Typography>
-          </Box>
+          </Alert>
         )}
 
         {/* Warning if no modules */}
         {planungId && moduleCount === 0 && currentStep >= 2 && (
           <Alert severity="warning" sx={{ mt: 2 }} icon={<Warning />}>
             <Typography variant="body2">
-              <strong>Achtung:</strong> Sie haben noch keine Module zur Planung hinzugefügt. 
+              <strong>Achtung:</strong> Sie haben noch keine Module zur Planung hinzugefügt.
               Mindestens ein Modul ist erforderlich, um die Planung einzureichen.
             </Typography>
           </Alert>
@@ -611,6 +826,203 @@ const WizardView: React.FC = () => {
           <Button onClick={() => setShowValidationDialog(false)} color="primary">
             Verstanden
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Template Dialog - Erweitert mit allen Details */}
+      <Dialog
+        open={showTemplateDialog}
+        onClose={() => setShowTemplateDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {getSemesterTyp() === 'winter' ? <AcUnit color="primary" /> : <WbSunny sx={{ color: 'orange' }} />}
+            <Typography variant="h6">Template laden - Schnellstart</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {availableTemplate && (
+            <>
+              <Alert severity="success" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>{availableTemplate.name || templateService.formatSemesterTyp(availableTemplate.semester_typ)}</strong>
+                </Typography>
+                <Typography variant="body2">
+                  Mit einem Klick werden alle gespeicherten Einstellungen geladen. Sie koennen danach alles noch anpassen.
+                </Typography>
+              </Alert>
+
+              {availableTemplate.beschreibung && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  {availableTemplate.beschreibung}
+                </Typography>
+              )}
+
+              {/* Uebersicht der Template-Inhalte */}
+              <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1, mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Template enthaelt:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  <Chip
+                    icon={<CheckCircle />}
+                    label={`${availableTemplate.anzahl_module} Module`}
+                    color="primary"
+                    variant="outlined"
+                  />
+                  {availableTemplate.wunsch_freie_tage && availableTemplate.wunsch_freie_tage.length > 0 && (
+                    <Chip
+                      icon={<CheckCircle />}
+                      label={`${availableTemplate.wunsch_freie_tage.length} Wunsch-Tage`}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
+                  {availableTemplate.anmerkungen && (
+                    <Chip
+                      icon={<CheckCircle />}
+                      label="Anmerkungen"
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
+                  {availableTemplate.raumbedarf && (
+                    <Chip
+                      icon={<CheckCircle />}
+                      label="Raumbedarf"
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+              </Box>
+
+              {/* Module Preview mit Details */}
+              {availableTemplate.template_module && availableTemplate.template_module.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Module mit Konfiguration:
+                  </Typography>
+                  <Box sx={{ maxHeight: 200, overflowY: 'auto', bgcolor: 'grey.50', p: 1, borderRadius: 1 }}>
+                    {availableTemplate.template_module.map((tm) => {
+                      const lehrformen: string[] = [];
+                      if (tm.anzahl_vorlesungen > 0) lehrformen.push(`${tm.anzahl_vorlesungen}V`);
+                      if (tm.anzahl_uebungen > 0) lehrformen.push(`${tm.anzahl_uebungen}Ue`);
+                      if (tm.anzahl_praktika > 0) lehrformen.push(`${tm.anzahl_praktika}P`);
+                      if (tm.anzahl_seminare > 0) lehrformen.push(`${tm.anzahl_seminare}S`);
+                      const lehrformenStr = lehrformen.join('+') || '-';
+                      const mitarbeiterCount = tm.mitarbeiter_ids?.length || 0;
+                      const hasRaum = tm.raum_vorlesung || tm.raum_uebung || tm.raum_praktikum || tm.raum_seminar;
+
+                      return (
+                        <Box
+                          key={tm.id}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            py: 0.5,
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                            '&:last-child': { borderBottom: 'none' }
+                          }}
+                        >
+                          <Chip
+                            label={tm.modul?.kuerzel || `Modul ${tm.modul_id}`}
+                            size="small"
+                            color="primary"
+                          />
+                          <Typography variant="body2" sx={{ flex: 1 }}>
+                            {tm.modul?.bezeichnung_de || ''}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {lehrformenStr}
+                          </Typography>
+                          {mitarbeiterCount > 0 && (
+                            <Chip label={`${mitarbeiterCount} MA`} size="small" variant="outlined" />
+                          )}
+                          {hasRaum && (
+                            <Chip label="Raum" size="small" variant="outlined" color="success" />
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Wunsch-freie Tage */}
+              {availableTemplate.wunsch_freie_tage && availableTemplate.wunsch_freie_tage.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Wunsch-freie Tage:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {availableTemplate.wunsch_freie_tage.map((tag, idx) => (
+                      <Chip
+                        key={idx}
+                        label={`${tag.wochentag} (${tag.zeitraum})`}
+                        size="small"
+                        variant="outlined"
+                        color={tag.prioritaet === 'hoch' ? 'error' : tag.prioritaet === 'mittel' ? 'warning' : 'default'}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {moduleCount > 0 && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Hinweis:</strong> Sie haben bereits {moduleCount} Module in der Planung.
+                    Bestehende Module werden nicht geloescht, nur neue werden hinzugefuegt.
+                  </Typography>
+                </Alert>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          <Button onClick={() => setShowTemplateDialog(false)} disabled={applyingTemplate}>
+            Manuell eingeben
+          </Button>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {moduleCount > 0 && (
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={() => handleApplyTemplate(true)}
+                disabled={applyingTemplate}
+                size="small"
+              >
+                Alles ersetzen
+              </Button>
+            )}
+            <Button
+              variant="outlined"
+              onClick={() => handleApplyTemplate(false)}
+              disabled={applyingTemplate}
+              startIcon={applyingTemplate ? <CircularProgress size={16} /> : <ContentPaste />}
+            >
+              {applyingTemplate ? 'Lade...' : 'Laden & Bearbeiten'}
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              size="large"
+              onClick={async () => {
+                await handleApplyTemplate(false);
+                // Nach erfolgreichem Laden direkt zur Zusammenfassung
+                setTimeout(() => setCurrentStep(7), 100);
+              }}
+              disabled={applyingTemplate}
+              startIcon={applyingTemplate ? <CircularProgress size={16} /> : <CheckCircle />}
+            >
+              {applyingTemplate ? 'Lade...' : 'Schnellstart'}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
 

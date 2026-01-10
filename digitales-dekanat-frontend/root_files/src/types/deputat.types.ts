@@ -111,7 +111,8 @@ export interface DeputatsLehrtaetigkeit {
   bezeichnung: string;
   kategorie: LehrtaetigkeitKategorie;
   sws: number;
-  wochentag: Wochentag | null;
+  wochentag: Wochentag | null;  // Legacy
+  wochentage: Wochentag[];  // NEU: Array von Wochentagen
   ist_block: boolean;
   quelle: EntragQuelle;
   geplantes_modul_id: number | null;
@@ -309,7 +310,8 @@ export interface CreateLehrtaetigkeitData {
   bezeichnung: string;
   sws: number;
   kategorie?: LehrtaetigkeitKategorie;
-  wochentag?: Wochentag;
+  wochentag?: Wochentag;  // Legacy
+  wochentage?: Wochentag[];  // NEU: Mehrere Tage
   ist_block?: boolean;
 }
 
@@ -317,7 +319,8 @@ export interface UpdateLehrtaetigkeitData {
   bezeichnung?: string;
   sws?: number;
   kategorie?: LehrtaetigkeitKategorie;
-  wochentag?: Wochentag | null;
+  wochentag?: Wochentag | null;  // Legacy
+  wochentage?: Wochentag[];  // NEU: Mehrere Tage
   ist_block?: boolean;
 }
 

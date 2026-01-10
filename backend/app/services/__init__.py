@@ -31,6 +31,9 @@ from app.services.auftrag_service import AuftragService
 # Import Deputat Service (Feature 4)
 from app.services.deputat_service import DeputatService
 
+# Import Template Service (Feature 5)
+from app.services.template_service import TemplateService
+
 # =========================================================================
 # SINGLETON INSTANCES
 # =========================================================================
@@ -45,6 +48,7 @@ notification_service = NotificationService()
 sws_calculator = SWSCalculator()
 auftrag_service = AuftragService()
 deputat_service = DeputatService()
+template_service = TemplateService()
 
 
 # =========================================================================
@@ -65,6 +69,7 @@ __all__ = [
     'SWSCalculator',
     'AuftragService',
     'DeputatService',
+    'TemplateService',
 
     # Singleton Instances (HAUPTSÄCHLICH DIESE VERWENDEN!)
     'user_service',
@@ -76,4 +81,5 @@ __all__ = [
     'sws_calculator',
     'auftrag_service',
     'deputat_service',
+    'template_service',
 ]

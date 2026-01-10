@@ -36,8 +36,12 @@ import AuftraegeVerwaltung from './pages/AuftraegeVerwaltung';
 import SemesterPage from './pages/SemesterPage';
 
 // Pages - Deputatsabrechnung (Feature 4)
-import Deputatsabrechnung from './pages/Deputatsabrechnung';
+import Deputatsabrechnung from './pages/DeputatsabrechnungNeu';
 import DeputatVerwaltung from './pages/DeputatVerwaltung';
+
+// Pages - Planungs-Templates (Feature 5)
+import TemplateVerwaltung from './pages/TemplateVerwaltung';
+import TemplateDetail from './pages/TemplateDetail';
 
 // Store
 import useAuthStore from './store/authStore';
@@ -208,6 +212,24 @@ const App: React.FC = () => {
                   element={
                     <ProtectedRoute requiredRoles={['professor', 'lehrbeauftragter']}>
                       <Deputatsabrechnung />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Planungs-Templates (Feature 5) */}
+                <Route
+                  path="templates"
+                  element={
+                    <ProtectedRoute requiredRoles={['professor', 'lehrbeauftragter']}>
+                      <TemplateVerwaltung />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="templates/:id"
+                  element={
+                    <ProtectedRoute requiredRoles={['professor', 'lehrbeauftragter']}>
+                      <TemplateDetail />
                     </ProtectedRoute>
                   }
                 />

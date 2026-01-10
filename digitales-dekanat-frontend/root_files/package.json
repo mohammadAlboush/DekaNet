@@ -3,6 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "author": {
+    "name": "Mohammad Alboush",
+    "email": "mohammadalboush8@gmail.com",
+    "url": "https://github.com/mohammadAlboush"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mohammadAlboush/DekaNet.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

@@ -82,6 +82,9 @@ from .deputat import (
     DeputatsBetreuung,
 )
 
+# ✨ NEW: Feature 5 - Planungs-Templates
+from .planungs_template import PlanungsTemplate, TemplateModul
+
 
 # Alle Models für easy import
 __all__ = [
@@ -138,4 +141,8 @@ __all__ = [
     'DeputatsVertretung',
     'DeputatsErmaessigung',
     'DeputatsBetreuung',
+
+    # Planungs-Templates
+    'PlanungsTemplate',
+    'TemplateModul',
 ]

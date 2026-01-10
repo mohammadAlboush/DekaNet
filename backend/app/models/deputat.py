@@ -433,7 +433,38 @@ class Deputatsabrechnung(db.Model):
             data['betreuungen'] = [b.to_dict() for b in self.betreuungen.all()]
 
         if include_summen:
-            data['summen'] = self.berechne_summen()
+            try:
+                data['summen'] = self.berechne_summen()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"berechne_summen failed: {e}")
+                # Fallback mit Default-Werten
+                data['summen'] = {
+                    'sws_lehrtaetigkeiten': 0,
+                    'sws_praxisseminar': 0,
+                    'sws_praxisseminar_angerechnet': 0,
+                    'sws_projektveranstaltung': 0,
+                    'sws_projektveranstaltung_angerechnet': 0,
+                    'sws_seminar_master': 0,
+                    'sws_seminar_master_angerechnet': 0,
+                    'sws_sonstige_lehre': 0,
+                    'sws_lehrexport': 0,
+                    'sws_vertretungen': 0,
+                    'sws_ermaessigungen': 0,
+                    'sws_betreuungen_roh': 0,
+                    'sws_betreuungen_angerechnet': 0,
+                    'gesamtdeputat': 0,
+                    'nettobelastung': 0,
+                    'netto_lehrverpflichtung': self.netto_lehrverpflichtung,
+                    'differenz': 0,
+                    'bewertung': 'abweichung',
+                    'warnungen': [f'Fehler bei Berechnung: {str(e)}'],
+                    'anzahl_lehrtaetigkeiten': 0,
+                    'anzahl_lehrexporte': 0,
+                    'anzahl_vertretungen': 0,
+                    'anzahl_ermaessigungen': 0,
+                    'anzahl_betreuungen': 0,
+                }
 
         return data
 
@@ -474,8 +505,9 @@ class DeputatsLehrtaetigkeit(db.Model):
 
     sws = db.Column(db.Float, nullable=False)
 
-    # Wochentag (für Tabellenansicht)
-    wochentag = db.Column(db.String(20), nullable=True)  # 'montag', 'dienstag', etc.
+    # Wochentage (für Tabellenansicht) - NEU: Mehrere Tage möglich als JSON-Array
+    wochentag = db.Column(db.String(20), nullable=True)  # Legacy: einzelner Tag
+    wochentage = db.Column(db.JSON, nullable=True)  # NEU: Array von Tagen ['montag', 'mittwoch']
     ist_block = db.Column(db.Boolean, default=False, nullable=False)
 
     # Quelle
@@ -499,6 +531,14 @@ class DeputatsLehrtaetigkeit(db.Model):
     def __repr__(self):
         return f'<DeputatsLehrtaetigkeit {self.bezeichnung} ({self.sws} SWS)>'
 
+    def get_wochentage_list(self) -> list:
+        """Gibt Liste der Wochentage zurück (kombiniert legacy + neu)"""
+        if self.wochentage:
+            return self.wochentage
+        elif self.wochentag:
+            return [self.wochentag]
+        return []
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'id': self.id,
@@ -506,7 +546,8 @@ class DeputatsLehrtaetigkeit(db.Model):
             'bezeichnung': self.bezeichnung,
             'kategorie': self.kategorie,
             'sws': self.sws,
-            'wochentag': self.wochentag,
+            'wochentag': self.wochentag,  # Legacy
+            'wochentage': self.get_wochentage_list(),  # NEU: Array
             'ist_block': self.ist_block,
             'quelle': self.quelle,
             'geplantes_modul_id': self.geplantes_modul_id,

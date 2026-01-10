@@ -373,7 +373,67 @@ def update_abrechnung(abrechnung_id: int):
 
 
 # =============================================================================
-# IMPORT
+# SYNC (NEU - Automatische Synchronisation)
+# =============================================================================
+
+@deputat_api.route('/<int:abrechnung_id>/sync', methods=['POST'])
+@jwt_required()
+def sync_abrechnung(abrechnung_id: int):
+    """
+    POST /api/deputat/<id>/sync - Synchronisiert mit Planung und Semesteraufträgen
+
+    Wird automatisch bei Phasenauswahl aufgerufen.
+    Aktualisiert importierte Daten, fügt neue hinzu, entfernt veraltete.
+    Manuell hinzugefügte Einträge bleiben unberührt.
+    """
+    try:
+        abrechnung = deputat_service.get_abrechnung(abrechnung_id)
+
+        if not abrechnung:
+            return jsonify({
+                'success': False,
+                'message': 'Abrechnung nicht gefunden'
+            }), 404
+
+        if not kann_abrechnung_zugreifen(abrechnung):
+            return jsonify({
+                'success': False,
+                'message': 'Keine Berechtigung'
+            }), 403
+
+        # Synchronisation durchführen
+        planung_result = deputat_service.sync_from_planung(abrechnung_id)
+        auftraege_result = deputat_service.sync_from_semesterauftraege(abrechnung_id)
+
+        # Aktualisierte Abrechnung laden
+        abrechnung = deputat_service.get_abrechnung(abrechnung_id)
+
+        return jsonify({
+            'success': True,
+            'data': abrechnung.to_dict(include_details=True, include_summen=True),
+            'sync_result': {
+                'planung': planung_result,
+                'auftraege': auftraege_result
+            },
+            'message': f"Sync: {planung_result.get('hinzugefuegt', 0)} Module hinzugefügt, {auftraege_result.get('hinzugefuegt', 0)} Ermäßigungen"
+        }), 200
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 400
+    except Exception as e:
+        current_app.logger.error(f"Error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': 'Fehler bei der Synchronisation',
+            'error': str(e)
+        }), 500
+
+
+# =============================================================================
+# IMPORT (Legacy - weiterhin verfügbar für manuellen Import)
 # =============================================================================
 
 @deputat_api.route('/<int:abrechnung_id>/import/planung', methods=['POST'])

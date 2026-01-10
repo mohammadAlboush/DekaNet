@@ -80,7 +80,20 @@ export interface ArbeitsaufwandData {
 
 class ModulService {
   /**
-   * Get all modules
+   * Get all modules (einfache Version)
+   */
+  async getAllModule(): Promise<Modul[]> {
+    try {
+      const response = await api.get<ApiResponse<Modul[]>>('/module/');
+      return response.data.data || [];
+    } catch (error) {
+      console.error('[ModulService] Error fetching modules:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all modules (mit params)
    */
   async getAllModules(params?: {
     po_id?: number;

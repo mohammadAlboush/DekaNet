@@ -112,6 +112,14 @@ def register_blueprints(app: Flask):
     except ImportError as e:
         logger.error(f'   [ERROR] Failed to import deputat API: {e}')
 
+    # ✨ NEW: TEMPLATES API (Feature 5)
+    try:
+        from app.api.templates import template_api
+        app.register_blueprint(template_api)
+        logger.info('   [OK] Templates API: /api/templates')
+    except ImportError as e:
+        logger.error(f'   [ERROR] Failed to import templates API: {e}')
+
     logger.info("="*80)
     logger.info('[OK] All API Blueprints registered')
     logger.info("="*80)

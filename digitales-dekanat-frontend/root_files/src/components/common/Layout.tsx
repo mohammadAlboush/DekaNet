@@ -34,6 +34,7 @@ import {
   SwapHoriz,
   Calculate,
   WorkHistory,
+  FileCopy,
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
 
@@ -96,6 +97,7 @@ const Layout: React.FC = () => {
         ...baseItems,
         { title: 'Semesterplanung', path: '/semesterplanung', icon: <Assignment /> },
         { title: 'Deputatsabrechnung', path: '/deputatsabrechnung', icon: <WorkHistory /> },
+        { title: 'Templates', path: '/templates', icon: <FileCopy /> },
         { title: 'Module', path: '/module', icon: <School /> },
       ];
     }
