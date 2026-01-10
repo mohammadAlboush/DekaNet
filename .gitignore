@@ -90,3 +90,25 @@ credentials/
 # AL Language (Business Central) Build Artifacts
 .alpackages/
 .snapshots/
+
+# Test scripts in root (should be in backend/tests/)
+/check_*.py
+/test_*.py
+/verify_*.py
+
+# Migration backups
+migrations_backup/
+
+# Manual SQL migrations (use Alembic instead)
+backend/database/migrations/*.sql
+backend/database/*.sql
+
+# Outdated scripts
+scripts/fix_unused_warnings.py
+scripts/backup_database.sh
+scripts/restore_database.sh
+
+# Old Express.js files (project uses Flask now)
+backend/controllers/
+backend/models/*.js
+backend/routes/*.js
