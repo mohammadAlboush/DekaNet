@@ -126,8 +126,7 @@ class SemesterAuftrag(db.Model):
     status = db.Column(
         db.String(20),
         nullable=False,
-        default='beantragt',
-        index=True
+        default='beantragt'
     )  # 'beantragt', 'genehmigt', 'abgelehnt'
 
     # Workflow-Tracking
