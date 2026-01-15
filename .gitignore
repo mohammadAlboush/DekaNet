@@ -112,3 +112,21 @@ scripts/restore_database.sh
 backend/controllers/
 backend/models/*.js
 backend/routes/*.js
+
+# Database dumps and backups (NEVER commit these)
+database_dumps/
+*.dump
+*.sql.gz
+backup_*.sql
+
+# Migration and setup scripts with credentials
+import_database_to_server.py
+migrate_sqlite_to_postgres.py
+create_migration_dump.sh
+setup_local_postgres.*
+
+# AI/IDE Configuration
+.claude/settings.local.json
+
+# Environment files with real credentials
+.env.production
