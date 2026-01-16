@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
 Test: Studiengang-Migration mit vollem Logging
+Speichert Ausgabe in test_studiengang_output.txt
 """
 
 import os
 import sqlite3
 import sys
+from datetime import datetime
 
 os.environ['DATABASE_URL'] = 'postgresql://dekanet:DekaNet2025Secure@localhost:5432/dekanet_db'
 
@@ -13,6 +15,24 @@ from app import create_app, db
 from sqlalchemy import text
 
 SQLITE_DB = 'dekanat_new.db'
+OUTPUT_FILE = 'test_studiengang_output.txt'
+
+# Output Logger
+class OutputLogger:
+    def __init__(self, filename):
+        self.terminal = sys.stdout
+        self.log = open(filename, 'w', encoding='utf-8')
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+    def close(self):
+        self.log.close()
 
 
 def convert_boolean(value):
@@ -27,8 +47,14 @@ def convert_boolean(value):
 
 
 def main():
+    # Aktiviere Output Logging
+    logger = OutputLogger(OUTPUT_FILE)
+    sys.stdout = logger
+
     print("=" * 80)
     print("TEST: studiengang-Migration mit detailliertem Logging")
+    print(f"Zeitstempel: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Output wird gespeichert in: {OUTPUT_FILE}")
     print("=" * 80 + "\n")
 
     # SQLite öffnen
@@ -107,6 +133,16 @@ def main():
             print(f"Fehlermeldung: {e}")
 
     sqlite_conn.close()
+
+    # Schließe Logger
+    logger.close()
+    sys.stdout = logger.terminal
+
+    print(f"\n[OK] Test abgeschlossen! Ausgabe gespeichert in: {OUTPUT_FILE}")
+    print("Jetzt ausführen:")
+    print(f"   git add {OUTPUT_FILE}")
+    print(f"   git commit -m 'test: studiengang migration results'")
+    print(f"   git push origin main")
 
 
 if __name__ == '__main__':
