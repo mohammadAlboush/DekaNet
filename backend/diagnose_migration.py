@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
 Migrations-Diagnose: Analysiert warum Tabellen fehlschlagen
+Erstellt diagnose_output.txt mit allen Ergebnissen
 """
 
 import os
 import sqlite3
 import sys
+from datetime import datetime
 
 os.environ['DATABASE_URL'] = 'postgresql://dekanet:DekaNet2025Secure@localhost:5432/dekanet_db'
 
@@ -13,6 +15,24 @@ from app import create_app, db
 from sqlalchemy import text, inspect
 
 SQLITE_DB = 'dekanat_new.db'
+OUTPUT_FILE = 'diagnose_output.txt'
+
+# Output Handler
+class OutputLogger:
+    def __init__(self, filename):
+        self.terminal = sys.stdout
+        self.log = open(filename, 'w', encoding='utf-8')
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+    def close(self):
+        self.log.close()
 
 
 def print_header(title):
@@ -170,9 +190,15 @@ def test_single_table(table_name):
 
 
 def main():
+    # Aktiviere Output Logging
+    logger = OutputLogger(OUTPUT_FILE)
+    sys.stdout = logger
+
     print("\n" + "╔" + "═" * 78 + "╗")
     print("║" + " " * 25 + "MIGRATIONS-DIAGNOSE" + " " * 34 + "║")
     print("╚" + "═" * 78 + "╝")
+    print(f"\nZeitstempel: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Output wird gespeichert in: {OUTPUT_FILE}\n")
 
     # 1. Analysiere Dependencies
     analyze_table_dependencies()
@@ -189,6 +215,16 @@ def main():
     print("3. Dann studiengang")
     print("4. Dann modul")
     print()
+
+    # Schließe Output-Datei
+    logger.close()
+    sys.stdout = logger.terminal
+
+    print(f"\n[OK] Diagnose abgeschlossen! Ergebnisse in: {OUTPUT_FILE}")
+    print(f"Jetzt ausführen:")
+    print(f"   git add {OUTPUT_FILE}")
+    print(f"   git commit -m 'diagnose: Migration analysis results'")
+    print(f"   git push origin main")
 
 
 if __name__ == '__main__':
