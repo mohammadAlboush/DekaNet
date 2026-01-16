@@ -3,6 +3,10 @@
 .env.local
 .env.*.local
 
+# Allow .env example templates
+!.env.example
+!.env.production.example
+
 # Python
 __pycache__/
 *.py[cod]
@@ -130,3 +134,4 @@ setup_local_postgres.*
 
 # Environment files with real credentials
 .env.production
+!.env.production.example

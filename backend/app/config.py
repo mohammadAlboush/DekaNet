@@ -196,12 +196,13 @@ class ProductionConfig(Config):
     # CSRF deaktivieren fuer JWT-basierte API
     # JWT im Authorization-Header ist bereits CSRF-sicher
     WTF_CSRF_ENABLED = False
-    
-    # Security - HTTPS (✅ Production: Alles auf HTTPS!)
-    SESSION_COOKIE_SECURE = True
-    REMEMBER_COOKIE_SECURE = True
-    JWT_COOKIE_SECURE = True  # ✅ JWT nur über HTTPS
-    PREFERRED_URL_SCHEME = 'https'
+
+    # Security - HTTPS (Aus Environment Variable, Default: False fuer HTTP-Server)
+    # Setze SESSION_COOKIE_SECURE=true in .env wenn HTTPS verfuegbar
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+    REMEMBER_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+    JWT_COOKIE_SECURE = os.environ.get('JWT_COOKIE_SECURE', 'false').lower() == 'true'
+    PREFERRED_URL_SCHEME = os.environ.get('PREFERRED_URL_SCHEME', 'http')
     
     # CORS stricter
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '').split(',')
