@@ -49,7 +49,7 @@ def analyze_sqlite(app):
     print_header("ANALYSE: SQLite-Datenbank")
 
     if not os.path.exists(SQLITE_DB):
-        print(f"❌ FEHLER: SQLite-Datenbank '{SQLITE_DB}' nicht gefunden!")
+        print(f"[FEHLER] SQLite-Datenbank '{SQLITE_DB}' nicht gefunden!")
         print(f"   Aktuelles Verzeichnis: {os.getcwd()}")
         return False
 
@@ -71,12 +71,12 @@ def analyze_sqlite(app):
         stats['sqlite_tables'][table_name] = count
         total_rows += count
 
-        status = "✓" if count > 0 else "○"
+        status = "[+]" if count > 0 else "[ ]"
         print(f"   {status} {table_name:30} {count:6} Zeilen")
 
     sqlite_conn.close()
 
-    print(f"\n✅ SQLite-Analyse abgeschlossen:")
+    print(f"\n[OK] SQLite-Analyse abgeschlossen:")
     print(f"   - {len(tables)} Tabellen gefunden")
     print(f"   - {total_rows} Zeilen insgesamt")
 
@@ -96,7 +96,7 @@ def create_tables(app):
         tables = inspector.get_table_names()
         stats['created_tables'] = sorted(tables)
 
-        print(f"\n✅ {len(tables)} Tabellen erstellt")
+        print(f"\n[OK] {len(tables)} Tabellen erstellt")
 
     return True
 
@@ -106,7 +106,7 @@ def migrate_data(app):
     print_header("SCHRITT 2: Daten migrieren")
 
     if not os.path.exists(SQLITE_DB):
-        print(f"❌ FEHLER: SQLite-Datenbank '{SQLITE_DB}' nicht gefunden!")
+        print(f"[FEHLER] SQLite-Datenbank '{SQLITE_DB}' nicht gefunden!")
         return False
 
     with app.app_context():
@@ -143,7 +143,7 @@ def migrate_data(app):
                     f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"
                 )
                 if not sqlite_cursor.fetchone():
-                    print(f"   ⊘ {table}: Existiert nicht in SQLite")
+                    print(f"   [SKIP] {table}: Existiert nicht in SQLite")
                     stats['skipped_tables'].append(table)
                     continue
 
@@ -152,7 +152,7 @@ def migrate_data(app):
                 rows = sqlite_cursor.fetchall()
 
                 if not rows:
-                    print(f"   ○ {table}: 0 Zeilen (leer)")
+                    print(f"   [ ] {table}: 0 Zeilen (leer)")
                     stats['migrated_tables'][table] = 0
                     continue
 
@@ -181,12 +181,12 @@ def migrate_data(app):
                         )
                         db.session.commit()
 
-                print(f"   ✓ {table}: {len(rows)} Zeilen migriert")
+                print(f"   [+] {table}: {len(rows)} Zeilen migriert")
                 stats['migrated_tables'][table] = len(rows)
 
             except Exception as e:
                 error_msg = str(e)[:100]
-                print(f"   ✗ {table}: FEHLER - {error_msg}")
+                print(f"   [x] {table}: FEHLER - {error_msg}")
                 stats['failed_tables'][table] = error_msg
                 db.session.rollback()
 
@@ -203,7 +203,7 @@ def reset_passwords(app):
         users = Benutzer.query.all()
 
         if not users:
-            print("⚠️  WARNUNG: Keine Benutzer gefunden!")
+            print("[WARNUNG] Keine Benutzer gefunden!")
             stats['password_stats'] = {'error': 'Keine Benutzer gefunden'}
             return False
 
@@ -213,7 +213,7 @@ def reset_passwords(app):
         for user in users:
             if user.username == 'dekan' or user.email == 'dekan@hochschule.de':
                 user.password_hash = generate_password_hash(DEKAN_PASSWORD)
-                print(f"   ✓ Dekan: {user.email} → {DEKAN_PASSWORD}")
+                print(f"   [+] Dekan: {user.email} → {DEKAN_PASSWORD}")
                 dekan_count += 1
             else:
                 user.password_hash = generate_password_hash(DEFAULT_PASSWORD)
@@ -221,7 +221,7 @@ def reset_passwords(app):
 
         db.session.commit()
 
-        print(f"\n✅ Passwörter gesetzt:")
+        print(f"\n[OK] Passwörter gesetzt:")
         print(f"   - {dekan_count} Dekan(e) → {DEKAN_PASSWORD}")
         print(f"   - {other_count} andere Benutzer → {DEFAULT_PASSWORD}")
 
@@ -266,10 +266,10 @@ def verify_data(app):
                 ).scalar()
 
                 stats['final_counts'][table] = result
-                status = "✓" if result > 0 else "○"
+                status = "[+]" if result > 0 else "[ ]"
                 print(f"   {status} {table:30} {result:6} Einträge")
             except Exception as e:
-                print(f"   ✗ {table:30} FEHLER")
+                print(f"   [x] {table:30} FEHLER")
                 stats['final_counts'][table] = 0
 
     return True
@@ -306,7 +306,7 @@ def print_final_summary():
     print("3. Daten-Migration")
     print("═" * 80)
     total_migrated = sum(stats['migrated_tables'].values())
-    print(f"   ✓ Erfolgreich migriert: {len(stats['migrated_tables'])} Tabellen ({total_migrated} Zeilen)")
+    print(f"   [+] Erfolgreich migriert: {len(stats['migrated_tables'])} Tabellen ({total_migrated} Zeilen)")
 
     if stats['migrated_tables']:
         print("\n   Details:")
@@ -314,12 +314,12 @@ def print_final_summary():
             print(f"      • {table:25} {count:6} Zeilen")
 
     if stats['skipped_tables']:
-        print(f"\n   ⊘ Übersprungen: {len(stats['skipped_tables'])} Tabellen")
+        print(f"\n   [SKIP] Übersprungen: {len(stats['skipped_tables'])} Tabellen")
         for table in stats['skipped_tables']:
             print(f"      • {table}")
 
     if stats['failed_tables']:
-        print(f"\n   ✗ FEHLER: {len(stats['failed_tables'])} Tabellen")
+        print(f"\n   [x] FEHLER: {len(stats['failed_tables'])} Tabellen")
         for table, error in stats['failed_tables'].items():
             print(f"      • {table}: {error[:60]}...")
 
@@ -328,11 +328,11 @@ def print_final_summary():
     print("4. Passwort-Reset")
     print("═" * 80)
     if 'error' in stats['password_stats']:
-        print(f"   ✗ FEHLER: {stats['password_stats']['error']}")
+        print(f"   [x] FEHLER: {stats['password_stats']['error']}")
     else:
-        print(f"   ✓ Dekan-Accounts:  {stats['password_stats'].get('dekan', 0)} → Passwort: {DEKAN_PASSWORD}")
-        print(f"   ✓ Andere Benutzer: {stats['password_stats'].get('others', 0)} → Passwort: {DEFAULT_PASSWORD}")
-        print(f"   ✓ Gesamt:          {stats['password_stats'].get('total', 0)} Benutzer")
+        print(f"   [+] Dekan-Accounts:  {stats['password_stats'].get('dekan', 0)} → Passwort: {DEKAN_PASSWORD}")
+        print(f"   [+] Andere Benutzer: {stats['password_stats'].get('others', 0)} → Passwort: {DEFAULT_PASSWORD}")
+        print(f"   [+] Gesamt:          {stats['password_stats'].get('total', 0)} Benutzer")
 
     # Finale Datenbank
     print("\n" + "═" * 80)
@@ -348,7 +348,7 @@ def print_final_summary():
     for table in important:
         if table in stats['final_counts']:
             count = stats['final_counts'][table]
-            status = "✓" if count > 0 else "✗"
+            status = "[+]" if count > 0 else "[x]"
             print(f"      {status} {table:20} {count:6} Einträge")
 
     # Zusammenfassung
@@ -359,15 +359,15 @@ def print_final_summary():
     print(f"   SQLite → PostgreSQL: {total_sqlite} → {total_final} Zeilen")
 
     if total_final == 0:
-        print("\n   ❌ KRITISCH: PostgreSQL-Datenbank ist leer!")
+        print("\n   [FEHLER] KRITISCH: PostgreSQL-Datenbank ist leer!")
         print("   Mögliche Ursachen:")
         print("      • SQLite-Datenbank enthält keine Daten")
         print("      • Tabellennamen stimmen nicht überein")
         print("      • Migration wurde abgebrochen")
     elif total_final < total_sqlite * 0.8:
-        print(f"\n   ⚠️  WARNUNG: Nur {(total_final/total_sqlite*100):.1f}% der Daten migriert!")
+        print(f"\n   [WARNUNG] Nur {(total_final/total_sqlite*100):.1f}% der Daten migriert!")
     else:
-        print("\n   ✅ Migration erfolgreich!")
+        print("\n   [OK] Migration erfolgreich!")
 
     print("\n" + "═" * 80 + "\n")
 
@@ -388,12 +388,12 @@ def main():
 
     # Analyse SQLite
     if not analyze_sqlite(app):
-        print("\n❌ FEHLER bei SQLite-Analyse!")
+        print("\n[FEHLER] FEHLER bei SQLite-Analyse!")
         sys.exit(1)
 
     # Schritt 1: Tabellen erstellen
     if not create_tables(app):
-        print("\n❌ FEHLER beim Erstellen der Tabellen!")
+        print("\n[FEHLER] FEHLER beim Erstellen der Tabellen!")
         sys.exit(1)
 
     # Schritt 2: Daten migrieren
@@ -430,10 +430,10 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Migration abgebrochen durch Benutzer")
+        print("\n\n[WARNUNG]  Migration abgebrochen durch Benutzer")
         sys.exit(1)
     except Exception as e:
-        print(f"\n\n❌ UNERWARTETER FEHLER: {e}")
+        print(f"\n\n[FEHLER] UNERWARTETER FEHLER: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
