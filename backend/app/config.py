@@ -184,14 +184,18 @@ class ProductionConfig(Config):
     """Production Configuration"""
     DEBUG = False
     TESTING = False
-    
+
     SQLALCHEMY_ECHO = False
-    
+
     # WICHTIG: Secret Keys aus Environment
     SECRET_KEY = os.environ.get('SECRET_KEY')
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
-    
+
     LOG_LEVEL = 'WARNING'
+
+    # CSRF deaktivieren fuer JWT-basierte API
+    # JWT im Authorization-Header ist bereits CSRF-sicher
+    WTF_CSRF_ENABLED = False
     
     # Security - HTTPS (✅ Production: Alles auf HTTPS!)
     SESSION_COOKIE_SECURE = True
