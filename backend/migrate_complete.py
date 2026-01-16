@@ -24,6 +24,18 @@ SQLITE_DB = 'dekanat_new.db'
 DEKAN_PASSWORD = 'dekan123'
 DEFAULT_PASSWORD = 'prof123'
 
+# Statistik-Tracking
+stats = {
+    'sqlite_tables': {},
+    'migrated_tables': {},
+    'skipped_tables': [],
+    'failed_tables': {},
+    'created_tables': [],
+    'password_stats': {},
+    'final_counts': {},
+    'duration': 0
+}
+
 
 def print_header(title):
     """Gibt einen formatierten Header aus"""
@@ -32,9 +44,48 @@ def print_header(title):
     print("=" * 80 + "\n")
 
 
+def analyze_sqlite(app):
+    """Analysiert SQLite-Datenbank"""
+    print_header("ANALYSE: SQLite-Datenbank")
+
+    if not os.path.exists(SQLITE_DB):
+        print(f"❌ FEHLER: SQLite-Datenbank '{SQLITE_DB}' nicht gefunden!")
+        print(f"   Aktuelles Verzeichnis: {os.getcwd()}")
+        return False
+
+    sqlite_conn = sqlite3.connect(SQLITE_DB)
+    sqlite_cursor = sqlite_conn.cursor()
+
+    # Hole alle Tabellen
+    sqlite_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+    tables = sqlite_cursor.fetchall()
+
+    print(f"SQLite-Datenbank '{SQLITE_DB}' gefunden!\n")
+    print("Tabellen und Inhalte:\n")
+
+    total_rows = 0
+    for table in tables:
+        table_name = table[0]
+        sqlite_cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+        count = sqlite_cursor.fetchone()[0]
+        stats['sqlite_tables'][table_name] = count
+        total_rows += count
+
+        status = "✓" if count > 0 else "○"
+        print(f"   {status} {table_name:30} {count:6} Zeilen")
+
+    sqlite_conn.close()
+
+    print(f"\n✅ SQLite-Analyse abgeschlossen:")
+    print(f"   - {len(tables)} Tabellen gefunden")
+    print(f"   - {total_rows} Zeilen insgesamt")
+
+    return True
+
+
 def create_tables(app):
     """Erstellt alle Tabellen in PostgreSQL"""
-    print_header("SCHRITT 1: Tabellen erstellen")
+    print_header("SCHRITT 1: PostgreSQL Tabellen erstellen")
 
     with app.app_context():
         print("Erstelle alle Tabellen in PostgreSQL...")
@@ -43,10 +94,9 @@ def create_tables(app):
         # Zeige erstellte Tabellen
         inspector = inspect(db.engine)
         tables = inspector.get_table_names()
+        stats['created_tables'] = sorted(tables)
 
-        print(f"✅ {len(tables)} Tabellen erstellt:\n")
-        for table in sorted(tables):
-            print(f"   - {table}")
+        print(f"\n✅ {len(tables)} Tabellen erstellt")
 
     return True
 
@@ -57,7 +107,6 @@ def migrate_data(app):
 
     if not os.path.exists(SQLITE_DB):
         print(f"❌ FEHLER: SQLite-Datenbank '{SQLITE_DB}' nicht gefunden!")
-        print(f"   Aktuelles Verzeichnis: {os.getcwd()}")
         return False
 
     with app.app_context():
@@ -87,9 +136,6 @@ def migrate_data(app):
             'planungs_templates'
         ]
 
-        total_rows = 0
-        migrated_tables = 0
-
         for table in tables:
             try:
                 # Prüfe ob Tabelle in SQLite existiert
@@ -98,6 +144,7 @@ def migrate_data(app):
                 )
                 if not sqlite_cursor.fetchone():
                     print(f"   ⊘ {table}: Existiert nicht in SQLite")
+                    stats['skipped_tables'].append(table)
                     continue
 
                 # Hole alle Daten aus SQLite
@@ -106,6 +153,7 @@ def migrate_data(app):
 
                 if not rows:
                     print(f"   ○ {table}: 0 Zeilen (leer)")
+                    stats['migrated_tables'][table] = 0
                     continue
 
                 # Spalten-Namen
@@ -134,18 +182,15 @@ def migrate_data(app):
                         db.session.commit()
 
                 print(f"   ✓ {table}: {len(rows)} Zeilen migriert")
-                total_rows += len(rows)
-                migrated_tables += 1
+                stats['migrated_tables'][table] = len(rows)
 
             except Exception as e:
-                print(f"   ✗ {table}: FEHLER - {str(e)}")
+                error_msg = str(e)[:100]
+                print(f"   ✗ {table}: FEHLER - {error_msg}")
+                stats['failed_tables'][table] = error_msg
                 db.session.rollback()
 
         sqlite_conn.close()
-
-        print(f"\n✅ Migration abgeschlossen:")
-        print(f"   - {migrated_tables} Tabellen migriert")
-        print(f"   - {total_rows} Zeilen insgesamt")
 
     return True
 
@@ -159,6 +204,7 @@ def reset_passwords(app):
 
         if not users:
             print("⚠️  WARNUNG: Keine Benutzer gefunden!")
+            stats['password_stats'] = {'error': 'Keine Benutzer gefunden'}
             return False
 
         dekan_count = 0
@@ -178,7 +224,12 @@ def reset_passwords(app):
         print(f"\n✅ Passwörter gesetzt:")
         print(f"   - {dekan_count} Dekan(e) → {DEKAN_PASSWORD}")
         print(f"   - {other_count} andere Benutzer → {DEFAULT_PASSWORD}")
-        print(f"   - {len(users)} Benutzer insgesamt")
+
+        stats['password_stats'] = {
+            'dekan': dekan_count,
+            'others': other_count,
+            'total': len(users)
+        }
 
     return True
 
@@ -189,29 +240,136 @@ def verify_data(app):
 
     with app.app_context():
         tables_to_check = [
-            ('rolle', 'Rollen'),
-            ('semester', 'Semester'),
-            ('dozent', 'Dozenten'),
-            ('benutzer', 'Benutzer'),
-            ('modul', 'Module'),
-            ('auftrag', 'Aufträge'),
-            ('semesterplanung', 'Semesterplanungen')
+            'rolle',
+            'semester',
+            'dozent',
+            'benutzer',
+            'modul',
+            'auftrag',
+            'semesterplanung',
+            'semester_auftrag',
+            'planungsphasen',
+            'phase_submissions',
+            'deputatsabrechnung',
+            'deputats_einstellungen',
+            'benachrichtigung',
+            'audit_log',
+            'modul_audit_log'
         ]
 
-        print("Datenbank-Inhalt:\n")
+        print("PostgreSQL Datenbank-Inhalt:\n")
 
-        for table, label in tables_to_check:
+        for table in tables_to_check:
             try:
                 result = db.session.execute(
                     text(f"SELECT COUNT(*) FROM {table}")
                 ).scalar()
 
+                stats['final_counts'][table] = result
                 status = "✓" if result > 0 else "○"
-                print(f"   {status} {label:20} {result:5} Einträge")
+                print(f"   {status} {table:30} {result:6} Einträge")
             except Exception as e:
-                print(f"   ✗ {label:20} FEHLER: {e}")
+                print(f"   ✗ {table:30} FEHLER")
+                stats['final_counts'][table] = 0
 
     return True
+
+
+def print_final_summary():
+    """Gibt detaillierte End-Statistik aus"""
+    print("\n" + "╔" + "═" * 78 + "╗")
+    print("║" + " " * 24 + "MIGRATIONS-STATISTIK" + " " * 34 + "║")
+    print("╚" + "═" * 78 + "╝\n")
+
+    # SQLite Analyse
+    print("═" * 80)
+    print("1. SQLite-Datenbank (Quelle)")
+    print("═" * 80)
+    total_sqlite = sum(stats['sqlite_tables'].values())
+    print(f"   Tabellen mit Daten: {len([t for t, c in stats['sqlite_tables'].items() if c > 0])}")
+    print(f"   Gesamt-Zeilen:      {total_sqlite}")
+
+    if stats['sqlite_tables']:
+        print("\n   Top 5 größte Tabellen:")
+        sorted_tables = sorted(stats['sqlite_tables'].items(), key=lambda x: x[1], reverse=True)[:5]
+        for table, count in sorted_tables:
+            print(f"      • {table:25} {count:6} Zeilen")
+
+    # PostgreSQL Tabellen
+    print("\n" + "═" * 80)
+    print("2. PostgreSQL-Tabellen erstellt")
+    print("═" * 80)
+    print(f"   Anzahl: {len(stats['created_tables'])} Tabellen")
+
+    # Migration Erfolg
+    print("\n" + "═" * 80)
+    print("3. Daten-Migration")
+    print("═" * 80)
+    total_migrated = sum(stats['migrated_tables'].values())
+    print(f"   ✓ Erfolgreich migriert: {len(stats['migrated_tables'])} Tabellen ({total_migrated} Zeilen)")
+
+    if stats['migrated_tables']:
+        print("\n   Details:")
+        for table, count in sorted(stats['migrated_tables'].items()):
+            print(f"      • {table:25} {count:6} Zeilen")
+
+    if stats['skipped_tables']:
+        print(f"\n   ⊘ Übersprungen: {len(stats['skipped_tables'])} Tabellen")
+        for table in stats['skipped_tables']:
+            print(f"      • {table}")
+
+    if stats['failed_tables']:
+        print(f"\n   ✗ FEHLER: {len(stats['failed_tables'])} Tabellen")
+        for table, error in stats['failed_tables'].items():
+            print(f"      • {table}: {error[:60]}...")
+
+    # Passwörter
+    print("\n" + "═" * 80)
+    print("4. Passwort-Reset")
+    print("═" * 80)
+    if 'error' in stats['password_stats']:
+        print(f"   ✗ FEHLER: {stats['password_stats']['error']}")
+    else:
+        print(f"   ✓ Dekan-Accounts:  {stats['password_stats'].get('dekan', 0)} → Passwort: {DEKAN_PASSWORD}")
+        print(f"   ✓ Andere Benutzer: {stats['password_stats'].get('others', 0)} → Passwort: {DEFAULT_PASSWORD}")
+        print(f"   ✓ Gesamt:          {stats['password_stats'].get('total', 0)} Benutzer")
+
+    # Finale Datenbank
+    print("\n" + "═" * 80)
+    print("5. PostgreSQL Datenbank-Inhalt (Final)")
+    print("═" * 80)
+    total_final = sum(stats['final_counts'].values())
+    tables_with_data = len([c for c in stats['final_counts'].values() if c > 0])
+    print(f"   Tabellen mit Daten: {tables_with_data}")
+    print(f"   Gesamt-Einträge:    {total_final}")
+
+    print("\n   Wichtigste Tabellen:")
+    important = ['benutzer', 'dozent', 'modul', 'semester', 'semesterplanung', 'rolle']
+    for table in important:
+        if table in stats['final_counts']:
+            count = stats['final_counts'][table]
+            status = "✓" if count > 0 else "✗"
+            print(f"      {status} {table:20} {count:6} Einträge")
+
+    # Zusammenfassung
+    print("\n" + "═" * 80)
+    print("ZUSAMMENFASSUNG")
+    print("═" * 80)
+    print(f"   Dauer:              {stats['duration']:.2f} Sekunden")
+    print(f"   SQLite → PostgreSQL: {total_sqlite} → {total_final} Zeilen")
+
+    if total_final == 0:
+        print("\n   ❌ KRITISCH: PostgreSQL-Datenbank ist leer!")
+        print("   Mögliche Ursachen:")
+        print("      • SQLite-Datenbank enthält keine Daten")
+        print("      • Tabellennamen stimmen nicht überein")
+        print("      • Migration wurde abgebrochen")
+    elif total_final < total_sqlite * 0.8:
+        print(f"\n   ⚠️  WARNUNG: Nur {(total_final/total_sqlite*100):.1f}% der Daten migriert!")
+    else:
+        print("\n   ✅ Migration erfolgreich!")
+
+    print("\n" + "═" * 80 + "\n")
 
 
 def main():
@@ -228,36 +386,44 @@ def main():
     app = create_app()
     print("[OK] Flask-Anwendung initialisiert\n")
 
+    # Analyse SQLite
+    if not analyze_sqlite(app):
+        print("\n❌ FEHLER bei SQLite-Analyse!")
+        sys.exit(1)
+
     # Schritt 1: Tabellen erstellen
     if not create_tables(app):
         print("\n❌ FEHLER beim Erstellen der Tabellen!")
         sys.exit(1)
 
     # Schritt 2: Daten migrieren
-    if not migrate_data(app):
-        print("\n❌ FEHLER bei der Daten-Migration!")
-        sys.exit(1)
+    migrate_data(app)
 
     # Schritt 3: Passwörter setzen
-    if not reset_passwords(app):
-        print("\n❌ FEHLER beim Setzen der Passwörter!")
-        sys.exit(1)
+    reset_passwords(app)
 
     # Schritt 4: Daten prüfen
     verify_data(app)
 
-    # Zusammenfassung
+    # Dauer berechnen
     end_time = datetime.now()
-    duration = (end_time - start_time).total_seconds()
+    stats['duration'] = (end_time - start_time).total_seconds()
 
-    print_header("✅ MIGRATION ERFOLGREICH ABGESCHLOSSEN!")
+    # FINALE STATISTIK
+    print_final_summary()
 
-    print(f"Dauer: {duration:.2f} Sekunden\n")
-    print("Nächste Schritte:")
-    print("   1. Backend neu starten: sudo systemctl restart dekanet")
-    print("   2. Login testen: http://193.175.86.198/")
-    print(f"   3. Anmelden mit: dekan@hochschule.de / {DEKAN_PASSWORD}")
-    print("\n" + "=" * 80 + "\n")
+    # Nächste Schritte
+    print("NÄCHSTE SCHRITTE:")
+    print("═" * 80)
+    print("   1. Backend neu starten:")
+    print("      $ sudo systemctl restart dekanet")
+    print()
+    print("   2. Login testen:")
+    print("      Browser: http://193.175.86.198/")
+    print(f"      Email:    dekan@hochschule.de")
+    print(f"      Passwort: {DEKAN_PASSWORD}")
+    print()
+    print("═" * 80 + "\n")
 
 
 if __name__ == '__main__':
