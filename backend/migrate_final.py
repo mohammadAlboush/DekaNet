@@ -52,6 +52,44 @@ def convert_value(col_name, value):
     return value
 
 
+def fix_studiengang_constraints():
+    """Behebt studiengang UNIQUE Constraint Problem"""
+    try:
+        print("Behebe studiengang UNIQUE Constraint...")
+
+        # Entferne alten UNIQUE Constraint auf 'kuerzel'
+        result = db.session.execute(text("""
+            SELECT constraint_name
+            FROM information_schema.table_constraints
+            WHERE table_name = 'studiengang'
+            AND constraint_type = 'UNIQUE'
+            AND constraint_name LIKE '%kuerzel%'
+            AND constraint_name NOT LIKE '%abschluss%'
+        """))
+
+        constraint_names = [row[0] for row in result]
+
+        for constraint_name in constraint_names:
+            db.session.execute(text(f"ALTER TABLE studiengang DROP CONSTRAINT {constraint_name}"))
+            print(f"   [OK] Constraint '{constraint_name}' entfernt")
+
+        # Füge neuen Composite UNIQUE Constraint hinzu
+        try:
+            db.session.execute(text(
+                "ALTER TABLE studiengang ADD CONSTRAINT studiengang_kuerzel_abschluss_unique "
+                "UNIQUE (kuerzel, abschluss)"
+            ))
+            print(f"   [OK] Neuer Constraint 'studiengang_kuerzel_abschluss_unique' hinzugefügt")
+        except:
+            pass  # Constraint existiert bereits
+
+        db.session.commit()
+
+    except Exception as e:
+        print(f"   [INFO] {e}")
+        db.session.rollback()
+
+
 def fix_varchar_lengths(table_name):
     """Erweitert zu kurze VARCHAR-Felder"""
     try:
@@ -195,6 +233,9 @@ def main():
         print("Erstelle Tabellen...")
         db.create_all()
         print("[OK] Tabellen erstellt")
+
+        # Behebe studiengang UNIQUE Constraint
+        fix_studiengang_constraints()
 
     # Migration
     print_header("SCHRITT 3: Multi-Pass Migration")
