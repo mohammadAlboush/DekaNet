@@ -47,6 +47,10 @@ import {
 import { useNavigate } from 'react-router-dom';
 import deputatService from '../services/deputatService';
 import planungPhaseService from '../services/planungPhaseService';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('DeputatVerwaltung');
+
 import {
   Deputatsabrechnung,
   DeputatsEinstellungen,
@@ -122,7 +126,7 @@ const DeputatVerwaltung: React.FC = () => {
           setSelectedPhaseId(aktive?.id || phasen[0].id);
         }
       } catch (error) {
-        console.error('Error loading planungsphasen:', error);
+        log.error('Error loading planungsphasen:', error);
       }
     };
     loadPlanungsphasen();
@@ -155,7 +159,7 @@ const DeputatVerwaltung: React.FC = () => {
       setStatistik(statistikData);
       setEinstellungen(einstellungenData);
     } catch (error) {
-      console.error('Error loading data:', error);
+      log.error('Error loading data:', error);
       showToast('Fehler beim Laden der Daten', 'error');
     } finally {
       setLoading(false);

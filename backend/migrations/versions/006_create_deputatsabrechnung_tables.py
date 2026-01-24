@@ -20,7 +20,7 @@ from datetime import datetime
 
 # revision identifiers, used by Alembic.
 revision = '006_deputatsabrechnung'
-down_revision = '005_kapazitaet_columns'
+down_revision = '005_kapazitaet'
 branch_labels = None
 depends_on = None
 

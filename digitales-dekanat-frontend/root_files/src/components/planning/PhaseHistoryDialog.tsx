@@ -54,6 +54,9 @@ import { de } from 'date-fns/locale';
 import usePlanungPhaseStore from '../../store/planungPhaseStore';
 import useAuthStore from '../../store/authStore';
 import { PhaseHistoryEntry } from '../../types/planungPhase.types';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('PhaseHistoryDialog');
 
 interface PhaseHistoryDialogProps {
   open: boolean;
@@ -89,7 +92,7 @@ const PhaseHistoryDialog: React.FC<PhaseHistoryDialogProps> = ({ open, onClose }
     try {
       await generatePhaseReport(phaseId);
     } catch (error) {
-      console.error('Fehler beim Generieren des Berichts:', error);
+      log.error('Fehler beim Generieren des Berichts:', error);
     }
   };
 

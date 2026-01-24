@@ -1,18 +1,23 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import authService from '../services/authService';
+import { setCsrfToken } from '../services/api';
 import { User, LoginCredentials } from '../types/auth.types';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('AuthStore');
 
 /**
- * Authentication Store - PRODUCTION READY
- * ========================================
+ * Authentication Store - SECURE COOKIE-BASED AUTH
+ * ================================================
  * Global state management für Authentication mit Zustand
- * 
- * FEATURES:
- * - Optimiertes checkAuth() - weniger API-Calls
- * - Besseres Error-Handling
- * - Comprehensive Logging
- * - Persistent Storage
+ *
+ * VERSION: 2.0 - Sichere httpOnly Cookie-basierte Authentifizierung
+ *
+ * SECURITY FEATURES:
+ * ✅ Tokens werden als httpOnly Cookies gespeichert (XSS-sicher)
+ * ✅ Nur User-Daten werden in Store/localStorage gespeichert
+ * ✅ CSRF-Protection durch Double Submit Cookie Pattern
  */
 
 interface AuthState {
@@ -42,28 +47,29 @@ const useAuthStore = create<AuthState>()(
         error: null,
 
         // Login Action
+        // ✅ SECURITY: Tokens werden als httpOnly Cookies gespeichert
         login: async (credentials: LoginCredentials) => {
-          console.log('[AuthStore] 🔐 Starting login...');
+          log.debug('Starting login...');
           set({ isLoading: true, error: null });
-          
+
           try {
             const response = await authService.login(credentials);
-            
+
             if (response.success && response.data) {
-              console.log('[AuthStore] ✓ Login successful');
+              log.info('Login successful');
               set({
                 user: response.data.user,
                 isAuthenticated: true,
                 isLoading: false,
                 error: null,
               });
-              
-              // Verify token was stored
-              const storedToken = localStorage.getItem('accessToken');
-              console.log('[AuthStore] Token stored:', !!storedToken);
-              
+
+              // ✅ SECURITY: Tokens sind in httpOnly Cookies
+              // Nur User ist in localStorage gespeichert
+              log.debug('User stored in localStorage, tokens in httpOnly cookies');
+
             } else {
-              console.error('[AuthStore] ✗ Login failed:', response.message);
+              log.error('Login failed', response.message);
               set({
                 user: null,
                 isAuthenticated: false,
@@ -71,31 +77,33 @@ const useAuthStore = create<AuthState>()(
                 error: response.message || 'Login fehlgeschlagen',
               });
             }
-          } catch (error: any) {
-            console.error('[AuthStore] ✗ Login error:', error);
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten';
+            log.error('Login error', error);
             set({
               user: null,
               isAuthenticated: false,
               isLoading: false,
-              error: error.message || 'Ein Fehler ist aufgetreten',
+              error: errorMessage,
             });
             throw error;
           }
         },
 
         // Logout Action
+        // ✅ SECURITY: Cookies werden vom Backend gelöscht
         logout: async () => {
-          console.log('[AuthStore] 🚪 Logging out...');
+          log.debug('Logging out...');
           set({ isLoading: true });
 
           try {
             await authService.logout();
-            console.log('[AuthStore] ✓ Logout successful');
+            log.info('Logout successful');
           } catch (error) {
-            console.error('[AuthStore] ⚠ Logout error (continuing anyway):', error);
+            log.warn('Logout error (continuing anyway)', error);
           } finally {
-            // ✅ Lösche user-spezifische LocalStorage Daten
-            // Suche und lösche alle planung_wizard_backup Keys
+            // Lösche user-spezifische LocalStorage Daten
+            // ✅ SECURITY: Keine Token-Löschung nötig (httpOnly Cookies)
             try {
               const keysToRemove: string[] = [];
               for (let i = 0; i < localStorage.length; i++) {
@@ -106,11 +114,15 @@ const useAuthStore = create<AuthState>()(
               }
               keysToRemove.forEach(key => {
                 localStorage.removeItem(key);
-                console.log(`[AuthStore] 🗑️ Cleared planning data: ${key}`);
+                log.debug(`Cleared planning data: ${key}`);
               });
             } catch (cleanupError) {
-              console.error('[AuthStore] ⚠ Error cleaning up planning data:', cleanupError);
+              log.warn('Error cleaning up planning data', cleanupError);
             }
+
+            // User-Daten löschen (Tokens sind in Cookies, werden vom Backend gelöscht)
+            localStorage.removeItem('user');
+            setCsrfToken(null);
 
             set({
               user: null,
@@ -121,16 +133,16 @@ const useAuthStore = create<AuthState>()(
           }
         },
 
-        // Check Authentication Status - OPTIMIERT & ROBUST!
+        // Check Authentication Status - SECURE COOKIE-BASED
+        // ✅ SECURITY: Tokens sind in httpOnly Cookies
         checkAuth: async () => {
-          console.log('[AuthStore] 🔍 Checking authentication...');
-          
-          const token = localStorage.getItem('accessToken');
+          log.debug('Checking authentication...');
+
           const storedUser = authService.getCurrentUser();
-          
-          // Keine Tokens = nicht authentifiziert
-          if (!token || !storedUser) {
-            console.log('[AuthStore] ⊘ No token or user in localStorage');
+
+          // Kein User = nicht authentifiziert
+          if (!storedUser) {
+            log.debug('No user in localStorage');
             set({
               user: null,
               isAuthenticated: false,
@@ -139,9 +151,8 @@ const useAuthStore = create<AuthState>()(
             return;
           }
 
-          console.log('[AuthStore] ✓ Token and user found in localStorage');
-          console.log('[AuthStore] User:', storedUser.username, '|', storedUser.rolle);
-          
+          log.debug(`User found: ${storedUser.username} | ${storedUser.rolle}`);
+
           // OPTIMIERUNG: Setze User sofort aus localStorage
           // So ist die UI instant ready, während wir im Hintergrund verifizieren
           set({
@@ -151,40 +162,42 @@ const useAuthStore = create<AuthState>()(
           });
 
           // Verifiziere Token im Hintergrund (non-blocking)
-          // Dies ist optional - der API Interceptor handled Token Refresh automatisch
+          // ✅ SECURITY: Cookie wird automatisch mitgesendet
           try {
-            console.log('[AuthStore] 🔍 Verifying token in background...');
+            log.debug('Verifying token in background...');
             const isValid = await authService.verifyToken();
-            
+
             if (!isValid) {
-              console.warn('[AuthStore] ⚠ Token verification failed');
-              
+              log.warn('Token verification failed');
+
               // Token ungültig - versuche Refresh
-              console.log('[AuthStore] 🔄 Attempting token refresh...');
-              const newToken = await authService.refreshToken();
-              
-              if (newToken) {
-                console.log('[AuthStore] ✓ Token refreshed successfully');
+              log.debug('Attempting token refresh...');
+              const success = await authService.refreshToken();
+
+              if (success) {
+                log.info('Token refreshed successfully');
                 // Token wurde erneuert, State bleibt authenticated
               } else {
-                console.error('[AuthStore] ✗ Token refresh failed - logging out');
+                log.error('Token refresh failed - logging out');
                 // Refresh fehlgeschlagen - logout
-                localStorage.clear();
-                
+                // ✅ SECURITY: Nur User-Daten löschen, keine Tokens
+                localStorage.removeItem('user');
+                setCsrfToken(null);
+
                 set({
                   user: null,
                   isAuthenticated: false,
                   isLoading: false,
                 });
-                
+
                 // Redirect to login
                 window.location.href = '/login';
               }
             } else {
-              console.log('[AuthStore] ✓ Token is valid');
+              log.debug('Token is valid');
             }
           } catch (error) {
-            console.error('[AuthStore] ⚠ Token verification error:', error);
+            log.warn('Token verification error', error);
             // Bei Fehler bleiben wir authenticated (optimistic)
             // Der API Interceptor wird bei 401 automatisch handlen
           }
@@ -192,22 +205,22 @@ const useAuthStore = create<AuthState>()(
 
         // Update User
         updateUser: (userData: Partial<User>) => {
-          console.log('[AuthStore] 📝 Updating user data...');
+          log.debug('Updating user data...');
           const currentUser = get().user;
-          
+
           if (currentUser) {
             const updatedUser = { ...currentUser, ...userData };
             set({ user: updatedUser });
             localStorage.setItem('user', JSON.stringify(updatedUser));
-            console.log('[AuthStore] ✓ User data updated');
+            log.debug('User data updated');
           } else {
-            console.warn('[AuthStore] ⚠ Cannot update user - no user logged in');
+            log.warn('Cannot update user - no user logged in');
           }
         },
 
         // Clear Error
         clearError: () => {
-          console.log('[AuthStore] 🧹 Clearing error');
+          log.debug('Clearing error');
           set({ error: null });
         },
 

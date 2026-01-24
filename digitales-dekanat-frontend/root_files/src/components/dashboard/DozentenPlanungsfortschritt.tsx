@@ -39,6 +39,9 @@ import {
   DozentPlanungsfortschritt,
   DozentenPlanungsfortschrittResponse,
 } from '../../services/dashboardService';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('DozentenPlanungsfortschritt');
 
 interface DozentenPlanungsfortschrittProps {
   semesterId?: number;
@@ -78,7 +81,7 @@ const DozentenPlanungsfortschritt: React.FC<DozentenPlanungsfortschrittProps> = 
         setError(response.message || 'Fehler beim Laden der Daten');
       }
     } catch (err: any) {
-      console.error('Error loading Dozenten Planungsfortschritt:', err);
+      log.error('Error loading Dozenten Planungsfortschritt:', err);
       setError(err.response?.data?.message || 'Fehler beim Laden der Daten');
     } finally {
       setLoading(false);

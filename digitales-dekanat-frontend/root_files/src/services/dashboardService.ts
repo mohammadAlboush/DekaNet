@@ -2,13 +2,99 @@
  * Dashboard Service
  *
  * Handles fetching dashboard statistics including phase-based statistics
+ * ✅ SECURITY FIX: `any` Types durch konkrete Typen ersetzt (2026-01-24)
  */
 
 import api, { ApiResponse } from './api';
+import { Semester } from '../types/semester.types';
+import { PlanungPhase } from '../types/planungPhase.types';
 
 // ============================================================================
 // Types
 // ============================================================================
+
+// ✅ TYPESAFE: Konkrete Typen für Dashboard-Daten
+export interface DashboardStatistik {
+  semester?: {
+    aktiv: Semester | null;
+    planungsphase: Semester | null;
+  };
+  planungen?: {
+    gesamt: number;
+    entwurf: number;
+    eingereicht: number;
+    freigegeben: number;
+    abgelehnt: number;
+  };
+  dozenten?: {
+    gesamt: number;
+    aktiv: number;
+  };
+  module?: {
+    gesamt: number;
+    aktiv: number;
+  };
+}
+
+export interface DozentDashboardData {
+  planungen: {
+    gesamt: number;
+    entwurf: number;
+    eingereicht: number;
+    freigegeben: number;
+    liste: unknown[];  // Simplified planung objects
+  };
+  aktuelle_planung: {
+    id: number;
+    semester_id: number;
+    status: string;
+    anzahl_module: number;
+  } | null;
+  module?: {
+    gesamt: number;
+    liste: unknown[];
+  };
+}
+
+export interface DekanDashboardData {
+  planungen: {
+    gesamt: number;
+    offen: number;
+    freigegeben: number;
+    abgelehnt: number;
+    eingereicht: number;
+    offene_liste?: unknown[];
+  };
+  semester?: {
+    aktiv: Semester | null;
+    planungsphase: PlanungPhase | null;
+  };
+  dozenten?: {
+    gesamt: number;
+    mit_planung: number;
+    ohne_planung: number;
+  };
+}
+
+export interface Notification {
+  id: number;
+  typ: 'info' | 'warnung' | 'erfolg' | 'fehler';
+  titel: string;
+  nachricht: string;
+  gelesen: boolean;
+  erstellt_am: string;
+  link?: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  ungelesen: number;
+}
+
+export interface MarkGelesenResponse {
+  erfolg: boolean;
+}
 
 export interface PhasenStatistikGesamt {
   anzahl_phasen: number;
@@ -59,7 +145,7 @@ export interface PhasenStatistikResponse {
 /**
  * Holt allgemeine Dashboard-Statistiken
  */
-export const getStatistik = async (): Promise<ApiResponse<any>> => {
+export const getStatistik = async (): Promise<ApiResponse<DashboardStatistik>> => {
   const response = await api.get('/dashboard/statistik');
   return response.data;
 };
@@ -74,7 +160,7 @@ export const getPhasenStatistik = async (
   semester_id?: number,
   limit?: number
 ): Promise<ApiResponse<PhasenStatistikResponse>> => {
-  const params: Record<string, any> = {};
+  const params: Record<string, string | number | boolean> = {};
 
   if (semester_id !== undefined) {
     params.semester_id = semester_id;
@@ -91,7 +177,7 @@ export const getPhasenStatistik = async (
 /**
  * Holt Dekan-Dashboard-Daten
  */
-export const getDekanDashboard = async (): Promise<ApiResponse<any>> => {
+export const getDekanDashboard = async (): Promise<ApiResponse<DekanDashboardData>> => {
   const response = await api.get('/dashboard/dekan');
   return response.data;
 };
@@ -99,7 +185,7 @@ export const getDekanDashboard = async (): Promise<ApiResponse<any>> => {
 /**
  * Holt Dozenten-Dashboard-Daten
  */
-export const getDozentDashboard = async (): Promise<ApiResponse<any>> => {
+export const getDozentDashboard = async (): Promise<ApiResponse<DozentDashboardData>> => {
   const response = await api.get('/dashboard/dozent');
   return response.data;
 };
@@ -113,8 +199,8 @@ export const getDozentDashboard = async (): Promise<ApiResponse<any>> => {
 export const getNotifications = async (
   ungelesen?: boolean,
   limit?: number
-): Promise<ApiResponse<any>> => {
-  const params: Record<string, any> = {};
+): Promise<ApiResponse<NotificationsResponse>> => {
+  const params: Record<string, string | number | boolean> = {};
 
   if (ungelesen !== undefined) {
     params.ungelesen = ungelesen;
@@ -135,7 +221,7 @@ export const getNotifications = async (
  */
 export const markiereGelesen = async (
   notificationId: number
-): Promise<ApiResponse<any>> => {
+): Promise<ApiResponse<MarkGelesenResponse>> => {
   const response = await api.post(`/dashboard/notifications/${notificationId}/gelesen`);
   return response.data;
 };
@@ -143,7 +229,7 @@ export const markiereGelesen = async (
 /**
  * Markiert alle Benachrichtigungen als gelesen
  */
-export const markiereAlleGelesen = async (): Promise<ApiResponse<any>> => {
+export const markiereAlleGelesen = async (): Promise<ApiResponse<MarkGelesenResponse>> => {
   const response = await api.post('/dashboard/notifications/alle-gelesen');
   return response.data;
 };
@@ -191,8 +277,8 @@ export interface NichtZugeordneteModuleStatistik {
 }
 
 export interface NichtZugeordneteModuleResponse {
-  semester: any;
-  planungsphase: any | null;
+  semester: Semester;                    // ✅ TYPESAFE: Konkreter Typ statt any
+  planungsphase: PlanungPhase | null;    // ✅ TYPESAFE: Konkreter Typ statt any
   planungsphase_aktiv: boolean;
   relevante_turnus: string[] | null;
   nicht_zugeordnete_module: NichtZugeordnetesModul[];
@@ -209,7 +295,7 @@ export const getNichtZugeordneteModule = async (
   semester_id?: number,
   po_id?: number
 ): Promise<ApiResponse<NichtZugeordneteModuleResponse>> => {
-  const params: Record<string, any> = {};
+  const params: Record<string, string | number | boolean> = {};
 
   if (semester_id !== undefined) {
     params.semester_id = semester_id;
@@ -244,7 +330,7 @@ export interface DozentPlanungsfortschritt {
 }
 
 export interface DozentenPlanungsfortschrittResponse {
-  semester: any;
+  semester: Semester;                    // ✅ TYPESAFE: Konkreter Typ statt any
   planungsphase_aktiv: boolean;
   dozenten: DozentPlanungsfortschritt[];
   statistik: {
@@ -264,7 +350,7 @@ export interface DozentenPlanungsfortschrittResponse {
 export const getDozentenPlanungsfortschritt = async (
   semester_id?: number
 ): Promise<ApiResponse<DozentenPlanungsfortschrittResponse>> => {
-  const params: Record<string, any> = {};
+  const params: Record<string, string | number | boolean> = {};
 
   if (semester_id !== undefined) {
     params.semester_id = semester_id;

@@ -44,6 +44,9 @@ import {
 import dashboardService, {
   PhasenStatistikResponse,
 } from '../../services/dashboardService';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('PhasenStatistiken');
 
 interface PhasenStatistikenProps {
   semesterId?: number;
@@ -80,7 +83,7 @@ const PhasenStatistiken: React.FC<PhasenStatistikenProps> = ({
       }
     } catch (err: any) {
       // ✅ VERBESSERT: Detaillierte Fehlerinformationen
-      console.error('Fehler beim Laden der Phasen-Statistiken:', err);
+      log.error('Fehler beim Laden der Phasen-Statistiken:', err);
 
       let errorMessage = 'Ein Fehler ist aufgetreten beim Laden der Statistiken';
 

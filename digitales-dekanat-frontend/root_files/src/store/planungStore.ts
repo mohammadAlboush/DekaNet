@@ -4,17 +4,35 @@ import { Semester } from '../types/semester.types';
 import { Modul } from '../types/modul.types';
 import { GeplantesModul, WunschFreierTag } from '../types/planung.types';
 import useAuthStore from './authStore';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('PlanungStore');
+
+// ============================================================================
+// DEBOUNCED SAVE - Verhindert zu viele localStorage-Schreibvorgänge
+// ============================================================================
+let saveTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+const debouncedSave = (saveFunc: () => void, delay: number = 300) => {
+  if (saveTimeoutId) {
+    clearTimeout(saveTimeoutId);
+  }
+  saveTimeoutId = setTimeout(() => {
+    saveFunc();
+    saveTimeoutId = null;
+  }, delay);
+};
 
 /**
  * Planung Store - State Management für Wizard mit LocalStorage Backup
  * ====================================================================
- * 
+ *
  * FEATURES:
  * - Auto-Save zu LocalStorage bei jedem Update
  * - Kein Datenverlust bei Browser-Crash
  * - Restore bei Wizard-Neustart
  * - Optimistic UI Updates
- * 
+ *
  * OPTION C: Auto-Save + LocalStorage Backup
  */
 
@@ -99,7 +117,7 @@ interface PlanungState extends WizardData {
 const getLocalStorageKey = (): string => {
   const user = useAuthStore.getState().user;
   if (!user || !user.id) {
-    console.warn('[PlanungStore] ⚠ No user logged in, using fallback key');
+    log.warn(' ⚠ No user logged in, using fallback key');
     return 'planung_wizard_backup_anonymous';
   }
   return `planung_wizard_backup_user_${user.id}`;
@@ -132,132 +150,149 @@ const usePlanungStore = create<PlanungState>()(
       // =====================================================================
 
       setWizardData: (data) => {
-        console.log('[PlanungStore] 💾 Updating wizard data:', Object.keys(data));
+        log.debug(' 💾 Updating wizard data:', Object.keys(data));
         set((state) => {
-          const newState = { ...state, ...data, isDirty: true };
+          // Handle mitarbeiterZuordnung: Convert object to Map if needed
+          let processedData = { ...data };
+          if (data.mitarbeiterZuordnung !== undefined && !(data.mitarbeiterZuordnung instanceof Map)) {
+            // Convert plain object or array to Map
+            if (Array.isArray(data.mitarbeiterZuordnung)) {
+              // Array format from JSON serialization: [[key, value], ...]
+              processedData.mitarbeiterZuordnung = new Map(data.mitarbeiterZuordnung);
+              log.debug(' 🔄 Converted mitarbeiterZuordnung from Array to Map');
+            } else if (typeof data.mitarbeiterZuordnung === 'object' && data.mitarbeiterZuordnung !== null) {
+              // Plain object format: { "1": [2,3], "4": [5] }
+              processedData.mitarbeiterZuordnung = new Map(
+                Object.entries(data.mitarbeiterZuordnung).map(([k, v]) => [Number(k), v as number[]])
+              );
+              log.debug(' 🔄 Converted mitarbeiterZuordnung from Object to Map');
+            }
+          }
+
+          const newState = { ...state, ...processedData, isDirty: true };
           // Auto-Save to LocalStorage
-          setTimeout(() => get().saveToLocalStorage(), 100);
+          debouncedSave(() => get().saveToLocalStorage());
           return newState;
         });
       },
 
       // Step 1: Semester
       setSemester: (semester) => {
-        console.log('[PlanungStore] 📅 Setting semester:', semester.bezeichnung);
+        log.debug(' 📅 Setting semester:', semester.bezeichnung);
         set({ 
           semester, 
           semesterId: semester.id,
           isDirty: true 
         });
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       // Step 2: Module Selection
       setSelectedModules: (modules) => {
-        console.log('[PlanungStore] 📚 Setting selected modules:', modules.length);
+        log.debug(' 📚 Setting selected modules:', modules.length);
         set({ selectedModules: modules, isDirty: true });
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       addSelectedModule: (module) => {
-        console.log('[PlanungStore] ➕ Adding module:', module.kuerzel);
+        log.debug(' ➕ Adding module:', module.kuerzel);
         set((state) => ({
           selectedModules: [...state.selectedModules, module],
           isDirty: true
         }));
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       removeSelectedModule: (moduleId) => {
-        console.log('[PlanungStore] ➖ Removing module:', moduleId);
+        log.debug(' ➖ Removing module:', moduleId);
         set((state) => ({
           selectedModules: state.selectedModules.filter((m) => m.id !== moduleId),
           isDirty: true
         }));
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       // Step 3: Geplante Module
       setGeplantModule: (modules) => {
-        console.log('[PlanungStore] 📋 Setting geplant module:', modules.length);
+        log.debug(' 📋 Setting geplant module:', modules.length);
         set({ geplantModule: modules, isDirty: true });
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       addGeplantesModul: (modul) => {
-        console.log('[PlanungStore] ➕ Adding geplantes modul:', modul.modul_id);
+        log.debug(' ➕ Adding geplantes modul:', modul.modul_id);
         set((state) => ({
           geplantModule: [...state.geplantModule, modul],
           isDirty: true
         }));
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       updateGeplantesModul: (modul) => {
-        console.log('[PlanungStore] ✏️ Updating geplantes modul:', modul.id);
+        log.debug(' ✏️ Updating geplantes modul:', modul.id);
         set((state) => ({
           geplantModule: state.geplantModule.map((m) =>
             m.id === modul.id ? modul : m
           ),
           isDirty: true
         }));
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       removeGeplantesModul: (modulId) => {
-        console.log('[PlanungStore] 🗑️ Removing geplantes modul:', modulId);
+        log.debug(' 🗑️ Removing geplantes modul:', modulId);
         set((state) => ({
           geplantModule: state.geplantModule.filter((m) => m.modul_id !== modulId),
           isDirty: true
         }));
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       // Step 4: Mitarbeiter
       setMitarbeiterZuordnung: (zuordnung) => {
-        console.log('[PlanungStore] 👥 Setting mitarbeiter zuordnung');
+        log.debug(' 👥 Setting mitarbeiter zuordnung');
         set({ mitarbeiterZuordnung: zuordnung, isDirty: true });
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       // Step 6: Zusatzinfos
       setAnmerkungen: (text) => {
         set({ anmerkungen: text, isDirty: true });
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       setRaumbedarf: (text) => {
         set({ raumbedarf: text, isDirty: true });
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       // Step 7: Wunsch-freie Tage
       addWunschTag: (tag) => {
-        console.log('[PlanungStore] 📆 Adding wunsch tag');
+        log.debug(' 📆 Adding wunsch tag');
         set((state) => ({
           wunschFreieTage: [...state.wunschFreieTage, tag],
           isDirty: true
         }));
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       removeWunschTag: (tagId) => {
-        console.log('[PlanungStore] 🗑️ Removing wunsch tag:', tagId);
+        log.debug(' 🗑️ Removing wunsch tag:', tagId);
         set((state) => ({
           wunschFreieTage: state.wunschFreieTage.filter((t) => t.id !== tagId),
           isDirty: true
         }));
-        setTimeout(() => get().saveToLocalStorage(), 100);
+        debouncedSave(() => get().saveToLocalStorage());
       },
 
       // Meta actions
       setPlanungId: (id) => {
-        console.log('[PlanungStore] 🆔 Setting planung ID:', id);
+        log.debug(' 🆔 Setting planung ID:', id);
         set({ planungId: id });
       },
 
       setCurrentStep: (step) => {
-        console.log('[PlanungStore] 📍 Setting current step:', step);
+        log.debug(' 📍 Setting current step:', step);
         set({ currentStep: step });
       },
 
@@ -274,7 +309,7 @@ const usePlanungStore = create<PlanungState>()(
       },
 
       setError: (error) => {
-        console.error('[PlanungStore] ❌ Error:', error);
+        log.error(' ❌ Error:', error);
         set({ error });
       },
 
@@ -293,7 +328,7 @@ const usePlanungStore = create<PlanungState>()(
 
           const user = useAuthStore.getState().user;
           if (!user || !user.id) {
-            console.warn('[PlanungStore] ⚠ Cannot save - no user logged in');
+            log.warn(' ⚠ Cannot save - no user logged in');
             return;
           }
 
@@ -320,9 +355,9 @@ const usePlanungStore = create<PlanungState>()(
             isDirty: false
           });
 
-          console.log(`[PlanungStore] 💾 Auto-saved to LocalStorage for user ${user.id}`);
+          log.debug(` 💾 Auto-saved to LocalStorage for user ${user.id}`);
         } catch (error) {
-          console.error('[PlanungStore] ❌ Error saving to LocalStorage:', error);
+          log.error(' ❌ Error saving to LocalStorage:', error);
         }
       },
 
@@ -330,7 +365,7 @@ const usePlanungStore = create<PlanungState>()(
         try {
           const user = useAuthStore.getState().user;
           if (!user || !user.id) {
-            console.warn('[PlanungStore] ⚠ Cannot load - no user logged in');
+            log.warn(' ⚠ Cannot load - no user logged in');
             return false;
           }
 
@@ -338,7 +373,7 @@ const usePlanungStore = create<PlanungState>()(
           const saved = localStorage.getItem(storageKey);
 
           if (!saved) {
-            console.log(`[PlanungStore] ℹ️ No saved data found for user ${user.id}`);
+            log.debug(` ℹ️ No saved data found for user ${user.id}`);
             return false;
           }
 
@@ -346,13 +381,13 @@ const usePlanungStore = create<PlanungState>()(
 
           // ✅ WICHTIG: Validiere, dass die Daten zum aktuellen User gehören
           if (data.userId && data.userId !== user.id) {
-            console.warn(`[PlanungStore] ⚠ Data belongs to different user (${data.userId}), clearing...`);
+            log.warn(` ⚠ Data belongs to different user (${data.userId}), clearing...`);
             localStorage.removeItem(storageKey);
             return false;
           }
 
-          console.log(`[PlanungStore] 📂 Loading from LocalStorage for user ${user.id}...`);
-          console.log('[PlanungStore] Saved at:', data.savedAt);
+          log.debug(` 📂 Loading from LocalStorage for user ${user.id}...`);
+          log.debug(' Saved at:', data.savedAt);
 
           set({
             semesterId: data.semesterId,
@@ -369,10 +404,10 @@ const usePlanungStore = create<PlanungState>()(
             isDirty: false,
           });
 
-          console.log('[PlanungStore] ✅ Data restored from LocalStorage');
+          log.debug(' ✅ Data restored from LocalStorage');
           return true;
         } catch (error) {
-          console.error('[PlanungStore] ❌ Error loading from LocalStorage:', error);
+          log.error(' ❌ Error loading from LocalStorage:', error);
           return false;
         }
       },
@@ -381,9 +416,9 @@ const usePlanungStore = create<PlanungState>()(
         try {
           const storageKey = getLocalStorageKey();
           localStorage.removeItem(storageKey);
-          console.log('[PlanungStore] 🗑️ LocalStorage cleared for current user');
+          log.debug(' 🗑️ LocalStorage cleared for current user');
         } catch (error) {
-          console.error('[PlanungStore] ❌ Error clearing LocalStorage:', error);
+          log.error(' ❌ Error clearing LocalStorage:', error);
         }
       },
 
@@ -403,7 +438,7 @@ const usePlanungStore = create<PlanungState>()(
       // =====================================================================
 
       resetWizard: () => {
-        console.log('[PlanungStore] 🔄 Resetting wizard');
+        log.debug(' 🔄 Resetting wizard');
         get().clearLocalStorage();
         set(initialState);
       },

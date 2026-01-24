@@ -11,9 +11,11 @@ Endpoints:
     GET /api/dashboard/notifications - Benachrichtigungen
 """
 
-from flask import Blueprint, request
-from datetime import datetime  # ✅ HINZUGEFÜGT: datetime import
-from app.extensions import db
+from flask import Blueprint, request, current_app
+from datetime import datetime
+from sqlalchemy.orm import joinedload
+from sqlalchemy import func
+from app.extensions import db, cache
 from app.api.base import (
     ApiResponse,
     login_required,
@@ -29,6 +31,7 @@ from app.services import (
     dozent_service,
     notification_service
 )
+from app.models.modul import Modul, ModulDozent
 
 # Blueprint
 dashboard_api = Blueprint('dashboard', __name__, url_prefix='/api/dashboard')
@@ -57,7 +60,7 @@ def get_dashboard():
             'user': {
                 'id': user.id,
                 'username': user.username,
-                'rolle': user.rolle.name,
+                'rolle': user.rolle.name if user.rolle else 'unknown',
                 'name_komplett': user.name_komplett
             },
             'semester': {
@@ -83,7 +86,7 @@ def get_dashboard():
         }
         
         # Rollen-spezifische Daten
-        if user.rolle.name == 'dekan':
+        if user.rolle and user.rolle.name == 'dekan':
             # Dekan Dashboard
             data['dekan'] = _get_dekan_dashboard_data()
         else:
@@ -153,7 +156,7 @@ def _get_dozent_dashboard_data(user):
         if aktuelle_planung:
             data['aktuelle_planung'] = {
                 **aktuelle_planung.to_dict(),
-                'anzahl_module': aktuelle_planung.geplante_module.count()
+                'anzahl_module': aktuelle_planung.anzahl_module
             }
         else:
             data['aktuelle_planung'] = None
@@ -240,6 +243,7 @@ def _get_dekan_dashboard_data():
 
 @dashboard_api.route('/statistik', methods=['GET'])
 @login_required
+@cache.cached(timeout=60, query_string=True)  # ✅ PERFORMANCE: 60s Cache für Statistiken
 def get_statistik():
     """
     GET /api/dashboard/statistik
@@ -277,6 +281,7 @@ def get_statistik():
 
 @dashboard_api.route('/statistik/phasen', methods=['GET'])
 @login_required
+@cache.cached(timeout=60, query_string=True)  # ✅ PERFORMANCE: 60s Cache
 def get_phasen_statistik():
     """
     GET /api/dashboard/statistik/phasen
@@ -636,8 +641,10 @@ def get_nicht_zugeordnete_module():
             ).first()
             planungsphase_aktiv = aktive_phase is not None
 
-        # Query: Alle Module des relevanten Turnus
-        modul_query = Modul.query
+        # Query: Alle Module des relevanten Turnus mit Eager Loading
+        modul_query = Modul.query.options(
+            joinedload(Modul.dozent_zuordnungen).joinedload(ModulDozent.dozent)
+        )
 
         if po_id:
             modul_query = modul_query.filter_by(po_id=po_id)
@@ -670,9 +677,59 @@ def get_nicht_zugeordnete_module():
         nicht_zugeordnete = []
         statistik_nach_turnus = {}
 
+        # ✅ PERFORMANCE FIX: Prefetch alle Planungen mit Benutzer-Daten VOR dem Loop
+        modul_planungen_map = {}  # modul_id -> [planungen_data]
+        if semester_id and aktive_phase:
+            from app.models.planung import Semesterplanung
+            from app.models.user import Benutzer
+
+            # Hole alle Planungen für alle Module in einem Query (mit Benutzer-Join)
+            alle_planungen = db.session.query(
+                GeplantesModul.modul_id,
+                Semesterplanung.id.label('planung_id'),
+                Semesterplanung.status,
+                Semesterplanung.eingereicht_am,
+                Semesterplanung.benutzer_id,
+                Benutzer.titel,
+                Benutzer.vorname,
+                Benutzer.nachname
+            ).join(
+                Semesterplanung,
+                GeplantesModul.semesterplanung_id == Semesterplanung.id
+            ).join(
+                Benutzer,
+                Semesterplanung.benutzer_id == Benutzer.id
+            ).filter(
+                Semesterplanung.planungsphase_id == aktive_phase.id
+            ).all()
+
+            # Gruppiere nach modul_id
+            for p in alle_planungen:
+                if p.modul_id not in modul_planungen_map:
+                    modul_planungen_map[p.modul_id] = []
+
+                # Name zusammenbauen
+                name_teile = []
+                if p.titel:
+                    name_teile.append(p.titel)
+                if p.vorname:
+                    name_teile.append(p.vorname)
+                if p.nachname:
+                    name_teile.append(p.nachname)
+                dozent_name = ' '.join(name_teile) if name_teile else 'Unbekannt'
+
+                modul_planungen_map[p.modul_id].append({
+                    'hat_planung': True,
+                    'planung_id': p.planung_id,
+                    'dozent_id': p.benutzer_id,
+                    'dozent_name': dozent_name,
+                    'status': p.status,
+                    'eingereicht_am': p.eingereicht_am.isoformat() if p.eingereicht_am else None
+                })
+
         for modul in alle_module:
             if modul.id not in geplante_modul_ids:
-                # Hole Verantwortlichen Dozenten
+                # Hole Verantwortlichen Dozenten (nutzt eager-loaded dozent_zuordnungen)
                 verantwortliche = modul.get_verantwortliche()
                 verantwortlicher_data = None
                 if verantwortliche:
@@ -682,14 +739,8 @@ def get_nicht_zugeordnete_module():
                         'name': v.name_komplett,
                         'email': v.email
                     }
-                    print(f"[DEBUG] Modul {modul.kuerzel}: Verantwortlicher = {v.name_komplett}")
-                else:
-                    # DEBUG: Zeige alle Dozenten-Zuordnungen für dieses Modul
-                    from app.models.modul import ModulDozent as MD
-                    zuordnungen = MD.query.filter_by(modul_id=modul.id).all()
-                    print(f"[DEBUG] Modul {modul.kuerzel}: Keine Verantwortlichen gefunden. Zuordnungen: {[(z.rolle, z.dozent_id) for z in zuordnungen]}")
 
-                # Hole alle Lehrpersonen
+                # Hole alle Lehrpersonen (nutzt eager-loaded dozent_zuordnungen)
                 lehrpersonen = modul.get_lehrpersonen()
                 lehrpersonen_data = [{
                     'dozent_id': lp.id,
@@ -697,38 +748,8 @@ def get_nicht_zugeordnete_module():
                     'email': lp.email
                 } for lp in lehrpersonen]
 
-                # Hole Planungsstatus für dieses Modul (wer hat es in seiner Planung?)
-                planungen_data = []
-                if semester_id and aktive_phase:
-                    from app.models.planung import Semesterplanung
-                    # Finde alle Planungen die dieses Modul enthalten
-                    planungen_mit_modul = db.session.query(
-                        Semesterplanung.id,
-                        Semesterplanung.status,
-                        Semesterplanung.eingereicht_am,
-                        Semesterplanung.benutzer_id
-                    ).join(
-                        GeplantesModul,
-                        GeplantesModul.semesterplanung_id == Semesterplanung.id
-                    ).filter(
-                        GeplantesModul.modul_id == modul.id,
-                        Semesterplanung.planungsphase_id == aktive_phase.id
-                    ).all()
-
-                    for p in planungen_mit_modul:
-                        # Hole Dozent-Name
-                        from app.models.user import User
-                        user = User.query.get(p.benutzer_id)
-                        dozent_name = user.name_komplett if user else 'Unbekannt'
-
-                        planungen_data.append({
-                            'hat_planung': True,
-                            'planung_id': p.id,
-                            'dozent_id': p.benutzer_id,
-                            'dozent_name': dozent_name,
-                            'status': p.status,
-                            'eingereicht_am': p.eingereicht_am.isoformat() if p.eingereicht_am else None
-                        })
+                # ✅ PERFORMANCE FIX: Nutze prefetched Planungen statt Query im Loop
+                planungen_data = modul_planungen_map.get(modul.id, [])
 
                 nicht_zugeordnete.append({
                     'id': modul.id,
@@ -802,21 +823,8 @@ def get_dozenten_planungsfortschritt():
     try:
         from app.models.semester import Semester
         from app.models.planungsphase import Planungsphase
-        from app.models.modul import Modul, ModulDozent
         from app.models.planung import Semesterplanung, GeplantesModul
         from app.models.dozent import Dozent
-        from sqlalchemy import func
-
-        # DEBUG: Zeige alle einzigartigen Rollen in ModulDozent
-        unique_roles = db.session.query(ModulDozent.rolle).distinct().all()
-        print(f"[DEBUG] Unique roles in ModulDozent: {[r[0] for r in unique_roles]}")
-
-        # DEBUG: Zähle Einträge pro Rolle
-        role_counts = db.session.query(
-            ModulDozent.rolle,
-            func.count(ModulDozent.id)
-        ).group_by(ModulDozent.rolle).all()
-        print(f"[DEBUG] Role counts: {dict(role_counts)}")
 
         semester_id = request.args.get('semester_id', type=int)
 
@@ -857,10 +865,10 @@ def get_dozenten_planungsfortschritt():
             for alt_rolle in ['Modulverantwortlicher', 'modulverantwortlicher', 'Verantwortlicher', 'verantwortlich']:
                 if db.session.query(ModulDozent.id).filter_by(rolle=alt_rolle).first():
                     verantwortlicher_rolle = alt_rolle
-                    print(f"[DEBUG] Using alternative rolle: {verantwortlicher_rolle}")
+                    current_app.logger.debug(f"Using alternative rolle: {verantwortlicher_rolle}")
                     break
 
-        print(f"[DEBUG] Searching for rolle: {verantwortlicher_rolle}")
+        current_app.logger.debug(f"Searching for rolle: {verantwortlicher_rolle}")
 
         dozenten_query = db.session.query(
             Dozent.id,
@@ -876,52 +884,73 @@ def get_dozenten_planungsfortschritt():
         ).distinct()
 
         dozenten = dozenten_query.all()
-        print(f"[DEBUG] Found {len(dozenten)} dozenten with rolle '{verantwortlicher_rolle}'")
+        current_app.logger.debug(f"Found {len(dozenten)} dozenten with rolle '{verantwortlicher_rolle}'")
+
+        # ✅ PERFORMANCE FIX: Prefetch alle Modul-Dozent-Zuordnungen VOR dem Loop
+        dozent_ids = [d.id for d in dozenten]
+
+        # Query: Alle Module aller Dozenten mit relevantem Turnus (1 Query statt N)
+        module_query = db.session.query(
+            ModulDozent.dozent_id,
+            Modul.id.label('modul_id'),
+            Modul.kuerzel,
+            Modul.bezeichnung_de
+        ).join(
+            Modul, ModulDozent.modul_id == Modul.id
+        ).filter(
+            ModulDozent.dozent_id.in_(dozent_ids),
+            ModulDozent.rolle == verantwortlicher_rolle
+        )
+
+        if relevante_turnus:
+            module_query = module_query.filter(Modul.turnus.in_(relevante_turnus))
+
+        alle_module_zuordnungen = module_query.all()
+
+        # Gruppiere nach dozent_id: {dozent_id: [(modul_id, kuerzel, bezeichnung), ...]}
+        dozent_module_map = {}
+        for z in alle_module_zuordnungen:
+            if z.dozent_id not in dozent_module_map:
+                dozent_module_map[z.dozent_id] = []
+            dozent_module_map[z.dozent_id].append({
+                'id': z.modul_id,
+                'kuerzel': z.kuerzel,
+                'bezeichnung': z.bezeichnung_de
+            })
+
+        # ✅ PERFORMANCE FIX: Prefetch alle geplanten Module (1 Query statt N)
+        alle_geplanten_modul_ids = set()
+        if aktive_phase:
+            geplante_query = db.session.query(GeplantesModul.modul_id).join(
+                Semesterplanung,
+                GeplantesModul.semesterplanung_id == Semesterplanung.id
+            ).filter(
+                Semesterplanung.planungsphase_id == aktive_phase.id
+            ).distinct().all()
+
+            alle_geplanten_modul_ids = set(m[0] for m in geplante_query)
 
         result = []
 
         for dozent in dozenten:
-            # Module die dieser Dozent verantwortet (mit relevantem Turnus)
-            modul_query = db.session.query(Modul.id, Modul.kuerzel, Modul.bezeichnung_de).join(
-                ModulDozent, ModulDozent.modul_id == Modul.id
-            ).filter(
-                ModulDozent.dozent_id == dozent.id,
-                ModulDozent.rolle == verantwortlicher_rolle
-            )
-
-            if relevante_turnus:
-                modul_query = modul_query.filter(Modul.turnus.in_(relevante_turnus))
-
-            verantwortliche_module = modul_query.all()
+            # ✅ PERFORMANCE FIX: Nutze prefetched Daten statt Query
+            verantwortliche_module = dozent_module_map.get(dozent.id, [])
             anzahl_zu_planen = len(verantwortliche_module)
 
             if anzahl_zu_planen == 0:
                 continue  # Skip Dozenten ohne Module in diesem Semester
 
-            # Geplante Module zählen (in aktiver Phase)
-            geplante_modul_ids = set()
-            nicht_geplante_module = []
-
-            if aktive_phase:
-                # Finde alle Module die dieser Dozent oder jemand anderes geplant hat
-                geplante = db.session.query(GeplantesModul.modul_id).join(
-                    Semesterplanung,
-                    GeplantesModul.semesterplanung_id == Semesterplanung.id
-                ).filter(
-                    Semesterplanung.planungsphase_id == aktive_phase.id,
-                    GeplantesModul.modul_id.in_([m.id for m in verantwortliche_module])
-                ).distinct().all()
-
-                geplante_modul_ids = set(m[0] for m in geplante)
+            # ✅ PERFORMANCE FIX: Filter aus prefetched Set
+            geplante_modul_ids = set(
+                m['id'] for m in verantwortliche_module
+                if m['id'] in alle_geplanten_modul_ids
+            )
 
             # Berechne nicht geplante Module
-            for modul in verantwortliche_module:
-                if modul.id not in geplante_modul_ids:
-                    nicht_geplante_module.append({
-                        'id': modul.id,
-                        'kuerzel': modul.kuerzel,
-                        'bezeichnung': modul.bezeichnung_de
-                    })
+            nicht_geplante_module = [
+                m for m in verantwortliche_module
+                if m['id'] not in geplante_modul_ids
+            ]
 
             anzahl_geplant = len(geplante_modul_ids)
             prozent = round((anzahl_geplant / anzahl_zu_planen) * 100, 1) if anzahl_zu_planen > 0 else 0
@@ -969,8 +998,7 @@ def get_dozenten_planungsfortschritt():
         })
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        current_app.logger.exception("Error in get_dozenten_planungsfortschritt")
         return ApiResponse.error(
             message='Fehler beim Laden des Planungsfortschritts',
             errors=[str(e)],

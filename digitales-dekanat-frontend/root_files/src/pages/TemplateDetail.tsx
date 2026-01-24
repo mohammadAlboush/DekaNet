@@ -38,6 +38,9 @@ import templateService, {
 import { useToastStore } from '../components/common/Toast';
 import TemplateModulList from '../components/templates/TemplateModulList';
 import WunschTagEditor, { WunschTag } from '../components/common/WunschTagEditor';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('TemplateDetail');
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -117,7 +120,7 @@ const TemplateDetail: React.FC = () => {
         navigate('/templates');
       }
     } catch (error: any) {
-      console.error('Error loading template:', error);
+      log.error('Error loading template:', error);
       showToast(error.message || 'Fehler beim Laden', 'error');
       navigate('/templates');
     } finally {
@@ -146,7 +149,7 @@ const TemplateDetail: React.FC = () => {
       setHasUnsavedChanges(false);
       loadTemplate(template.id);
     } catch (error: any) {
-      console.error('Error saving:', error);
+      log.error('Error saving:', error);
       showToast(error.message || 'Fehler beim Speichern', 'error');
     } finally {
       setSaving(false);
@@ -166,7 +169,7 @@ const TemplateDetail: React.FC = () => {
       setEditingHeader(false);
       loadTemplate(template.id);
     } catch (error: any) {
-      console.error('Error saving header:', error);
+      log.error('Error saving header:', error);
       showToast(error.message || 'Fehler beim Speichern', 'error');
     } finally {
       setSaving(false);
@@ -185,7 +188,7 @@ const TemplateDetail: React.FC = () => {
       showToast('Template gelöscht', 'success');
       navigate('/templates');
     } catch (error: any) {
-      console.error('Error deleting:', error);
+      log.error('Error deleting:', error);
       showToast(error.message || 'Fehler beim Löschen', 'error');
     }
   };

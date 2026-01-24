@@ -31,12 +31,14 @@ import {
   AccountCircle,
   Logout,
   ChevronLeft,
-  SwapHoriz,
   Calculate,
   WorkHistory,
   FileCopy,
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('Layout');
 
 /**
  * Layout Component
@@ -83,12 +85,12 @@ const Layout: React.FC = () => {
     if (hasRole('dekan')) {
       return [
         ...baseItems,
-        { title: 'Planungen Prüfen', path: '/dekan/planungen', icon: <Assignment />, roles: ['dekan'] },
+        { title: 'Semesterplanung', path: '/dekan/planungen', icon: <Assignment />, roles: ['dekan'] },
         { title: 'Deputat-Verwaltung', path: '/dekan/deputat', icon: <Calculate />, roles: ['dekan'] },
-        { title: 'Modul-Verwaltung', path: '/dekan/modul-verwaltung', icon: <SwapHoriz />, roles: ['dekan'] },
         { title: 'Module', path: '/module', icon: <School /> },
         { title: 'Dozenten', path: '/dozenten', icon: <Group /> },
-        { title: 'Semester', path: '/semester', icon: <CalendarMonth />, roles: ['dekan'] },
+        // Semester-Link versteckt - Dekan wählt Semester bei Planungsphase-Start
+        // { title: 'Semester', path: '/semester', icon: <CalendarMonth />, roles: ['dekan'] },
       ];
     }
 
@@ -124,7 +126,7 @@ const Layout: React.FC = () => {
       await logout();
       navigate('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      log.error('Logout error:', error);
     }
   };
 

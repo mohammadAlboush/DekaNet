@@ -133,4 +133,5 @@ export interface StepZusammenfassungProps {
   onBack: () => void;
   onSubmit: () => Promise<void>;
   planungId?: number;
+  onGoToStep?: (step: number) => void;
 }

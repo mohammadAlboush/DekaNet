@@ -65,27 +65,27 @@ class Modul(db.Model):
     # Relationships
     pruefungsordnung = db.relationship('Pruefungsordnung', back_populates='module')
     
-    # Lehrformen (N:M mit SWS)
+    # Lehrformen (N:M mit SWS) - selectin for efficient batch loading
     lehrformen = db.relationship(
         'ModulLehrform',
         back_populates='modul',
-        lazy='dynamic',
+        lazy='selectin',
         cascade='all, delete-orphan'
     )
-    
-    # Dozenten (N:M mit Rolle)
+
+    # Dozenten (N:M mit Rolle) - selectin for efficient batch loading
     dozent_zuordnungen = db.relationship(
         'ModulDozent',
         back_populates='modul',
-        lazy='dynamic',
+        lazy='selectin',
         cascade='all, delete-orphan'
     )
     
-    # StudiengÃ¤nge (N:M)
+    # Studiengänge (N:M) - selectin for efficient batch loading
     studiengang_zuordnungen = db.relationship(
         'ModulStudiengang',
         back_populates='modul',
-        lazy='dynamic',
+        lazy='selectin',
         cascade='all, delete-orphan'
     )
     
@@ -172,17 +172,17 @@ class Modul(db.Model):
     
     def get_sws_gesamt(self):
         """Berechnet Gesamt-SWS aus allen Lehrformen"""
-        return sum(lf.sws for lf in self.lehrformen.all())
-    
+        return sum(lf.sws for lf in self.lehrformen)
+
     def get_dozenten(self):
-        """Holt alle Dozenten fÃ¼r dieses Modul"""
-        return [dz.dozent for dz in self.dozent_zuordnungen.all()]
-    
+        """Holt alle Dozenten für dieses Modul"""
+        return [dz.dozent for dz in self.dozent_zuordnungen]
+
     def get_verantwortliche(self):
         """Holt verantwortliche Dozenten"""
         # Prüfe verschiedene Schreibweisen der Rolle
         for rolle in ['verantwortlicher', 'Modulverantwortlicher', 'modulverantwortlicher', 'Verantwortlicher']:
-            result = [dz.dozent for dz in self.dozent_zuordnungen.filter_by(rolle=rolle).all()]
+            result = [dz.dozent for dz in self.dozent_zuordnungen if dz.rolle == rolle]
             if result:
                 return result
         return []
@@ -191,15 +191,15 @@ class Modul(db.Model):
         """Holt Lehrpersonen"""
         # Prüfe verschiedene Schreibweisen der Rolle
         for rolle in ['lehrperson', 'Lehrperson', 'Dozent', 'dozent']:
-            result = [dz.dozent for dz in self.dozent_zuordnungen.filter_by(rolle=rolle).all()]
+            result = [dz.dozent for dz in self.dozent_zuordnungen if dz.rolle == rolle]
             if result:
                 return result
         return []
     
     def get_studiengaenge(self):
-        """Holt alle StudiengÃ¤nge fÃ¼r dieses Modul"""
-        return [sg.studiengang for sg in self.studiengang_zuordnungen.all()]
-    
+        """Holt alle Studiengänge für dieses Modul"""
+        return [sg.studiengang for sg in self.studiengang_zuordnungen]
+
     def to_dict(self, include_details=False):
         """Konvertiert zu Dictionary"""
         data = {
@@ -211,17 +211,17 @@ class Modul(db.Model):
             'turnus': self.turnus,
             'sws_gesamt': self.get_sws_gesamt()
         }
-        
+
         if include_details:
-            data['lehrformen'] = [lf.to_dict() for lf in self.lehrformen.all()]
+            data['lehrformen'] = [lf.to_dict() for lf in self.lehrformen]
             data['dozenten'] = [d.to_dict() for d in self.get_dozenten()]
             data['studiengaenge'] = [sg.to_dict() for sg in self.get_studiengaenge()]
-            
+
             if self.lernergebnisse:
                 data['lernergebnisse'] = self.lernergebnisse.to_dict()
             if self.pruefung:
                 data['pruefung'] = self.pruefung.to_dict()
-        
+
         return data
 
 
@@ -319,7 +319,8 @@ class ModulDozent(db.Model):
 
     # Relationships
     modul = db.relationship('Modul', back_populates='dozent_zuordnungen')
-    dozent = db.relationship('Dozent', back_populates='modul_zuordnungen', foreign_keys=[dozent_id])
+    # ✅ PERFORMANCE FIX: lazy='joined' für eager loading des Dozenten
+    dozent = db.relationship('Dozent', back_populates='modul_zuordnungen', foreign_keys=[dozent_id], lazy='joined')
     pruefungsordnung = db.relationship('Pruefungsordnung')
 
     # ✨ NEW: Vertreter & Zweitprüfer Relationships

@@ -54,6 +54,9 @@ import { format } from 'date-fns';
 import usePlanungPhaseStore from '../../store/planungPhaseStore';
 import useAuthStore from '../../store/authStore';
 import { ArchiviertePlanung, ArchivFilter } from '../../types/planungPhase.types';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('ArchivedPlanungsList');
 
 const ArchivedPlanungsList: React.FC = () => {
   const { user } = useAuthStore();
@@ -124,7 +127,7 @@ const ArchivedPlanungsList: React.FC = () => {
       alert(`Planung wurde erfolgreich wiederhergestellt (ID: ${planungId})`);
       loadArchivedPlanungen(); // Reload list
     } catch (error) {
-      console.error('Fehler beim Wiederherstellen:', error);
+      log.error('Fehler beim Wiederherstellen:', error);
     }
   };
 

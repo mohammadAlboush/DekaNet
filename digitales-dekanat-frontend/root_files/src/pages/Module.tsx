@@ -11,11 +11,16 @@ import {
 import {
   Search, Visibility, Edit, School, Group, Add, Delete, Warning,
   Close, Save, Book, Assessment, WorkOutline, LibraryBooks, Cancel,
-  SwapHoriz
+  SwapHoriz, History
 } from '@mui/icons-material';
 import modulService from '../services/modulService';
 import useAuthStore from '../store/authStore';
 import { Modul, ModulDetails } from '../types/modul.types';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('Module');
+import BulkTransferDialog from '../components/modul-verwaltung/BulkTransferDialog';
+import AuditLogViewer from '../components/modul-verwaltung/AuditLogViewer';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -44,11 +49,11 @@ const ModulePage: React.FC = () => {
   // ✅ FIX: Check if user is Modulverantwortlicher for a specific module
   const isModulverantwortlicher = React.useCallback((modul: Modul | ModulDetails | null): boolean => {
     if (!user || !modul) {
-      console.log('[Module] isModulverantwortlicher: false - no user or modul');
+      log.debug('isModulverantwortlicher: false - no user or modul');
       return false;
     }
     if (!user.dozent_id) {
-      console.log('[Module] isModulverantwortlicher: false - user has no dozent_id', { user });
+      log.debug('isModulverantwortlicher: false - user has no dozent_id', { user });
       return false;
     }
 
@@ -69,7 +74,7 @@ const ModulePage: React.FC = () => {
         return rolle === 'verantwortlicher' || rolle === 'modulverantwortlicher';
       });
 
-      console.log('[Module] isModulverantwortlicher check:', {
+      log.debug('isModulverantwortlicher check:', {
         modulId: modul.id,
         modulName: modul.kuerzel,
         userDozentId: user.dozent_id,
@@ -80,7 +85,7 @@ const ModulePage: React.FC = () => {
       return isVerantwortlicher;
     }
 
-    console.log('[Module] isModulverantwortlicher: false - no dozenten array');
+    log.debug('isModulverantwortlicher: false - no dozenten array');
     return false;
   }, [user]);
 
@@ -137,6 +142,9 @@ const ModulePage: React.FC = () => {
   const [replaceDozentData, setReplaceDozentData] = useState<{ id: number; name: string; rolle: string } | null>(null);
   const [replaceDozentNew, setReplaceDozentNew] = useState<string>('');
 
+  // Bulk Transfer Dialog (Dekan only)
+  const [bulkTransferDialog, setBulkTransferDialog] = useState(false);
+
   // ✅ OPTIMIERT: useEffect nur einmal ausführen, statt bei jedem user-Objekt-Update
   useEffect(() => {
     const initializePage = async () => {
@@ -160,7 +168,7 @@ const ModulePage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await modulService.getAllModules({ per_page: 1000 });
+      const response = await modulService.getAllModules({ per_page: 100 });
       if (response.success) {
         setModule(response.data || []);
       } else {
@@ -184,7 +192,7 @@ const ModulePage: React.FC = () => {
       if (lehrformen.success) setLehrformenOptions(lehrformen.data || []);
       if (dozenten.success) setDozentenOptions(dozenten.data || []);
     } catch (error) {
-      console.error('Error loading options:', error);
+      log.error('Error loading options:', error);
     }
   }, []);
 
@@ -710,9 +718,14 @@ const ModulePage: React.FC = () => {
             </Button>
           )}
           {isDekan && (
-            <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate}>
-              Neu
-            </Button>
+            <>
+              <Button variant="outlined" startIcon={<SwapHoriz />} onClick={() => setBulkTransferDialog(true)}>
+                Bulk Transfer
+              </Button>
+              <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate}>
+                Neu
+              </Button>
+            </>
           )}
         </Box>
       </Paper>
@@ -801,6 +814,17 @@ const ModulePage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* ========== AUDIT LOG SECTION (DEKAN ONLY) ========== */}
+      {isDekan && (
+        <Paper sx={{ mt: 3, p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <History color="primary" />
+            <Typography variant="h6">Änderungsprotokoll</Typography>
+          </Box>
+          <AuditLogViewer />
+        </Paper>
+      )}
 
       {/* ========== VOLLSTÄNDIGE DETAILS DIALOG WITH EDIT CAPABILITIES ========== */}
       <Dialog open={detailsDialog} onClose={() => setDetailsDialog(false)} maxWidth="lg" fullWidth>
@@ -1860,6 +1884,27 @@ const ModulePage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ========== BULK TRANSFER DIALOG (DEKAN ONLY) ========== */}
+      <BulkTransferDialog
+        open={bulkTransferDialog}
+        onClose={() => setBulkTransferDialog(false)}
+        onSuccess={() => {
+          setSuccess('Bulk Transfer erfolgreich durchgeführt');
+          loadModule();
+        }}
+        module={module.map(m => ({
+          id: m.id,
+          kuerzel: m.kuerzel,
+          bezeichnung_de: m.bezeichnung_de,
+          dozenten: m.dozenten?.map((d: any) => ({
+            zuordnung_id: d.id,
+            id: d.dozent_id,
+            name: d.name_komplett || d.name_kurz || `${d.vorname || ''} ${d.nachname || ''}`.trim(),
+            rolle: d.rolle
+          })) || []
+        }))}
+      />
     </Container>
   );
 };

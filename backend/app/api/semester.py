@@ -186,37 +186,8 @@ def get_planungssemester():
         )
 
 
-@semester_api.route('/auto-vorschlag', methods=['GET'])
-@login_required
-def get_auto_semester_vorschlag():
-    """
-    GET /api/semester/auto-vorschlag
-
-    Schlägt automatisch das passende Semester vor basierend auf heutigem Datum.
-
-    Returns:
-        200: Vorschlag-Daten mit:
-            - vorschlag: Vorgeschlagenes Semester (kann null sein)
-            - aktives: Aktuell aktiviertes Semester (kann null sein)
-            - laufendes: Heute laufendes Semester (kann null sein)
-            - ist_korrekt: bool - Stimmen aktives und laufendes überein?
-            - empfehlung: str - Empfehlungstext
-            - datum_heute: ISO-Datum von heute
-    """
-    try:
-        result = semester_service.auto_semester_vorschlag()
-
-        return ApiResponse.success(
-            data=result,
-            message=result['empfehlung']
-        )
-
-    except Exception as e:
-        return ApiResponse.error(
-            message='Fehler beim Erstellen des Semester-Vorschlags',
-            errors=[str(e)],
-            status_code=500
-        )
+# NOTE: /auto-vorschlag Endpoint wurde entfernt - automatische Semester-Erkennung
+# wird nicht mehr verwendet. Der Dekan wählt Semester-Typ und Jahr manuell.
 
 
 @semester_api.route('/<int:semester_id>/statistik', methods=['GET'])

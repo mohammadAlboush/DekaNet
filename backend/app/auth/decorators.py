@@ -90,8 +90,9 @@ def role_required(*roles):
                 flash('Ihrem Account ist keine Rolle zugewiesen.', 'danger')
                 abort(403)
             
-            user_role = current_user.rolle.name
-            
+            # ✅ SECURITY: Sichere Methode verwenden
+            user_role = current_user.get_rolle_name() if hasattr(current_user, 'get_rolle_name') else current_user.rolle.name
+
             if user_role not in roles:
                 # API Request?
                 if request.path.startswith('/api/'):

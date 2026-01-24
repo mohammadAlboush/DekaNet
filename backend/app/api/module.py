@@ -38,9 +38,9 @@ def calculate_sws_robust(modul):
                 sws = modul.get_sws_gesamt()
                 if sws is not None and sws > 0:
                     return float(sws)
-            except:
-                pass
-        
+            except (AttributeError, TypeError) as e:
+                current_app.logger.debug(f"get_sws_gesamt failed for modul {getattr(modul, 'id', '?')}: {e}")
+
         if hasattr(modul, 'lehrformen'):
             try:
                 lehrformen = modul.lehrformen.all() if hasattr(modul.lehrformen, 'all') else modul.lehrformen
@@ -48,22 +48,23 @@ def calculate_sws_robust(modul):
                     sws = sum(lf.sws for lf in lehrformen if hasattr(lf, 'sws'))
                     if sws > 0:
                         return float(sws)
-            except:
-                pass
-        
+            except (AttributeError, TypeError) as e:
+                current_app.logger.debug(f"lehrformen calculation failed for modul {getattr(modul, 'id', '?')}: {e}")
+
         return 0.0
-    except:
+    except Exception as e:
+        current_app.logger.warning(f"SWS calculation failed: {e}")
         return 0.0
 
 
 def modul_to_dict_robust(modul):
-    """Konvertiert Modul zu Dict - MIT DOZENTEN UND LEHRFORMEN"""
+    """Konvertiert Modul zu Dict - MIT DOZENTEN UND LEHRFORMEN (nutzt eager-loaded relationships)"""
     try:
-        # Lade Dozenten für das Modul
+        # Nutze pre-loaded dozent_zuordnungen (keine zusätzliche Query wenn eager-loaded)
         dozenten_list = []
         try:
-            dozenten = ModulDozent.query.filter_by(modul_id=modul.id).all()
-            current_app.logger.debug(f"[modul_to_dict] Modul {modul.kuerzel} (ID: {modul.id}) - Found {len(dozenten)} dozent assignments")
+            # Nutze die bereits geladene Relationship statt neuer Query
+            dozenten = modul.dozent_zuordnungen.all() if hasattr(modul.dozent_zuordnungen, 'all') else list(modul.dozent_zuordnungen)
 
             for d in dozenten:
                 if d.dozent:
@@ -72,27 +73,21 @@ def modul_to_dict_robust(modul):
                     dozent_data = {
                         'id': d.id,
                         'dozent_id': d.dozent_id,
-                        'name': name_komplett,  # ✅ Für Anzeige in Tabelle
-                        'name_komplett': name_komplett,  # ✅ Konsistent mit TypeScript
-                        'name_kurz': name_kurz,  # ✅ Für kompakte Anzeige
+                        'name': name_komplett,
+                        'name_komplett': name_komplett,
+                        'name_kurz': name_kurz,
                         'vorname': d.dozent.vorname,
                         'nachname': d.dozent.nachname,
                         'rolle': d.rolle
                     }
                     dozenten_list.append(dozent_data)
-                    current_app.logger.debug(f"[modul_to_dict]   - Added dozent: {dozent_data}")
-                else:
-                    current_app.logger.warning(f"[modul_to_dict]   - ModulDozent {d.id} has no dozent reference!")
-
-            if len(dozenten_list) > 0:
-                current_app.logger.info(f"[modul_to_dict] ✓ Modul {modul.kuerzel} has {len(dozenten_list)} dozenten assigned")
         except Exception as e:
-            current_app.logger.error(f"[modul_to_dict] ✗ Error loading dozenten for modul {modul.id}: {e}")
+            current_app.logger.error(f"[modul_to_dict] Error loading dozenten for modul {modul.id}: {e}")
 
-        # ✅ Lade Lehrformen für das Modul (WICHTIG für SWS-Berechnung!)
+        # Nutze pre-loaded lehrformen (keine zusätzliche Query wenn eager-loaded)
         lehrformen_list = []
         try:
-            lehrformen = ModulLehrform.query.filter_by(modul_id=modul.id).all()
+            lehrformen = modul.lehrformen.all() if hasattr(modul.lehrformen, 'all') else list(modul.lehrformen)
             for lf in lehrformen:
                 if lf.lehrform:
                     lehrformen_list.append({
@@ -133,6 +128,7 @@ def modul_to_dict_robust(modul):
 
 @modul_api.route('/', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=300, query_string=True)  # 5 Minuten Cache
 def get_alle_module():
     """GET /api/module/ - Holt alle Module"""
     try:
@@ -155,9 +151,13 @@ def get_alle_module():
 
         current_app.logger.info(f"[ModuleAPI] Query params: page={page}, per_page={per_page}, po_id={po_id}, turnus={turnus}, search='{search}'")
 
-        # Query bauen
+        # Query bauen - mit eager loading um N+1 zu vermeiden
+        from sqlalchemy.orm import subqueryload
         try:
-            query = Modul.query.options(joinedload(Modul.lehrformen))
+            query = Modul.query.options(
+                subqueryload(Modul.lehrformen).joinedload(ModulLehrform.lehrform),
+                subqueryload(Modul.dozent_zuordnungen).joinedload(ModulDozent.dozent)
+            )
 
             if po_id:
                 query = query.filter(Modul.po_id == po_id)
@@ -173,15 +173,20 @@ def get_alle_module():
                     )
                 )
 
-            module = query.all()
-            current_app.logger.info(f"[ModuleAPI] ✓ Query successful: {len(module)} modules found")
+            # Pagination anwenden
+            paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+            module = paginated.items
+            total = paginated.total
+            current_app.logger.info(f"[ModuleAPI] Query successful: {len(module)} modules (page {page}/{paginated.pages}, total {total})")
         except Exception as e:
-            current_app.logger.error(f"[ModuleAPI] ✗ Query failed: {e}")
+            current_app.logger.error(f"[ModuleAPI] Query failed: {e}")
             query = Modul.query
             if po_id:
                 query = query.filter(Modul.po_id == po_id)
-            module = query.all()
-            current_app.logger.info(f"[ModuleAPI] ✓ Fallback query: {len(module)} modules found")
+            paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+            module = paginated.items
+            total = paginated.total
+            current_app.logger.info(f"[ModuleAPI] Fallback query: {len(module)} modules (total {total})")
 
         # Konvertiere zu Dict
         items = []
@@ -190,20 +195,21 @@ def get_alle_module():
             if modul_dict:
                 items.append(modul_dict)
 
-        # DEBUG: Log first 3 modules with dozenten details
-        current_app.logger.info(f"[ModuleAPI] 📊 First 3 modules with dozenten:")
-        for i, item in enumerate(items[:3]):
-            current_app.logger.info(f"[ModuleAPI] Module {i+1}: {item['kuerzel']}")
-            current_app.logger.info(f"[ModuleAPI]   - Dozenten count: {len(item.get('dozenten', []))}")
-            current_app.logger.info(f"[ModuleAPI]   - Dozenten: {item.get('dozenten', [])}")
+        # DEBUG logging entfernt für bessere Performance
 
-        current_app.logger.info(f"[ModuleAPI] ✅ Returning {len(items)} modules to client")
+        current_app.logger.info(f"[ModuleAPI] ✅ Returning {len(items)} modules to client (total: {total})")
         current_app.logger.info(f"[ModuleAPI] ========== GET ALL MODULES END ==========")
 
         return jsonify({
             'success': True,
             'data': items,
-            'message': f'{len(items)} Module gefunden'
+            'message': f'{len(items)} Module gefunden',
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'pages': (total + per_page - 1) // per_page
+            }
         }), 200
 
     except Exception as e:
@@ -230,17 +236,21 @@ def search_module():
             }), 400
         
         search_term = f"%{query_text}%"
-        module_query = Modul.query.filter(
+        from sqlalchemy.orm import subqueryload
+        module_query = Modul.query.options(
+            subqueryload(Modul.lehrformen).joinedload(ModulLehrform.lehrform),
+            subqueryload(Modul.dozent_zuordnungen).joinedload(ModulDozent.dozent)
+        ).filter(
             db.or_(
                 Modul.kuerzel.ilike(search_term),
                 Modul.bezeichnung_de.ilike(search_term),
                 Modul.bezeichnung_en.ilike(search_term)
             )
         )
-        
+
         if po_id:
             module_query = module_query.filter(Modul.po_id == po_id)
-        
+
         module = module_query.all()
         
         items = []
@@ -310,9 +320,11 @@ def get_modul(modul_id: int):
             'arbeitsaufwand': []
         }
         
-        # Lehrformen
+        # Lehrformen - mit Eager Loading
         try:
-            lehrformen = ModulLehrform.query.filter_by(modul_id=modul_id).all()
+            lehrformen = ModulLehrform.query.options(
+                joinedload(ModulLehrform.lehrform)
+            ).filter_by(modul_id=modul_id).all()
             for lf in lehrformen:
                 if lf.lehrform:
                     details['lehrformen'].append({
@@ -324,10 +336,12 @@ def get_modul(modul_id: int):
                     })
         except Exception as e:
             current_app.logger.error(f"Error loading lehrformen: {e}")
-        
-        # Dozenten
+
+        # Dozenten - mit Eager Loading
         try:
-            dozenten = ModulDozent.query.filter_by(modul_id=modul_id).all()
+            dozenten = ModulDozent.query.options(
+                joinedload(ModulDozent.dozent)
+            ).filter_by(modul_id=modul_id).all()
             for d in dozenten:
                 if d.dozent:
                     details['dozenten'].append({
@@ -340,10 +354,12 @@ def get_modul(modul_id: int):
                     })
         except Exception as e:
             current_app.logger.error(f"Error loading dozenten: {e}")
-        
-        # Studiengänge
+
+        # Studiengänge - mit Eager Loading
         try:
-            studiengaenge = ModulStudiengang.query.filter_by(modul_id=modul_id).all()
+            studiengaenge = ModulStudiengang.query.options(
+                joinedload(ModulStudiengang.studiengang)
+            ).filter_by(modul_id=modul_id).all()
             for sg in studiengaenge:
                 if sg.studiengang:
                     details['studiengaenge'].append({
@@ -376,9 +392,11 @@ def get_modul(modul_id: int):
         except Exception as e:
             current_app.logger.error(f"Error loading literatur: {e}")
         
-        # Sprachen
+        # Sprachen - mit Eager Loading
         try:
-            sprachen = ModulSprache.query.filter_by(modul_id=modul_id).all()
+            sprachen = ModulSprache.query.options(
+                joinedload(ModulSprache.sprache)
+            ).filter_by(modul_id=modul_id).all()
             for spr in sprachen:
                 if spr.sprache:
                     details['sprachen'].append({
@@ -616,8 +634,8 @@ def delete_modul(modul_id: int):
         
         force = request.args.get('force', 'false').lower() == 'true'
         
-        from app.models import GeplanteModule
-        verwendungen = GeplanteModule.query.filter_by(modul_id=modul_id).count()
+        from app.models import GeplantesModul
+        verwendungen = GeplantesModul.query.filter_by(modul_id=modul_id).count()
         
         if verwendungen > 0 and not force:
             return jsonify({

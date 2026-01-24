@@ -36,6 +36,9 @@ import auftragService from '../../services/auftragService';
 import { SemesterAuftrag, Auftrag } from '../../types/auftrag.types';
 import { useToastStore } from '../common/Toast';
 import useAuftragStore from '../../store/auftragStore';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('AuftraegeWidget');
 
 interface AuftraegeWidgetProps {
   semesterId: number;
@@ -89,7 +92,7 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
 
   const loadData = async () => {
     try {
-      console.log('[AuftraegeWidget] Loading data for semester:', semesterId);
+      log.debug(' Loading data for semester:', semesterId);
       setLoading(true);
 
       // Lade alle Aufträge (für Mapping)
@@ -99,11 +102,11 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
       // ✅ Lade Semester-Aufträge über Store (für Synchronisation)
       await loadAuftraege(semesterId);
 
-      console.log('[AuftraegeWidget] Loaded:', {
+      log.debug(' Loaded:', {
         auftraege: auftraege.length,
       });
     } catch (error) {
-      console.error('[AuftraegeWidget] Error loading data:', error);
+      log.error(' Error loading data:', error);
       showToast('Fehler beim Laden der Aufträge', 'error');
     } finally {
       setLoading(false);
@@ -123,7 +126,7 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
       // ✅ Trigger Store refresh for synchronization
       await triggerRefresh(semesterId);
     } catch (error: any) {
-      console.error('[AuftraegeWidget] Error approving:', error);
+      log.error(' Error approving:', error);
       showToast(error.message || 'Fehler beim Genehmigen', 'error');
     } finally {
       setLoading(false);
@@ -155,7 +158,7 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
       // ✅ Trigger Store refresh for synchronization
       await triggerRefresh(semesterId);
     } catch (error: any) {
-      console.error('[AuftraegeWidget] Error rejecting:', error);
+      log.error(' Error rejecting:', error);
       showToast(error.message || 'Fehler beim Ablehnen', 'error');
     } finally {
       setLoading(false);

@@ -28,7 +28,7 @@ export interface Modul {
   lernergebnisse?: ModulLernergebnisse | null;
   voraussetzungen?: ModulVoraussetzungen | null;
   arbeitsaufwand?: ModulArbeitsaufwand[];  // ✅ KORRIGIERT: Array statt single object
-  seiten?: any[];
+  seiten?: ModulSeite[];  // ✅ TYPESAFE: Konkreter Typ statt any
 }
 
 export interface ModulLehrform {
@@ -110,6 +110,15 @@ export interface ModulAbhaengigkeit {
   typ: string;
 }
 
+// ✅ HINZUGEFÜGT: Konkreter Typ für Modul-Seiten (HTML-Inhalte)
+export interface ModulSeite {
+  id: number;
+  titel: string;
+  inhalt: string;
+  sortierung?: number;
+  typ?: 'beschreibung' | 'inhalt' | 'methoden' | 'sonstiges';
+}
+
 export interface ModulDetails extends Modul {
   lehrformen: ModulLehrform[];
   dozenten: ModulDozent[];
@@ -121,7 +130,7 @@ export interface ModulDetails extends Modul {
   lernergebnisse?: ModulLernergebnisse | null;
   voraussetzungen?: ModulVoraussetzungen | null;
   arbeitsaufwand: ModulArbeitsaufwand[];  // ✅ KORRIGIERT: Array
-  seiten?: any[];
+  seiten?: ModulSeite[];  // ✅ TYPESAFE: Konkreter Typ statt any
 }
 
 // Legacy exports for backwards compatibility

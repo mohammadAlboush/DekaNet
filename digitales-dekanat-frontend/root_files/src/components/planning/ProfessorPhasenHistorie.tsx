@@ -34,6 +34,9 @@ import {
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import api from '../../services/api';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('ProfessorPhasenHistorie');
 
 interface ProfessorPhasenHistorieProps {
   open: boolean;
@@ -99,7 +102,7 @@ const ProfessorPhasenHistorie: React.FC<ProfessorPhasenHistorieProps> = ({ open,
         setError('Fehler beim Laden der Historie');
       }
     } catch (err: any) {
-      console.error('[ProfessorPhasenHistorie] Fehler:', err);
+      log.error(' Fehler:', err);
       setError(err.response?.data?.message || 'Fehler beim Laden der Historie');
     } finally {
       setLoading(false);

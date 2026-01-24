@@ -83,12 +83,12 @@ class PlanungsTemplate(db.Model):
         backref=db.backref('planungs_templates', lazy='dynamic')
     )
 
-    # Template-Module
+    # Template-Module - lazy='selectin' für optimierte Batch-Queries
     template_module = db.relationship(
         'TemplateModul',
         back_populates='template',
         cascade='all, delete-orphan',
-        lazy='dynamic'
+        lazy='selectin'
     )
 
     # UNIQUE Constraint: Ein Benutzer kann nur EIN Template pro Semestertyp haben
@@ -163,6 +163,8 @@ class PlanungsTemplate(db.Model):
         Returns:
             Liste von PlanungsTemplates
         """
+        # Wegen lazy='dynamic' auf template_module können wir kein eager loading nutzen
+        # Die Module werden bei to_dict() geladen
         return cls.query.filter_by(benutzer_id=benutzer_id).order_by(cls.semester_typ).all()
 
     @classmethod
@@ -230,7 +232,7 @@ class PlanungsTemplate(db.Model):
             TemplateModul
         """
         # Prüfe ob Modul bereits existiert
-        existing = self.template_module.filter_by(modul_id=modul_id).first()
+        existing = TemplateModul.query.filter_by(template_id=self.id, modul_id=modul_id).first()
         if existing:
             raise ValueError(f"Modul {modul_id} ist bereits im Template")
 
@@ -260,7 +262,7 @@ class PlanungsTemplate(db.Model):
         Returns:
             bool: True wenn erfolgreich
         """
-        template_modul = self.template_module.filter_by(modul_id=modul_id).first()
+        template_modul = TemplateModul.query.filter_by(template_id=self.id, modul_id=modul_id).first()
         if template_modul:
             db.session.delete(template_modul)
             db.session.commit()
@@ -269,8 +271,7 @@ class PlanungsTemplate(db.Model):
 
     def clear_module(self):
         """Entfernt alle Module aus dem Template."""
-        for modul in self.template_module.all():
-            db.session.delete(modul)
+        TemplateModul.query.filter_by(template_id=self.id).delete()
         db.session.commit()
 
     def update_from_planung(self, semesterplanung: 'Semesterplanung') -> int:
@@ -289,7 +290,7 @@ class PlanungsTemplate(db.Model):
 
         # Wunsch-freie Tage übernehmen
         wunsch_tage = []
-        for tag in semesterplanung.wunsch_freie_tage.all():
+        for tag in semesterplanung.wunsch_freie_tage:
             wunsch_tage.append({
                 'wochentag': tag.wochentag,
                 'zeitraum': tag.zeitraum,
@@ -304,7 +305,7 @@ class PlanungsTemplate(db.Model):
 
         # Module übernehmen
         count = 0
-        for geplantes_modul in semesterplanung.geplante_module.all():
+        for geplantes_modul in semesterplanung.geplante_module:
             template_modul = TemplateModul(
                 template_id=self.id,
                 modul_id=geplantes_modul.modul_id,
@@ -342,6 +343,10 @@ class PlanungsTemplate(db.Model):
         Args:
             include_module: Sollen alle Module inkludiert werden?
         """
+        # Mit lazy='selectin' ist template_module eine Liste
+        module_list = self.template_module if self.template_module else []
+        anzahl_module = len(module_list)
+
         data = {
             'id': self.id,
             'benutzer_id': self.benutzer_id,
@@ -352,7 +357,7 @@ class PlanungsTemplate(db.Model):
             'wunsch_freie_tage': self.wunsch_freie_tage,
             'anmerkungen': self.anmerkungen,
             'raumbedarf': self.raumbedarf,
-            'anzahl_module': self.template_module.count(),
+            'anzahl_module': anzahl_module,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -366,7 +371,7 @@ class PlanungsTemplate(db.Model):
             }
 
         if include_module:
-            data['template_module'] = [m.to_dict() for m in self.template_module.all()]
+            data['template_module'] = [m.to_dict() for m in module_list]
 
         return data
 

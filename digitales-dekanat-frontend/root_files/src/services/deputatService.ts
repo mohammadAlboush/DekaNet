@@ -1,6 +1,9 @@
 // services/deputatService.ts - Deputatsabrechnung API Service
 
 import api from './api';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('DeputatService');
 import {
   DeputatsEinstellungen,
   Deputatsabrechnung,
@@ -582,7 +585,7 @@ class DeputatService {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('PDF Download Error:', error);
+      log.error('PDF Download Error:', error);
       throw error;
     }
   }

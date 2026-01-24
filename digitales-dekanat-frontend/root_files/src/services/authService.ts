@@ -1,16 +1,18 @@
-import api, { ApiResponse, handleApiError, debugTokenState } from './api';
+import api, { ApiResponse, handleApiError, debugAuthState, setCsrfToken, getCsrfToken } from './api';
 import { User, LoginCredentials, LoginResponse, ChangePasswordData } from '../types/auth.types';
 import { logger } from '../utils/logger';
 
 /**
- * Authentication Service - PRODUCTION READY
- * ==========================================
- * 
- * FEATURES:
- * - Comprehensive logging
- * - Token validation
- * - Secure token storage
- * - Role-based access control
+ * Authentication Service - SECURE COOKIE-BASED AUTH
+ * ==================================================
+ *
+ * VERSION: 2.0 - Sichere httpOnly Cookie-basierte Authentifizierung
+ *
+ * SECURITY FEATURES:
+ * ✅ Tokens werden als httpOnly Cookies gespeichert (XSS-sicher)
+ * ✅ Nur User-Daten werden in localStorage gespeichert
+ * ✅ CSRF-Protection durch Double Submit Cookie Pattern
+ * ✅ Keine sensiblen Daten im Frontend-Code
  */
 
 class AuthService {
@@ -27,27 +29,30 @@ class AuthService {
       logger.debug('AuthService', 'Response received', {
         success: data.success,
         hasData: !!data.data,
-        hasTokens: !!(data.data?.access_token && data.data?.refresh_token)
+        hasUser: !!data.data?.user
       });
 
       if (data.success && data.data) {
-        // Store tokens and user
-        localStorage.setItem('accessToken', data.data.access_token);
-        localStorage.setItem('refreshToken', data.data.refresh_token);
+        // ✅ SECURITY: Nur User-Daten speichern (keine Tokens!)
+        // Tokens werden als httpOnly Cookies vom Backend gesetzt
         localStorage.setItem('user', JSON.stringify(data.data.user));
+
+        // CSRF-Token für Double Submit Cookie Pattern speichern
+        if (data.data.csrf_token) {
+          setCsrfToken(data.data.csrf_token);
+          logger.debug('AuthService', 'CSRF token stored');
+        }
 
         logger.info('AuthService', 'Login successful');
         logger.debug('AuthService', 'User logged in', {
           username: data.data.user.username,
           rolle: data.data.user.rolle
         });
-        logger.debug('AuthService', 'Access Token stored', data.data.access_token.substring(0, 30) + '...');
-        logger.debug('AuthService', 'Refresh Token stored', data.data.refresh_token.substring(0, 30) + '...');
 
         // Debug: Verify storage
         if (process.env.NODE_ENV === 'development') {
           setTimeout(() => {
-            debugTokenState();
+            debugAuthState();
           }, 100);
         }
       } else {
@@ -63,19 +68,21 @@ class AuthService {
 
   /**
    * Logout
+   * ✅ SECURITY: Cookies werden vom Backend gelöscht
    */
   async logout(): Promise<void> {
     try {
       logger.info('AuthService', 'Logging out...');
+      // API-Call löscht die httpOnly Cookies auf dem Server
       await api.post('/auth/logout');
       logger.info('AuthService', 'Logout API call successful');
     } catch (error) {
       logger.warn('AuthService', 'Logout API error (continuing anyway)', error);
     } finally {
-      // IMMER localStorage clearen
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // ✅ SECURITY: Nur User-Daten und CSRF-Token löschen
+      // Tokens sind in httpOnly Cookies und werden vom Backend gelöscht
       localStorage.removeItem('user');
+      setCsrfToken(null);
       logger.info('AuthService', 'Local storage cleared');
 
       // Redirect zum Login
@@ -106,15 +113,18 @@ class AuthService {
 
   /**
    * Check if user is authenticated
+   * ✅ SECURITY: Prüft nur User-Daten und CSRF-Token
+   * Token-Validierung erfolgt serverseitig
    */
   isAuthenticated(): boolean {
-    const token = localStorage.getItem('accessToken');
     const user = this.getCurrentUser();
-    const isAuth = !!token && !!user;
+    const hasCsrf = !!getCsrfToken();
+    // User muss existieren und CSRF-Token vorhanden sein
+    const isAuth = !!user && hasCsrf;
 
     logger.debug('AuthService', 'Authentication check', {
-      hasToken: !!token,
       hasUser: !!user,
+      hasCsrfToken: hasCsrf,
       isAuthenticated: isAuth
     });
 
@@ -180,17 +190,12 @@ class AuthService {
 
   /**
    * Verify token
+   * ✅ SECURITY: Cookie wird automatisch mitgesendet
    */
   async verifyToken(): Promise<boolean> {
     try {
-      const token = localStorage.getItem('accessToken');
-
-      if (!token) {
-        logger.debug('AuthService', 'No token to verify');
-        return false;
-      }
-
-      logger.debug('AuthService', 'Verifying token...');
+      // Keine Token-Prüfung mehr nötig - Cookie wird automatisch gesendet
+      logger.debug('AuthService', 'Verifying token via cookie...');
       const response = await api.get<ApiResponse>('/auth/verify');
       const isValid = response.data.success;
 
@@ -204,39 +209,30 @@ class AuthService {
 
   /**
    * Refresh token
+   * ✅ SECURITY: Refresh-Token als httpOnly Cookie
    */
-  async refreshToken(): Promise<string | null> {
-    const refreshToken = localStorage.getItem('refreshToken');
-
-    if (!refreshToken) {
-      logger.debug('AuthService', 'No refresh token available');
-      return null;
-    }
-
+  async refreshToken(): Promise<boolean> {
     try {
-      logger.debug('AuthService', 'Refreshing token...');
+      logger.debug('AuthService', 'Refreshing token via cookie...');
 
-      const response = await api.post<ApiResponse<{ access_token: string }>>('/auth/refresh', {}, {
-        headers: {
-          'Authorization': `Bearer ${refreshToken}`
+      // Cookie wird automatisch mitgesendet (withCredentials)
+      const response = await api.post<ApiResponse<{ csrf_token?: string }>>('/auth/refresh', {});
+
+      if (response.data.success) {
+        // Neues CSRF-Token speichern wenn vorhanden
+        if (response.data.data?.csrf_token) {
+          setCsrfToken(response.data.data.csrf_token);
         }
-      });
 
-      if (response.data.success && response.data.data) {
-        const newAccessToken = response.data.data.access_token;
-        localStorage.setItem('accessToken', newAccessToken);
-
-        logger.info('AuthService', 'Token refreshed');
-        logger.debug('AuthService', 'New token', newAccessToken.substring(0, 30) + '...');
-
-        return newAccessToken;
+        logger.info('AuthService', 'Token refreshed successfully');
+        return true;
       }
 
-      logger.error('AuthService', 'Refresh failed - no token in response');
-      return null;
+      logger.error('AuthService', 'Refresh failed');
+      return false;
     } catch (error) {
       logger.error('AuthService', 'Token refresh error', error);
-      return null;
+      return false;
     }
   }
 

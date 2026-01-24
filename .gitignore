@@ -52,7 +52,12 @@ instance/
 
 # Logs
 *.log
-logs/
+logs/*
+!logs/.gitkeep
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
 
 # Node.js (Frontend)
 node_modules/
@@ -135,3 +140,18 @@ setup_local_postgres.*
 # Environment files with real credentials
 .env.production
 !.env.production.example
+
+# Docker volumes and data
+docker/postgres_data/
+docker/redis_data/
+
+# Build output
+digitales-dekanat-frontend/root_files/dist/
+
+# Migration scripts (already migrated)
+backend/migrate_*.py
+backend/test_*.py
+backend/verify_*.py
+
+# Test outputs
+backend/*.pdf

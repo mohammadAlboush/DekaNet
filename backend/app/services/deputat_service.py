@@ -15,6 +15,7 @@ Funktionen:
 
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
+from sqlalchemy.orm import joinedload, selectinload
 from app.services.base_service import BaseService
 from app.models import (
     Deputatsabrechnung,
@@ -190,7 +191,10 @@ class DeputatService(BaseService):
         Returns:
             Liste von Deputatsabrechnungen
         """
-        query = Deputatsabrechnung.query.filter_by(benutzer_id=benutzer_id)
+        query = Deputatsabrechnung.query.options(
+            joinedload(Deputatsabrechnung.planungsphase).joinedload(Planungsphase.semester),
+            joinedload(Deputatsabrechnung.benutzer)
+        ).filter_by(benutzer_id=benutzer_id)
 
         if planungsphase_id:
             query = query.filter_by(planungsphase_id=planungsphase_id)
@@ -212,7 +216,10 @@ class DeputatService(BaseService):
         Returns:
             Liste von Deputatsabrechnungen
         """
-        query = Deputatsabrechnung.query.filter_by(planungsphase_id=planungsphase_id)
+        query = Deputatsabrechnung.query.options(
+            joinedload(Deputatsabrechnung.benutzer),
+            joinedload(Deputatsabrechnung.planungsphase).joinedload(Planungsphase.semester)
+        ).filter_by(planungsphase_id=planungsphase_id)
 
         if status:
             query = query.filter_by(status=status)
@@ -232,7 +239,10 @@ class DeputatService(BaseService):
         Returns:
             Liste von eingereichten Deputatsabrechnungen
         """
-        query = Deputatsabrechnung.query.filter_by(status='eingereicht')
+        query = Deputatsabrechnung.query.options(
+            joinedload(Deputatsabrechnung.benutzer),
+            joinedload(Deputatsabrechnung.planungsphase).joinedload(Planungsphase.semester)
+        ).filter_by(status='eingereicht')
 
         if planungsphase_id:
             query = query.filter_by(planungsphase_id=planungsphase_id)
@@ -321,8 +331,13 @@ class DeputatService(BaseService):
             if lt.geplantes_modul_id
         }
 
-        # Hole alle geplanten Module
-        geplante_module = {gm.id: gm for gm in planung.geplante_module.all()}
+        # Hole alle geplanten Module MIT EAGER LOADING für modul
+        geplante_module = {
+            gm.id: gm
+            for gm in GeplantesModul.query.options(
+                joinedload(GeplantesModul.modul)
+            ).filter_by(semesterplanung_id=planung.id).all()
+        }
 
         hinzugefuegt = 0
         aktualisiert = 0
@@ -412,10 +427,12 @@ class DeputatService(BaseService):
             if e.semester_auftrag_id
         }
 
-        # Hole genehmigte Semesteraufträge für diese Planungsphase
+        # Hole genehmigte Semesteraufträge für diese Planungsphase MIT EAGER LOADING
         semester_id = planungsphase.semester_id
         genehmigte_auftraege = {
-            a.id: a for a in SemesterAuftrag.query.filter_by(
+            a.id: a for a in SemesterAuftrag.query.options(
+                joinedload(SemesterAuftrag.auftrag)
+            ).filter_by(
                 semester_id=semester_id,
                 dozent_id=benutzer.dozent_id,
                 status='genehmigt'
@@ -523,8 +540,12 @@ class DeputatService(BaseService):
         importiert = 0
         uebersprungen = 0
 
-        # Importiere geplante Module
-        for gm in planung.geplante_module.all():
+        # Importiere geplante Module MIT EAGER LOADING
+        geplante_module = GeplantesModul.query.options(
+            joinedload(GeplantesModul.modul)
+        ).filter_by(semesterplanung_id=planung.id).all()
+
+        for gm in geplante_module:
             if gm.id in bereits_importiert:
                 uebersprungen += 1
                 continue
@@ -600,9 +621,11 @@ class DeputatService(BaseService):
             if e.semester_auftrag_id
         }
 
-        # Hole genehmigte Semesteraufträge für diese Planungsphase
+        # Hole genehmigte Semesteraufträge für diese Planungsphase MIT EAGER LOADING
         semester_id = planungsphase.semester_id
-        auftraege = SemesterAuftrag.query.filter_by(
+        auftraege = SemesterAuftrag.query.options(
+            joinedload(SemesterAuftrag.auftrag)
+        ).filter_by(
             semester_id=semester_id,
             dozent_id=benutzer.dozent_id,
             status='genehmigt'

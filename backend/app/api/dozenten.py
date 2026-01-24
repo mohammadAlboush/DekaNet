@@ -6,6 +6,8 @@ Zeigt ALLE Dozenten-Daten aus der Datenbank an und ermöglicht Bearbeitung
 
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, current_user
+from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy import func
 from app.models import Dozent, Benutzer, ModulDozent, Modul
 from app.extensions import db
 
@@ -43,31 +45,51 @@ def get_alle_dozenten():
         mit_benutzer = request.args.get('mit_benutzer')
         search = request.args.get('search')
         
-        # Direkte Datenbankabfrage
+        # Direkte Datenbankabfrage mit eager loading
         if not search and not fachbereich and mit_benutzer is None:
             if aktiv is not None:
                 aktiv_bool = aktiv.lower() == 'true'
             else:
                 aktiv_bool = True
-            
-            dozenten = Dozent.query.filter_by(aktiv=aktiv_bool).all()
-            
+
+            # Pre-compute module counts to avoid N+1 queries
+            modul_counts = dict(
+                db.session.query(
+                    ModulDozent.dozent_id,
+                    func.count(func.distinct(ModulDozent.modul_id))
+                ).group_by(ModulDozent.dozent_id).all()
+            )
+
+            dozenten = Dozent.query.options(
+                joinedload(Dozent.benutzer)
+            ).filter_by(aktiv=aktiv_bool).all()
+
             if len(dozenten) == 0:
-                dozenten = Dozent.query.all()
+                dozenten = Dozent.query.options(
+                    joinedload(Dozent.benutzer)
+                ).all()
         else:
             # Mit Filtern
             from app.services import dozent_service
-            
+
             if aktiv is not None:
                 aktiv_bool = aktiv.lower() == 'true'
             else:
                 aktiv_bool = True
-                
+
             if mit_benutzer is not None:
                 mit_benutzer_bool = mit_benutzer.lower() == 'true'
             else:
                 mit_benutzer_bool = None
-            
+
+            # Pre-compute module counts to avoid N+1 queries
+            modul_counts = dict(
+                db.session.query(
+                    ModulDozent.dozent_id,
+                    func.count(func.distinct(ModulDozent.modul_id))
+                ).group_by(ModulDozent.dozent_id).all()
+            )
+
             dozenten = dozent_service.filter_dozenten(
                 fachbereich=fachbereich,
                 aktiv=aktiv_bool,
@@ -75,7 +97,7 @@ def get_alle_dozenten():
                 suchbegriff=search
             )
         
-        # Format response
+        # Format response - use pre-computed counts to avoid N+1 queries
         items = []
         for dozent in dozenten:
             try:
@@ -89,18 +111,10 @@ def get_alle_dozenten():
                     'fachbereich': dozent.fachbereich,
                     'aktiv': dozent.aktiv,
                     'name_mit_titel': f"{dozent.titel or ''} {dozent.name_komplett}".strip(),
-                    'hat_benutzer_account': False,
-                    'anzahl_module': 0
+                    'hat_benutzer_account': dozent.benutzer is not None,
+                    'anzahl_module': modul_counts.get(dozent.id, 0)
                 }
-                
-                try:
-                    if hasattr(dozent, 'hat_benutzer_account'):
-                        dozent_dict['hat_benutzer_account'] = dozent.hat_benutzer_account
-                    if hasattr(dozent, 'anzahl_module'):
-                        dozent_dict['anzahl_module'] = dozent.anzahl_module
-                except:
-                    pass
-                
+
                 items.append(dozent_dict)
             except Exception as e:
                 current_app.logger.error(f"Error processing dozent {dozent.id}: {e}")
@@ -236,21 +250,22 @@ def get_dozent(dozent_id: int):
         except Exception as e:
             current_app.logger.error(f"Error loading benutzer: {e}")
         
-        # Module
+        # Module - optimiert mit einer Query
         try:
             modul_zuordnungen = ModulDozent.query.filter_by(dozent_id=dozent_id).all()
-            
+
             # Zähle nur eindeutige Module (ein Dozent kann mehrere Rollen im selben Modul haben)
-            unique_module_ids = set(zuordnung.modul_id for zuordnung in modul_zuordnungen)
+            unique_module_ids = list(set(zuordnung.modul_id for zuordnung in modul_zuordnungen))
             details['anzahl_module'] = len(unique_module_ids)
-            
+
             current_app.logger.info(f"[DozentenAPI] Found {len(modul_zuordnungen)} module zuordnungen, {len(unique_module_ids)} unique modules")
-            
-            
-            for zuordnung in modul_zuordnungen:
-                try:
-                    # Lade Modul direkt über modul_id
-                    modul = Modul.query.get(zuordnung.modul_id)
+
+            # Lade alle Module in EINER Query (statt N+1)
+            if unique_module_ids:
+                module_dict = {m.id: m for m in Modul.query.filter(Modul.id.in_(unique_module_ids)).all()}
+
+                for zuordnung in modul_zuordnungen:
+                    modul = module_dict.get(zuordnung.modul_id)
                     if modul:
                         details['module'].append({
                             'zuordnung_id': zuordnung.id,
@@ -260,10 +275,7 @@ def get_dozent(dozent_id: int):
                             'rolle': zuordnung.rolle,
                             'po_id': modul.po_id if hasattr(modul, 'po_id') else None
                         })
-                        current_app.logger.debug(f"  Added module: {modul.kuerzel}")
-                except Exception as inner_e:
-                    current_app.logger.error(f"Error loading modul {zuordnung.modul_id}: {inner_e}")
-                    
+
             current_app.logger.info(f"[DozentenAPI] ✓ Loaded {len(details['module'])} modules")
         except Exception as e:
             current_app.logger.error(f"Error loading module: {e}", exc_info=True)
@@ -287,7 +299,7 @@ def get_dozent(dozent_id: int):
 @dozenten_api.route('/<int:dozent_id>/module', methods=['GET'])
 @jwt_required()
 def get_dozent_module(dozent_id: int):
-    """GET /api/dozenten/<id>/module - Holt Module eines Dozenten"""
+    """GET /api/dozenten/<id>/module - Holt Module eines Dozenten mit vollständigen Daten (optimiert)"""
     try:
         dozent = Dozent.query.get(dozent_id)
         if not dozent:
@@ -295,39 +307,86 @@ def get_dozent_module(dozent_id: int):
                 'success': False,
                 'message': 'Dozent nicht gefunden'
             }), 404
-        
+
         rolle = request.args.get('rolle')
         po_id = request.args.get('po_id', type=int)
-        
+
         query = ModulDozent.query.filter_by(dozent_id=dozent_id)
-        
+
         if rolle:
             query = query.filter_by(rolle=rolle)
-        
+
         zuordnungen = query.all()
-        
+
+        # Hole alle Modul-IDs
+        modul_ids = list(set(z.modul_id for z in zuordnungen))
+
+        if not modul_ids:
+            return jsonify({
+                'success': True,
+                'data': [],
+                'message': '0 Modul(e) gefunden'
+            }), 200
+
+        # Lade alle Module in EINER Query
+        module_query = Modul.query.filter(Modul.id.in_(modul_ids))
+
+        if po_id:
+            module_query = module_query.filter_by(po_id=po_id)
+
+        module = module_query.all()
+
+        # Erstelle Mapping für schnellen Zugriff
+        rolle_map = {z.modul_id: (z.rolle, z.id) for z in zuordnungen}
+
         items = []
-        for zuordnung in zuordnungen:
-            modul = Modul.query.get(zuordnung.modul_id)
-            if modul:
-                if po_id and modul.po_id != po_id:
-                    continue
-                    
-                items.append({
-                    'zuordnung_id': zuordnung.id,
-                    'modul_id': modul.id,
-                    'kuerzel': modul.kuerzel,
-                    'bezeichnung_de': modul.bezeichnung_de,
-                    'rolle': zuordnung.rolle,
-                    'po_id': modul.po_id if hasattr(modul, 'po_id') else None
-                })
-        
+        for modul in module:
+            rolle_info = rolle_map.get(modul.id, (None, None))
+
+            modul_data = {
+                'id': modul.id,
+                'kuerzel': modul.kuerzel,
+                'bezeichnung_de': modul.bezeichnung_de,
+                'bezeichnung_en': getattr(modul, 'bezeichnung_en', None),
+                'leistungspunkte': getattr(modul, 'leistungspunkte', None),
+                'sws_gesamt': getattr(modul, 'sws_gesamt', 0),
+                'po_id': getattr(modul, 'po_id', None),
+                'rolle': rolle_info[0],
+                'zuordnung_id': rolle_info[1],
+            }
+
+            # Lehrformen laden - sicher mit try/except
+            modul_data['lehrformen'] = []
+            try:
+                if hasattr(modul, 'lehrformen') and modul.lehrformen is not None:
+                    # Konvertiere zu Liste (funktioniert mit lazy='dynamic' und anderen)
+                    lehrformen_list = []
+                    for lf in modul.lehrformen:
+                        lf_data = {
+                            'id': lf.id,
+                            'sws': getattr(lf, 'sws', 0),
+                        }
+                        # Lehrform-Kürzel sicher laden
+                        try:
+                            if hasattr(lf, 'lehrform') and lf.lehrform:
+                                lf_data['kuerzel'] = lf.lehrform.kuerzel
+                            else:
+                                lf_data['kuerzel'] = 'V'
+                        except Exception:
+                            lf_data['kuerzel'] = 'V'
+                        lehrformen_list.append(lf_data)
+                    modul_data['lehrformen'] = lehrformen_list
+            except Exception as e:
+                current_app.logger.warning(f"Error loading lehrformen for modul {modul.id}: {e}")
+
+            items.append(modul_data)
+
         return jsonify({
             'success': True,
             'data': items,
             'message': f'{len(items)} Modul(e) gefunden'
         }), 200
-        
+
     except Exception as e:
         current_app.logger.error(f"Error: {e}", exc_info=True)
         return jsonify({

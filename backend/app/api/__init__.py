@@ -120,6 +120,14 @@ def register_blueprints(app: Flask):
     except ImportError as e:
         logger.error(f'   [ERROR] Failed to import templates API: {e}')
 
+    # ✨ NEW: ADMIN API (Database Reset)
+    try:
+        from app.api.admin import admin_api
+        app.register_blueprint(admin_api)
+        logger.info('   [OK] Admin API: /api/admin')
+    except ImportError as e:
+        logger.error(f'   [ERROR] Failed to import admin API: {e}')
+
     logger.info("="*80)
     logger.info('[OK] All API Blueprints registered')
     logger.info("="*80)

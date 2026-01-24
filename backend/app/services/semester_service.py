@@ -12,8 +12,9 @@ Funktionen:
 
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
+from sqlalchemy import func, case
 from app.services.base_service import BaseService
-from app.models import Semester
+from app.models import Semester, Semesterplanung
 from app.extensions import db
 
 
@@ -251,27 +252,78 @@ class SemesterService(BaseService):
     
     def get_planungssemester(self) -> Optional[Semester]:
         """
-        Gibt das Semester zurück für das gerade geplant werden kann
-        
+        Gibt das Semester zurück für das gerade geplant werden kann.
+        Priorisiert Semester mit einer aktiven Planungsphase.
+
         Returns:
             Semester oder None
-            
+
         Example:
             planungs_sem = semester_service.get_planungssemester()
         """
+        from app.models.planungsphase import Planungsphase
+
+        # Priorität 1: Semester mit aktiver Planungsphase
+        semester_mit_aktiver_phase = Semester.query.join(
+            Planungsphase, Planungsphase.semester_id == Semester.id
+        ).filter(
+            Planungsphase.ist_aktiv == True
+        ).first()
+
+        if semester_mit_aktiver_phase:
+            return semester_mit_aktiver_phase
+
+        # Fallback: Semester mit ist_planungsphase=True
         return self.get_first(ist_planungsphase=True)
     
     def get_by_kuerzel(self, kuerzel: str) -> Optional[Semester]:
         """
         Findet Semester anhand Kürzel
-        
+
         Args:
             kuerzel: Semester-Kürzel (z.B. "WS2025")
-            
+
         Returns:
             Semester oder None
         """
         return self.get_first(kuerzel=kuerzel)
+
+    def get_or_create_semester_for_phase(self, semester_typ: str, jahr: int) -> Semester:
+        """
+        Erstellt oder findet Semester basierend auf Typ und Jahr.
+
+        Args:
+            semester_typ: 'wintersemester' oder 'sommersemester'
+            jahr: Jahr (z.B. 2025)
+
+        Returns:
+            Semester: Existierendes oder neu erstelltes Semester
+
+        Example:
+            semester = semester_service.get_or_create_semester_for_phase('wintersemester', 2025)
+        """
+        kuerzel = f"{'WS' if semester_typ == 'wintersemester' else 'SS'}{jahr}"
+
+        existing = self.get_by_kuerzel(kuerzel)
+        if existing:
+            return existing
+
+        # Standard-Datumsbereiche für Deutschland
+        if semester_typ == 'wintersemester':
+            bezeichnung = f"Wintersemester {jahr}/{jahr+1}"
+            start_datum = date(jahr, 10, 1)
+            ende_datum = date(jahr+1, 3, 31)
+        else:
+            bezeichnung = f"Sommersemester {jahr}"
+            start_datum = date(jahr, 4, 1)
+            ende_datum = date(jahr, 9, 30)
+
+        return self.create_semester(
+            bezeichnung=bezeichnung,
+            kuerzel=kuerzel,
+            start_datum=start_datum,
+            ende_datum=ende_datum
+        )
     
     def get_vergangene(self) -> List[Semester]:
         """
@@ -295,101 +347,9 @@ class SemesterService(BaseService):
             Semester.start_datum > date.today()
         ).order_by(Semester.start_datum.asc()).all()
     
-    def get_laufende(self) -> List[Semester]:
-        """
-        Holt alle aktuell laufenden Semester
-        
-        Returns:
-            Liste von Semestern
-        """
-        heute = date.today()
-        return Semester.query.filter(
-            Semester.start_datum <= heute,
-            Semester.ende_datum >= heute
-        ).all()
-    
-    def get_semester_for_date(self, datum: date) -> Optional[Semester]:
-        """
-        Findet Semester für ein bestimmtes Datum
-
-        Args:
-            datum: Datum
-
-        Returns:
-            Semester oder None
-
-        Example:
-            semester = semester_service.get_semester_for_date(date(2025, 11, 1))
-        """
-        return Semester.query.filter(
-            Semester.start_datum <= datum,
-            Semester.ende_datum >= datum
-        ).first()
-
-    def get_aktuelles_laufendes_semester(self) -> Optional[Semester]:
-        """
-        Gibt das Semester zurück das heute läuft
-
-        Returns:
-            Semester oder None
-
-        Example:
-            laufendes = semester_service.get_aktuelles_laufendes_semester()
-        """
-        return self.get_semester_for_date(date.today())
-
-    def auto_semester_vorschlag(self) -> Dict[str, Any]:
-        """
-        Schlägt automatisch das passende Semester vor basierend auf heutigem Datum
-
-        Returns:
-            Dict mit:
-                - vorschlag: Vorgeschlagenes Semester (kann None sein)
-                - aktives: Aktuell aktiviertes Semester (kann None sein)
-                - laufendes: Heute laufendes Semester (kann None sein)
-                - ist_korrekt: bool - Stimmen aktives und laufendes Semester überein?
-                - empfehlung: str - Empfehlungstext
-
-        Example:
-            result = semester_service.auto_semester_vorschlag()
-            if not result['ist_korrekt']:
-                print(result['empfehlung'])
-        """
-        aktives = self.get_aktives_semester()
-        laufendes = self.get_aktuelles_laufendes_semester()
-
-        # Prüfe ob ein Wechsel nötig ist
-        ist_korrekt = False
-        empfehlung = ""
-        vorschlag = None
-
-        if not aktives and not laufendes:
-            # Kein Semester vorhanden
-            empfehlung = "Kein Semester vorhanden. Bitte erstellen Sie zunächst Semester."
-        elif not aktives and laufendes:
-            # Laufendes Semester existiert aber ist nicht aktiv
-            vorschlag = laufendes
-            empfehlung = f"Empfehlung: Aktivieren Sie '{laufendes.bezeichnung}', da dieses Semester aktuell läuft."
-        elif aktives and not laufendes:
-            # Aktives Semester aber kein laufendes gefunden
-            empfehlung = f"Warnung: '{aktives.bezeichnung}' ist aktiv, aber es läuft aktuell kein Semester laut Datum."
-        elif aktives.id == laufendes.id:
-            # Perfekt - aktives Semester stimmt mit laufendem überein
-            ist_korrekt = True
-            empfehlung = f"Alles korrekt: '{aktives.bezeichnung}' ist aktiv und läuft aktuell."
-        else:
-            # Aktives und laufendes Semester unterschiedlich
-            vorschlag = laufendes
-            empfehlung = f"Semesterwechsel empfohlen: '{laufendes.bezeichnung}' läuft aktuell, aber '{aktives.bezeichnung}' ist noch aktiv."
-
-        return {
-            'vorschlag': vorschlag.to_dict() if vorschlag else None,
-            'aktives': aktives.to_dict() if aktives else None,
-            'laufendes': laufendes.to_dict() if laufendes else None,
-            'ist_korrekt': ist_korrekt,
-            'empfehlung': empfehlung,
-            'datum_heute': date.today().isoformat()
-        }
+    # NOTE: Die folgenden Methoden wurden entfernt da die automatische Semester-Erkennung
+    # nicht mehr verwendet wird. Stattdessen wählt der Dekan Semester-Typ und Jahr manuell.
+    # Entfernt: get_laufende(), get_semester_for_date(), get_aktuelles_laufendes_semester(), auto_semester_vorschlag()
     
     # =========================================================================
     # STATISTICS
@@ -432,13 +392,72 @@ class SemesterService(BaseService):
     
     def get_alle_mit_statistik(self) -> List[Dict[str, Any]]:
         """
-        Holt alle Semester mit Statistiken
-        
+        Holt alle Semester mit Statistiken - OPTIMIERT mit einer Query
+
         Returns:
             Liste von Dicts mit Semester und Statistiken
         """
+        # Hole alle Semester
         semester_liste = self.get_all()
-        return [self.get_statistik(s.id) for s in semester_liste]
+
+        if not semester_liste:
+            return []
+
+        # Berechne alle Statistiken in EINER Query mit SQL-Aggregation
+        stats_query = db.session.query(
+            Semesterplanung.semester_id,
+            func.count(Semesterplanung.id).label('gesamt'),
+            func.sum(case((Semesterplanung.status == 'entwurf', 1), else_=0)).label('entwurf'),
+            func.sum(case((Semesterplanung.status == 'eingereicht', 1), else_=0)).label('eingereicht'),
+            func.sum(case((Semesterplanung.status == 'freigegeben', 1), else_=0)).label('freigegeben'),
+            func.sum(case((Semesterplanung.status == 'abgelehnt', 1), else_=0)).label('abgelehnt')
+        ).group_by(Semesterplanung.semester_id).all()
+
+        # Erstelle Mapping für schnellen Zugriff
+        stats_map = {
+            row.semester_id: {
+                'gesamt': row.gesamt or 0,
+                'entwurf': row.entwurf or 0,
+                'eingereicht': row.eingereicht or 0,
+                'freigegeben': row.freigegeben or 0,
+                'abgelehnt': row.abgelehnt or 0
+            }
+            for row in stats_query
+        }
+
+        result = []
+        for semester in semester_liste:
+            stats = stats_map.get(semester.id, {
+                'gesamt': 0, 'entwurf': 0, 'eingereicht': 0,
+                'freigegeben': 0, 'abgelehnt': 0
+            })
+
+            # Berechne planungen_abgeschlossen
+            planungen_abgeschlossen = (
+                stats['gesamt'] > 0 and stats['freigegeben'] == stats['gesamt']
+            )
+
+            result.append({
+                'semester': {
+                    'id': semester.id,
+                    'bezeichnung': semester.bezeichnung,
+                    'kuerzel': semester.kuerzel,
+                    'start_datum': semester.start_datum.isoformat(),
+                    'ende_datum': semester.ende_datum.isoformat(),
+                    'vorlesungsbeginn': semester.vorlesungsbeginn.isoformat() if semester.vorlesungsbeginn else None,
+                    'vorlesungsende': semester.vorlesungsende.isoformat() if semester.vorlesungsende else None,
+                    'ist_aktiv': semester.ist_aktiv,
+                    'ist_planungsphase': semester.ist_planungsphase,
+                    'ist_wintersemester': semester.ist_wintersemester,
+                    'ist_sommersemester': semester.ist_sommersemester,
+                    'ist_laufend': semester.ist_laufend,
+                    'dauer_tage': semester.dauer_tage,
+                },
+                'statistik': stats,
+                'planungen_abgeschlossen': planungen_abgeschlossen
+            })
+
+        return result
     
     # =========================================================================
     # VALIDATION

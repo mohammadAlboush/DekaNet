@@ -38,6 +38,9 @@ import { useNavigate } from 'react-router-dom';
 import auftragService from '../services/auftragService';
 import { Auftrag, CreateAuftragData, UpdateAuftragData } from '../types/auftrag.types';
 import { useToastStore } from '../components/common/Toast';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('AuftraegeVerwaltung');
 
 /**
  * Aufträge-Verwaltung - MASTER-LISTE
@@ -58,7 +61,11 @@ import { useToastStore } from '../components/common/Toast';
  * - etc.
  */
 
-const AuftraegeVerwaltung: React.FC = () => {
+interface AuftraegeVerwaltungProps {
+  embedded?: boolean;
+}
+
+const AuftraegeVerwaltung: React.FC<AuftraegeVerwaltungProps> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const showToast = useToastStore((state) => state.showToast);
 
@@ -85,9 +92,9 @@ const AuftraegeVerwaltung: React.FC = () => {
       setLoading(true);
       const data = await auftragService.getAlleAuftraege(false); // Alle, auch inaktive
       setAuftraege(data);
-      console.log('[AuftraegeVerwaltung] Loaded:', data.length, 'aufträge');
+      log.debug(' Loaded:', data.length, 'aufträge');
     } catch (error) {
-      console.error('[AuftraegeVerwaltung] Error loading:', error);
+      log.error(' Error loading:', error);
       showToast('Fehler beim Laden der Aufträge', 'error');
     } finally {
       setLoading(false);
@@ -159,7 +166,7 @@ const AuftraegeVerwaltung: React.FC = () => {
 
       handleCloseDialog();
     } catch (error: any) {
-      console.error('[AuftraegeVerwaltung] Error saving:', error);
+      log.error(' Error saving:', error);
       showToast(error.message || 'Fehler beim Speichern', 'error');
     } finally {
       setLoading(false);
@@ -177,7 +184,7 @@ const AuftraegeVerwaltung: React.FC = () => {
         'success'
       );
     } catch (error: any) {
-      console.error('[AuftraegeVerwaltung] Error toggling:', error);
+      log.error(' Error toggling:', error);
       showToast(error.message || 'Fehler beim Ändern', 'error');
     }
   };
@@ -197,7 +204,7 @@ const AuftraegeVerwaltung: React.FC = () => {
       setAuftraege(auftraege.filter(a => a.id !== auftrag.id));
       showToast('Auftrag gelöscht', 'success');
     } catch (error: any) {
-      console.error('[AuftraegeVerwaltung] Error deleting:', error);
+      log.error(' Error deleting:', error);
       showToast(error.message || 'Fehler beim Löschen', 'error');
     } finally {
       setLoading(false);
@@ -215,31 +222,42 @@ const AuftraegeVerwaltung: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg">
-      {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate('/dashboard')}>
-            <ArrowBack />
-          </IconButton>
-          <Box>
-            <Typography variant="h4" fontWeight={600}>
-              ⚙️ Semesteraufträge verwalten
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Master-Liste aller verfügbaren Aufträge
-            </Typography>
+    <Container maxWidth="lg" disableGutters={embedded}>
+      {/* Header - nur wenn nicht embedded */}
+      {!embedded && (
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton onClick={() => navigate('/dashboard')}>
+              <ArrowBack />
+            </IconButton>
+            <Box>
+              <Typography variant="h4" fontWeight={600}>
+                Semesteraufträge verwalten
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Master-Liste aller verfügbaren Aufträge
+              </Typography>
+            </Box>
           </Box>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenDialog()}
+            size="large"
+          >
+            Neuer Auftrag
+          </Button>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpenDialog()}
-          size="large"
-        >
-          Neuer Auftrag
-        </Button>
-      </Box>
+      )}
+
+      {/* Wenn embedded: Kompakter Header */}
+      {embedded && (
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenDialog()}>
+            Neuer Auftrag
+          </Button>
+        </Box>
+      )}
 
       {/* Info */}
       <Alert severity="info" sx={{ mb: 3 }}>

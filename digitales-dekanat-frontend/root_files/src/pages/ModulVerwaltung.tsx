@@ -16,7 +16,10 @@ import modulVerwaltungService, {
   ModulDozentZuordnung
 } from '../services/modulVerwaltungService';
 import useAuthStore from '../store/authStore';
+import { createContextLogger } from '../utils/logger';
 import AddDozentDialog from '../components/modul-verwaltung/AddDozentDialog';
+
+const log = createContextLogger('ModulVerwaltung');
 import RemoveDozentDialog from '../components/modul-verwaltung/RemoveDozentDialog';
 import ReplaceDozentDialog from '../components/modul-verwaltung/ReplaceDozentDialog';
 import BulkTransferDialog from '../components/modul-verwaltung/BulkTransferDialog';
@@ -100,12 +103,12 @@ const ModulVerwaltungPage: React.FC = () => {
 
       if (response.success) {
         setModule(response.data || []);
-        console.log('[ModulVerwaltung] Module loaded:', response.data?.length);
+        log.debug(' Module loaded:', response.data?.length);
       } else {
         setError(response.message || 'Fehler beim Laden der Module');
       }
     } catch (error: any) {
-      console.error('[ModulVerwaltung] Error:', error);
+      log.error(' Error:', error);
       setError(error.message || 'Ein Fehler ist aufgetreten');
     } finally {
       setLoading(false);

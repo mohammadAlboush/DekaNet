@@ -11,7 +11,7 @@ automatisch zu laden.
 
 from typing import List, Dict, Any, Optional
 from app.extensions import db
-from app.models import PlanungsTemplate, TemplateModul, Semesterplanung, GeplantesModul, WunschFreierTag
+from app.models import PlanungsTemplate, TemplateModul, Semesterplanung, GeplantesModul, WunschFreierTag, Modul, Benutzer
 from app.services.base_service import BaseService
 
 
@@ -393,14 +393,14 @@ class TemplateService(BaseService):
 
         # Optional: Bestehende Module löschen
         if clear_existing:
-            for gm in planung.geplante_module.all():
+            for gm in planung.geplante_module:
                 db.session.delete(gm)
-            for wt in planung.wunsch_freie_tage.all():
+            for wt in planung.wunsch_freie_tage:
                 db.session.delete(wt)
             db.session.flush()
 
         # Wunsch-freie Tage übernehmen (nur wenn clear_existing oder keine vorhanden)
-        if clear_existing or planung.wunsch_freie_tage.count() == 0:
+        if clear_existing or len(planung.wunsch_freie_tage) == 0:
             for tag_data in template.wunsch_freie_tage:
                 wunsch_tag = WunschFreierTag(
                     semesterplanung_id=planung.id,
@@ -418,9 +418,9 @@ class TemplateService(BaseService):
             planung.raumbedarf = template.raumbedarf
 
         # Module übernehmen
-        existing_modul_ids = [gm.modul_id for gm in planung.geplante_module.all()]
+        existing_modul_ids = [gm.modul_id for gm in planung.geplante_module]
 
-        for tm in template.template_module.all():
+        for tm in template.template_module:
             if tm.modul_id in existing_modul_ids:
                 uebersprungen += 1
                 continue
@@ -513,3 +513,130 @@ class TemplateService(BaseService):
             'template': template,
             'anzahl_module': anzahl
         }
+
+    # =========================================================================
+    # WIZARD INTEGRATION
+    # =========================================================================
+
+    def get_template_for_wizard(
+        self,
+        benutzer_id: int,
+        semester_typ: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Holt Template mit validierten Modulen für den Wizard.
+
+        Validiert ob Module noch existieren und löst Mitarbeiter-Namen auf.
+
+        Args:
+            benutzer_id: ID des Benutzers
+            semester_typ: 'winter' oder 'sommer'
+
+        Returns:
+            Dict mit Template-Daten, valid_modules, invalid_modules oder None
+        """
+        template = self.get_template_for_semester(benutzer_id, semester_typ)
+        if not template:
+            return None
+
+        valid_modules = []
+        invalid_modules = []
+
+        # Hole alle Modul-IDs für Batch-Query (Performance-Optimierung)
+        modul_ids = [tm.modul_id for tm in template.template_module]
+        module_map = {m.id: m for m in Modul.query.filter(Modul.id.in_(modul_ids)).all()} if modul_ids else {}
+
+        # Hole alle Mitarbeiter-IDs für Batch-Query (Performance-Optimierung)
+        all_mitarbeiter_ids = set()
+        for tm in template.template_module:
+            if tm.mitarbeiter_ids:
+                all_mitarbeiter_ids.update(tm.mitarbeiter_ids)
+
+        # Batch-lade alle Benutzer in einer Query
+        benutzer_map = {}
+        if all_mitarbeiter_ids:
+            benutzer_list = Benutzer.query.filter(Benutzer.id.in_(all_mitarbeiter_ids)).all()
+            benutzer_map = {b.id: b for b in benutzer_list}
+
+        # Iteriere über alle Template-Module
+        for tm in template.template_module:
+            # Prüfe ob Modul noch existiert (aus dem Batch geladen)
+            modul = module_map.get(tm.modul_id)
+
+            if not modul:
+                # Modul existiert nicht mehr
+                invalid_modules.append({
+                    'id': tm.id,
+                    'modul_id': tm.modul_id,
+                    'reason': 'Modul nicht gefunden'
+                })
+                continue
+
+            # Validiere und löse Mitarbeiter-IDs auf (aus Batch-Map)
+            mitarbeiter_info = []
+            valid_mitarbeiter_ids = []
+            invalid_mitarbeiter = []
+
+            for ma_id in (tm.mitarbeiter_ids or []):
+                benutzer = benutzer_map.get(ma_id)
+                if benutzer and benutzer.aktiv:
+                    valid_mitarbeiter_ids.append(ma_id)
+                    mitarbeiter_info.append({
+                        'id': benutzer.id,
+                        'username': benutzer.username,
+                        'name': f"{benutzer.vorname or ''} {benutzer.nachname or ''}".strip() or benutzer.username
+                    })
+                else:
+                    invalid_mitarbeiter.append(ma_id)
+
+            # Erstelle validiertes Modul-Dict
+            modul_dict = {
+                'id': tm.id,
+                'modul_id': tm.modul_id,
+                'po_id': tm.po_id,
+                'modul': {
+                    'id': modul.id,
+                    'kuerzel': modul.kuerzel,
+                    'bezeichnung_de': modul.bezeichnung_de,
+                    'leistungspunkte': modul.leistungspunkte
+                },
+                'anzahl_vorlesungen': tm.anzahl_vorlesungen,
+                'anzahl_uebungen': tm.anzahl_uebungen,
+                'anzahl_praktika': tm.anzahl_praktika,
+                'anzahl_seminare': tm.anzahl_seminare,
+                'mitarbeiter_ids': valid_mitarbeiter_ids,
+                'mitarbeiter': mitarbeiter_info,
+                'invalid_mitarbeiter': invalid_mitarbeiter,
+                'anmerkungen': tm.anmerkungen,
+                'raumbedarf': tm.raumbedarf,
+                'raum_vorlesung': tm.raum_vorlesung,
+                'raum_uebung': tm.raum_uebung,
+                'raum_praktikum': tm.raum_praktikum,
+                'raum_seminar': tm.raum_seminar,
+                'kapazitaet_vorlesung': tm.kapazitaet_vorlesung,
+                'kapazitaet_uebung': tm.kapazitaet_uebung,
+                'kapazitaet_praktikum': tm.kapazitaet_praktikum,
+                'kapazitaet_seminar': tm.kapazitaet_seminar,
+            }
+
+            valid_modules.append(modul_dict)
+
+        # Template-Daten zusammenstellen
+        result = {
+            'id': template.id,
+            'benutzer_id': template.benutzer_id,
+            'semester_typ': template.semester_typ,
+            'name': template.name,
+            'beschreibung': template.beschreibung,
+            'ist_aktiv': template.ist_aktiv,
+            'wunsch_freie_tage': template.wunsch_freie_tage,
+            'anmerkungen': template.anmerkungen,
+            'raumbedarf': template.raumbedarf,
+            'valid_modules': valid_modules,
+            'invalid_modules': invalid_modules,
+            'has_invalid_modules': len(invalid_modules) > 0,
+            'created_at': template.created_at.isoformat() if template.created_at else None,
+            'updated_at': template.updated_at.isoformat() if template.updated_at else None,
+        }
+
+        return result

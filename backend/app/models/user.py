@@ -228,10 +228,21 @@ class Benutzer(db.Model, UserMixin):
     def ist_lehrbeauftragter(self):
         """Ist Benutzer ein Lehrbeauftragter?"""
         return self.hat_rolle('lehrbeauftragter')
-    
+
     def ist_dozent(self):
         """Ist Benutzer ein Dozent? (Professor oder Lehrbeauftragter)"""
         return self.ist_professor() or self.ist_lehrbeauftragter()
+
+    def get_rolle_name(self) -> str:
+        """
+        ✅ SECURITY: Sichere Methode um Rollennamen zu erhalten.
+
+        Returns:
+            str: Rollenname oder 'unknown' wenn keine Rolle zugewiesen
+        """
+        if self.rolle and hasattr(self.rolle, 'name'):
+            return self.rolle.name
+        return 'unknown'
     
     # =========================================================================
     # PROPERTIES

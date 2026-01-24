@@ -6,9 +6,24 @@ import {
   ArchiviertePlanung,
   PhaseHistoryEntry,
   ProfessorPhaseSubmission,
-  PhaseStatistik
+  PhaseStatistik,
+  SemesterTyp,
+  CreatePlanungPhaseDto,
+  ArchivFilter
 } from '../types/planungPhase.types';
 import planungPhaseService from '../services/planungPhaseService';
+import { createContextLogger } from '../utils/logger';
+import { handleApiError } from '../services/api';
+
+const log = createContextLogger('PlanungPhaseStore');
+
+// ✅ TYPESAFE: Konkrete Typen für Phase-Updates
+export interface PhaseUpdateData {
+  name?: string;
+  startdatum?: string;
+  enddatum?: string;
+  ist_aktiv?: boolean;
+}
 
 interface PlanungPhaseStore {
   // State
@@ -30,9 +45,9 @@ interface PlanungPhaseStore {
 
   // Actions - Phasenverwaltung
   fetchActivePhase: () => Promise<void>;
-  startNewPhase: (name: string, semesterId: number, deadline?: string) => Promise<void>;
+  startNewPhase: (data: CreatePlanungPhaseDto) => Promise<void>;
   closeCurrentPhase: (archiveEntwuerfe: boolean, grund?: string) => Promise<void>;
-  updatePhase: (phaseId: number, updates: any) => Promise<void>;
+  updatePhase: (phaseId: number, updates: PhaseUpdateData) => Promise<void>;  // ✅ TYPESAFE
 
   // Actions - Submission Management
   checkSubmissionStatus: (professorId?: number) => Promise<void>;
@@ -40,9 +55,9 @@ interface PlanungPhaseStore {
   fetchPhaseSubmissions: (phaseId: number) => Promise<void>;
 
   // Actions - Archiv
-  fetchArchivedPlanungen: (filter?: any) => Promise<void>;
+  fetchArchivedPlanungen: (filter?: ArchivFilter) => Promise<void>;  // ✅ TYPESAFE
   restoreFromArchive: (archivId: number) => Promise<number>;
-  exportArchive: (filter?: any) => Promise<void>;
+  exportArchive: (filter?: ArchivFilter) => Promise<void>;  // ✅ TYPESAFE
 
   // Actions - Historie & Statistiken
   fetchPhaseHistory: (professorId?: number) => Promise<void>;
@@ -108,36 +123,31 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
         try {
           const phase = await planungPhaseService.getActivePhase();
           set({ activePhase: phase, loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Laden der aktiven Phase',
+            error: handleApiError(error),
             loading: false
           });
         }
       },
 
-      startNewPhase: async (name: string, semesterId: number, deadline?: string) => {
+      startNewPhase: async (data: CreatePlanungPhaseDto) => {
         set({ loading: true, error: null });
         try {
-          const newPhase = await planungPhaseService.startPhase({
-            name,
-            semester_id: semesterId,
-            startdatum: new Date().toISOString(),
-            enddatum: deadline
-          });
+          const response = await planungPhaseService.startPhase(data);
 
           set({
-            activePhase: newPhase,
+            activePhase: response.phase,
             loading: false
           });
 
           // Refresh all phases
-          const response = await planungPhaseService.getAllPhases();
-          set({ allPhases: response.phasen });
+          const allPhasesResponse = await planungPhaseService.getAllPhases();
+          set({ allPhases: allPhasesResponse.phasen });
 
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Starten der Planungsphase',
+            error: handleApiError(error),
             loading: false
           });
           throw error;
@@ -168,18 +178,18 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
           set({ allPhases: response.phasen });
 
           // Show success info
-          console.log(`Phase geschlossen. ${result.archivierte_planungen} Planungen archiviert, ${result.geloeschte_entwuerfe} Entwürfe gelöscht.`);
+          log.info(`Phase geschlossen. ${result.archivierte_planungen} Planungen archiviert, ${result.geloeschte_entwuerfe} Entwürfe gelöscht.`);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Schließen der Planungsphase',
+            error: handleApiError(error),
             loading: false
           });
           throw error;
         }
       },
 
-      updatePhase: async (phaseId: number, updates: any) => {
+      updatePhase: async (phaseId: number, updates: PhaseUpdateData) => {
         set({ loading: true, error: null });
         try {
           const updatedPhase = await planungPhaseService.updatePhase(phaseId, updates);
@@ -195,9 +205,9 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
             loading: false
           });
 
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Aktualisieren der Phase',
+            error: handleApiError(error),
             loading: false
           });
           throw error;
@@ -210,9 +220,9 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
         try {
           const status = await planungPhaseService.checkSubmissionStatus(professorId);
           set({ submissionStatus: status, loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Prüfen des Einreichungsstatus',
+            error: handleApiError(error),
             loading: false
           });
         }
@@ -233,9 +243,9 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
             loading: false
           });
 
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Aufzeichnen der Einreichung',
+            error: handleApiError(error),
             loading: false
           });
           throw error;
@@ -247,23 +257,23 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
         try {
           const submissions = await planungPhaseService.getPhaseSubmissions(phaseId);
           set({ phaseSubmissions: submissions, loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Laden der Einreichungen',
+            error: handleApiError(error),
             loading: false
           });
         }
       },
 
       // ========== Archiv ==========
-      fetchArchivedPlanungen: async (filter?: any) => {
+      fetchArchivedPlanungen: async (filter?: ArchivFilter) => {
         set({ loading: true, error: null });
         try {
           const response = await planungPhaseService.getArchivedPlanungen(filter);
           set({ archivedPlanungen: response.planungen, loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Laden der archivierten Planungen',
+            error: handleApiError(error),
             loading: false
           });
         }
@@ -282,16 +292,16 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
           });
 
           return result.planung_id;
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Wiederherstellen der Planung',
+            error: handleApiError(error),
             loading: false
           });
           throw error;
         }
       },
 
-      exportArchive: async (filter?: any) => {
+      exportArchive: async (filter?: ArchivFilter) => {
         set({ loading: true, error: null });
         try {
           const blob = await planungPhaseService.exportArchiv(filter);
@@ -307,9 +317,9 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
           document.body.removeChild(a);
 
           set({ loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Exportieren des Archivs',
+            error: handleApiError(error),
             loading: false
           });
         }
@@ -321,9 +331,9 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
         try {
           const history = await planungPhaseService.getPhaseHistory(professorId);
           set({ phaseHistory: history, loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Laden der Phasenhistorie',
+            error: handleApiError(error),
             loading: false
           });
         }
@@ -334,9 +344,9 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
         try {
           const statistics = await planungPhaseService.getPhaseStatistics(phaseId);
           set({ currentPhaseStatistics: statistics, loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Laden der Statistiken',
+            error: handleApiError(error),
             loading: false
           });
         }
@@ -358,9 +368,9 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
           document.body.removeChild(a);
 
           set({ loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Generieren des Berichts',
+            error: handleApiError(error),
             loading: false
           });
         }
@@ -371,11 +381,11 @@ const usePlanungPhaseStore = create<PlanungPhaseStore>()(
         set({ loading: true, error: null });
         try {
           const result = await planungPhaseService.sendReminders(phaseId, professorIds);
-          console.log(`${result.gesendet} Erinnerungen gesendet, ${result.fehler} Fehler`);
+          log.info(`${result.gesendet} Erinnerungen gesendet, ${result.fehler} Fehler`);
           set({ loading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({
-            error: error.response?.data?.message || 'Fehler beim Senden der Erinnerungen',
+            error: handleApiError(error),
             loading: false
           });
           throw error;

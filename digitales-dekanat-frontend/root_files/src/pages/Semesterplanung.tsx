@@ -42,6 +42,9 @@ import {
   Calculate,
   FileDownload,
 } from '@mui/icons-material';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('Semesterplanung');
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import usePlanungPhaseStore from '../store/planungPhaseStore';
@@ -100,7 +103,7 @@ const SemesterplanungPage: React.FC = () => {
         if (res.success) setPlanungen(res.data || []);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      log.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -121,7 +124,7 @@ const SemesterplanungPage: React.FC = () => {
         loadData();
       }
     } catch (error) {
-      console.error('Error submitting planung:', error);
+      log.error('Error submitting planung:', error);
     }
   };
 
@@ -132,7 +135,7 @@ const SemesterplanungPage: React.FC = () => {
         loadData();
       }
     } catch (error) {
-      console.error('Error approving planung:', error);
+      log.error('Error approving planung:', error);
     }
   };
 

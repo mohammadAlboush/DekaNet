@@ -27,6 +27,10 @@ class Planungsphase(BaseModel):
     geschlossen_von = db.Column(db.Integer, db.ForeignKey('benutzer.id'), nullable=True)
     geschlossen_grund = db.Column(db.Text, nullable=True)
 
+    # NEU: Strukturierte Semester-Info (zur Redundanz, falls Semester gelöscht wird)
+    semester_typ = db.Column(db.String(20), nullable=True)  # 'wintersemester' | 'sommersemester'
+    semester_jahr = db.Column(db.Integer, nullable=True)     # z.B. 2025
+
     # Statistik-Felder (werden automatisch aktualisiert)
     anzahl_einreichungen = db.Column(db.Integer, nullable=False, default=0)
     anzahl_genehmigt = db.Column(db.Integer, nullable=False, default=0)
@@ -201,6 +205,8 @@ class Planungsphase(BaseModel):
             'geschlossen_am': self.geschlossen_am.isoformat() if self.geschlossen_am else None,
             'geschlossen_von': self.geschlossen_von,
             'geschlossen_grund': self.geschlossen_grund,
+            'semester_typ': self.semester_typ,
+            'semester_jahr': self.semester_jahr,
             'anzahl_einreichungen': self.anzahl_einreichungen,
             'anzahl_genehmigt': self.anzahl_genehmigt,
             'anzahl_abgelehnt': self.anzahl_abgelehnt,

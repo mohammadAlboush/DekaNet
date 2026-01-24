@@ -33,7 +33,6 @@ import {
   TrendingUp,
   Group,
   School,
-  CalendarMonth,
   Folder,
   ArrowForward,
   CheckCircle,
@@ -106,10 +105,9 @@ const DekanDashboard: React.FC = () => {
   // Auto-refresh when AuftragStore changes (Professor submits new request)
   useEffect(() => {
     if (lastUpdate && planningSemester) {
-      console.log('[Dashboard] AuftragStore updated, refreshing...');
       loadAuftraegeOnly();
     }
-  }, [lastUpdate]);
+  }, [lastUpdate, planningSemester]);
 
   // Only reload Aufträge (lighter refresh)
   const loadAuftraegeOnly = async () => {
@@ -135,7 +133,7 @@ const DekanDashboard: React.FC = () => {
         genehmigteAuftraege: genehmigteRes.length,
       }));
     } catch (err) {
-      console.error('Error refreshing aufträge:', err);
+      // Error logged via API interceptor('Error refreshing aufträge:', err);
     }
   };
 
@@ -179,7 +177,7 @@ const DekanDashboard: React.FC = () => {
           setGenehmigteAuftraege(genehmigteRes);
           genehmigteCount = genehmigteRes.length;
         } catch (err) {
-          console.error('Error loading aufträge:', err);
+          // Error logged via API interceptor('Error loading aufträge:', err);
         }
       }
 
@@ -189,7 +187,7 @@ const DekanDashboard: React.FC = () => {
         genehmigteAuftraege: genehmigteCount,
       });
     } catch (error) {
-      console.error('Dashboard load error:', error);
+      // Error logged via API interceptor('Dashboard load error:', error);
     } finally {
       setLoading(false);
     }
@@ -311,7 +309,7 @@ const DekanDashboard: React.FC = () => {
                 transform: 'translateY(-4px)',
               }
             }}
-            onClick={() => navigate('/dekan/auftraege')}
+            onClick={() => navigate('/einstellungen')}
           >
             <CardContent>
               <Stack spacing={2}>
@@ -375,17 +373,6 @@ const DekanDashboard: React.FC = () => {
               fullWidth
               variant="outlined"
               size="large"
-              startIcon={<CalendarMonth />}
-              onClick={() => navigate('/semester')}
-            >
-              Semesterverwaltung
-            </Button>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Button
-              fullWidth
-              variant="outlined"
-              size="large"
               startIcon={<Assignment />}
               onClick={() => navigate('/dekan/planungen')}
             >
@@ -398,7 +385,7 @@ const DekanDashboard: React.FC = () => {
               variant="outlined"
               size="large"
               startIcon={<Work />}
-              onClick={() => navigate('/dekan/auftraege')}
+              onClick={() => navigate('/einstellungen')}
             >
               Aufträge verwalten
             </Button>
@@ -463,7 +450,7 @@ const DekanDashboard: React.FC = () => {
             </Box>
             <Button
               endIcon={<ArrowForward />}
-              onClick={() => navigate('/dekan/auftraege')}
+              onClick={() => navigate('/einstellungen')}
             >
               Alle anzeigen
             </Button>

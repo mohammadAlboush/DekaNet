@@ -20,6 +20,8 @@ import {
   List,
   ListItem,
   ListItemText,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   NavigateBefore,
@@ -32,15 +34,27 @@ import {
   Person,
   EventNote,
   Info,
+  Edit as EditIcon,
+  Group,
 } from '@mui/icons-material';
-import { StepZusammenfassungProps } from '../../../../types/StepProps.types';
 import { GeplantesModul } from '../../../../types/planung.types';
+import { StepZusammenfassungProps } from '../../../../types/StepProps.types';
 
-const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({ 
-  data, 
-  onBack, 
+/**
+ * StepZusammenfassung - Mit Schnellbearbeitung
+ * =============================================
+ *
+ * Features:
+ * - Übersicht aller Planungsdaten
+ * - "Bearbeiten" Buttons pro Sektion für schnelle Navigation
+ * - Validierung vor Einreichung
+ */
+const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
+  data,
+  onBack,
   onSubmit,
-  planungId 
+  planungId,
+  onGoToStep
 }) => {
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,12 +67,18 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
     }
   };
 
+  const handleEditSection = (step: number) => {
+    if (onGoToStep) {
+      onGoToStep(step);
+    }
+  };
+
   const calculateTotalSWS = () => {
-    return data.geplantModule?.reduce((sum, gm) => sum + (gm.sws_gesamt || 0), 0) || 0;
+    return data.geplantModule?.reduce((sum: number, gm: GeplantesModul) => sum + (gm.sws_gesamt || 0), 0) || 0;
   };
 
   const calculateTotalECTS = () => {
-    return data.geplantModule?.reduce((sum, gm) => sum + (gm.modul?.leistungspunkte || 0), 0) || 0;
+    return data.geplantModule?.reduce((sum: number, gm: GeplantesModul) => sum + (gm.modul?.leistungspunkte || 0), 0) || 0;
   };
 
   const getLehrformenText = (gm: GeplantesModul) => {
@@ -70,6 +90,22 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
     return parts.join(' + ') || 'Keine Lehrformen';
   };
 
+  const getMitarbeiterCount = (): number => {
+    if (!data.mitarbeiterZuordnung) return 0;
+    if (data.mitarbeiterZuordnung instanceof Map) {
+      let count = 0;
+      data.mitarbeiterZuordnung.forEach((ids: number[]) => {
+        count += ids.length;
+      });
+      return count;
+    }
+    // Handle plain object
+    return Object.values(data.mitarbeiterZuordnung).reduce(
+      (sum: number, ids: any) => sum + (Array.isArray(ids) ? ids.length : 0),
+      0
+    );
+  };
+
   const hasValidData = () => {
     return (
       data.semesterId &&
@@ -78,6 +114,38 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
       calculateTotalSWS() > 0
     );
   };
+
+  // Section Header with Edit Button
+  const SectionHeader: React.FC<{
+    icon: React.ReactNode;
+    title: string;
+    count?: number;
+    editStep?: number;
+  }> = ({ icon, title, count, editStep }) => (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {icon}
+        <Typography variant="h6">
+          {title}
+          {count !== undefined && count > 0 && (
+            <Chip label={count} size="small" sx={{ ml: 1 }} />
+          )}
+        </Typography>
+      </Box>
+      {editStep !== undefined && onGoToStep && (
+        <Tooltip title={`${title} bearbeiten`}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={() => handleEditSection(editStep)}
+          >
+            Bearbeiten
+          </Button>
+        </Tooltip>
+      )}
+    </Box>
+  );
 
   return (
     <Box>
@@ -111,12 +179,11 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
       {/* Semester Information */}
       {data.semester && (
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <CalendarMonth color="primary" />
-            <Typography variant="h6">
-              Semester
-            </Typography>
-          </Box>
+          <SectionHeader
+            icon={<CalendarMonth color="primary" />}
+            title="Semester"
+            editStep={0}
+          />
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Typography variant="body2" color="text.secondary">
@@ -159,12 +226,12 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
       {/* Module Summary */}
       {data.geplantModule && data.geplantModule.length > 0 && (
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <School color="primary" />
-            <Typography variant="h6">
-              Geplante Module ({data.geplantModule.length})
-            </Typography>
-          </Box>
+          <SectionHeader
+            icon={<School color="primary" />}
+            title="Geplante Module"
+            count={data.geplantModule.length}
+            editStep={2}
+          />
 
           {/* Statistics Cards */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -228,7 +295,7 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.geplantModule.map((gm, index) => (
+                {data.geplantModule.map((gm: GeplantesModul, index: number) => (
                   <TableRow key={gm.id || index}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={600}>
@@ -241,8 +308,8 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
-                      <Chip 
-                        label={getLehrformenText(gm)} 
+                      <Chip
+                        label={getLehrformenText(gm)}
                         size="small"
                         color="primary"
                         variant="outlined"
@@ -284,15 +351,31 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
         </Paper>
       )}
 
+      {/* Mitarbeiter-Zuordnung */}
+      {getMitarbeiterCount() > 0 && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <SectionHeader
+            icon={<Group color="primary" />}
+            title="Mitarbeiter-Zuordnung"
+            count={getMitarbeiterCount()}
+            editStep={3}
+          />
+          <Alert severity="info" icon={<CheckCircle />}>
+            <Typography variant="body2">
+              {getMitarbeiterCount()} Mitarbeiter-Zuordnung(en) wurden vorgenommen.
+            </Typography>
+          </Alert>
+        </Paper>
+      )}
+
       {/* Additional Information */}
       {(data.anmerkungen || data.raumbedarf || (data.wunschFreieTage && data.wunschFreieTage.length > 0)) && (
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <Info color="primary" />
-            <Typography variant="h6">
-              Zusätzliche Informationen
-            </Typography>
-          </Box>
+          <SectionHeader
+            icon={<Info color="primary" />}
+            title="Zusätzliche Informationen"
+            editStep={5}
+          />
 
           {data.anmerkungen && (
             <Box sx={{ mb: 2 }}>
@@ -319,45 +402,62 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
               </Paper>
             </Box>
           )}
+        </Paper>
+      )}
 
-          {data.wunschFreieTage && data.wunschFreieTage.length > 0 && (
-            <Box>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Wunsch-freie Tage
-              </Typography>
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
-                <List dense>
-                  {data.wunschFreieTage.map((tag, index) => {
-                    // ✅ FIX: Handle invalid or missing dates
-                    let dateText = 'Datum nicht angegeben';
-                    if (tag.datum) {
-                      const date = new Date(tag.datum);
-                      if (!isNaN(date.getTime())) {
-                        dateText = date.toLocaleDateString('de-DE', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        });
+      {/* Wunsch-freie Tage - Separate Section */}
+      {data.wunschFreieTage && data.wunschFreieTage.length > 0 && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <SectionHeader
+            icon={<EventNote color="primary" />}
+            title="Wunsch-freie Tage"
+            count={data.wunschFreieTage.length}
+            editStep={6}
+          />
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
+            <List dense>
+              {data.wunschFreieTage.map((tag: any, index: number) => {
+                // Handle invalid or missing dates
+                let dateText = 'Datum nicht angegeben';
+                if (tag.datum) {
+                  const date = new Date(tag.datum);
+                  if (!isNaN(date.getTime())) {
+                    dateText = date.toLocaleDateString('de-DE', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    });
+                  }
+                } else if (tag.wochentag) {
+                  // Falls nur Wochentag vorhanden ist
+                  dateText = tag.wochentag + (tag.zeitraum ? ` (${tag.zeitraum})` : '');
+                }
+
+                return (
+                  <ListItem key={index}>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {dateText}
+                          </Typography>
+                          {tag.prioritaet && (
+                            <Chip
+                              label={tag.prioritaet}
+                              size="small"
+                              color={tag.prioritaet === 'hoch' ? 'error' : tag.prioritaet === 'mittel' ? 'warning' : 'default'}
+                            />
+                          )}
+                        </Box>
                       }
-                    } else if (tag.wochentag) {
-                      // Falls nur Wochentag vorhanden ist
-                      dateText = tag.wochentag + (tag.zeitraum ? ` (${tag.zeitraum})` : '');
-                    }
-
-                    return (
-                      <ListItem key={index}>
-                        <ListItemText
-                          primary={dateText}
-                          secondary={tag.grund || 'Kein Grund angegeben'}
-                        />
-                      </ListItem>
-                    );
-                  })}
-                </List>
-              </Paper>
-            </Box>
-          )}
+                      secondary={tag.grund || 'Kein Grund angegeben'}
+                    />
+                  </ListItem>
+                );
+              })}
+            </List>
+          </Paper>
         </Paper>
       )}
 

@@ -17,6 +17,9 @@ import {
 import { SwapHoriz, Close, ArrowForward } from '@mui/icons-material';
 import modulVerwaltungService from '../../services/modulVerwaltungService';
 import dozentService, { Dozent } from '../../services/dozentService';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('ReplaceDozentDialog');
 
 interface ReplaceDozentDialogProps {
   open: boolean;
@@ -69,7 +72,7 @@ const ReplaceDozentDialog: React.FC<ReplaceDozentDialogProps> = ({
         setDozenten(filtered);
       }
     } catch (error: any) {
-      console.error('Error loading dozenten:', error);
+      log.error('Error loading dozenten:', error);
     } finally {
       setLoadingDozenten(false);
     }

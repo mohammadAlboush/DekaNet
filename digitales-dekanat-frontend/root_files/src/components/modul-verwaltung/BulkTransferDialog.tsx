@@ -28,6 +28,9 @@ import { SwapHoriz, Close, School } from '@mui/icons-material';
 import modulVerwaltungService, { BulkTransferResult } from '../../services/modulVerwaltungService';
 import dozentService, { Dozent } from '../../services/dozentService';
 import poService, { Pruefungsordnung } from '../../services/poService';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('BulkTransferDialog');
 
 interface BulkTransferDialogProps {
   open: boolean;
@@ -97,7 +100,7 @@ const BulkTransferDialog: React.FC<BulkTransferDialogProps> = ({
         setDozenten(response.data || []);
       }
     } catch (error: any) {
-      console.error('Error loading dozenten:', error);
+      log.error('Error loading dozenten:', error);
     } finally {
       setLoadingDozenten(false);
     }
@@ -115,7 +118,7 @@ const BulkTransferDialog: React.FC<BulkTransferDialogProps> = ({
         }
       }
     } catch (error: any) {
-      console.error('Error loading Prüfungsordnungen:', error);
+      log.error('Error loading Prüfungsordnungen:', error);
     } finally {
       setLoadingPOs(false);
     }

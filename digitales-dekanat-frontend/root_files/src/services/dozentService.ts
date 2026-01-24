@@ -1,4 +1,7 @@
 import api, { ApiResponse, handleApiError } from './api';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('DozentService');
 
 /**
  * Dozent Service - ERWEITERT MIT CRUD
@@ -49,7 +52,7 @@ class DozentService {
     mit_benutzer?: boolean;
   }): Promise<ApiResponse<Dozent[]>> {
     try {
-      console.log('[DozentService] Fetching dozenten with params:', params);
+      log.debug(' Fetching dozenten with params:', params);
       
       const queryParams = new URLSearchParams();
       if (params?.fachbereich) queryParams.append('fachbereich', params.fachbereich);
@@ -58,18 +61,18 @@ class DozentService {
       
       // WICHTIG: Trailing slash hinzugefügt!
       const url = `/dozenten/${queryParams.toString() ? `?${queryParams}` : ''}`;
-      console.log('[DozentService] Request URL:', url);
+      log.debug(' Request URL:', url);
       
       const response = await api.get<ApiResponse<Dozent[]>>(url);
       
-      console.log('[DozentService] Response:', {
+      log.debug(' Response:', {
         success: response.data.success,
         dataLength: response.data.data?.length || 0
       });
       
       return response.data;
     } catch (error) {
-      console.error('[DozentService] Error fetching dozenten:', error);
+      log.error(' Error fetching dozenten:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -79,14 +82,14 @@ class DozentService {
    */
   async getDozentDetails(id: number): Promise<ApiResponse<any>> {
     try {
-      console.log('[DozentService] Fetching details for dozent:', id);
+      log.debug(' Fetching details for dozent:', id);
       
       const response = await api.get<ApiResponse<any>>(`/dozenten/${id}`);
       
-      console.log('[DozentService] Dozent details received');
+      log.debug(' Dozent details received');
       return response.data;
     } catch (error) {
-      console.error('[DozentService] Error fetching dozent details:', error);
+      log.error(' Error fetching dozent details:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -96,14 +99,14 @@ class DozentService {
    */
   async searchDozenten(query: string): Promise<ApiResponse<Dozent[]>> {
     try {
-      console.log('[DozentService] Searching dozenten with query:', query);
+      log.debug(' Searching dozenten with query:', query);
       
       const response = await api.get<ApiResponse<Dozent[]>>(`/dozenten/search?q=${query}`);
       
-      console.log('[DozentService] Search results:', response.data.data?.length || 0);
+      log.debug(' Search results:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      console.error('[DozentService] Error searching dozenten:', error);
+      log.error(' Error searching dozenten:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -113,15 +116,15 @@ class DozentService {
    */
   async getDozentModule(id: number, po_id?: number): Promise<ApiResponse<any[]>> {
     try {
-      console.log('[DozentService] Fetching modules for dozent:', id);
+      log.debug(' Fetching modules for dozent:', id);
       
       const params = po_id ? `?po_id=${po_id}` : '';
       const response = await api.get<ApiResponse<any[]>>(`/dozenten/${id}/module${params}`);
       
-      console.log('[DozentService] Modules received:', response.data.data?.length || 0);
+      log.debug(' Modules received:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      console.error('[DozentService] Error fetching modules:', error);
+      log.error(' Error fetching modules:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -131,14 +134,14 @@ class DozentService {
    */
   async createDozent(data: DozentCreateData): Promise<ApiResponse<Dozent>> {
     try {
-      console.log('[DozentService] Creating dozent:', data.nachname);
+      log.debug(' Creating dozent:', data.nachname);
       
       const response = await api.post<ApiResponse<Dozent>>('/dozenten/', data);
       
-      console.log('[DozentService] ✓ Dozent created:', response.data.data?.id);
+      log.debug(' ✓ Dozent created:', response.data.data?.id);
       return response.data;
     } catch (error) {
-      console.error('[DozentService] Error creating dozent:', error);
+      log.error(' Error creating dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -148,14 +151,14 @@ class DozentService {
    */
   async updateDozent(id: number, data: DozentUpdateData): Promise<ApiResponse<Dozent>> {
     try {
-      console.log('[DozentService] Updating dozent:', id);
+      log.debug(' Updating dozent:', id);
       
       const response = await api.put<ApiResponse<Dozent>>(`/dozenten/${id}`, data);
       
-      console.log('[DozentService] ✓ Dozent updated');
+      log.debug(' ✓ Dozent updated');
       return response.data;
     } catch (error) {
-      console.error('[DozentService] Error updating dozent:', error);
+      log.error(' Error updating dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -165,14 +168,14 @@ class DozentService {
    */
   async deleteDozent(id: number, force: boolean = false): Promise<ApiResponse> {
     try {
-      console.log('[DozentService] Deleting dozent:', id, 'force:', force);
+      log.debug(' Deleting dozent:', id, 'force:', force);
       
       const response = await api.delete<ApiResponse>(`/dozenten/${id}?force=${force}`);
       
-      console.log('[DozentService] ✓ Dozent deleted');
+      log.debug(' ✓ Dozent deleted');
       return response.data;
     } catch (error) {
-      console.error('[DozentService] Error deleting dozent:', error);
+      log.error(' Error deleting dozent:', error);
       throw new Error(handleApiError(error));
     }
   }

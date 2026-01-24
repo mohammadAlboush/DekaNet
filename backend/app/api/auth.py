@@ -14,14 +14,20 @@ Routes:
     GET    /api/auth/verify          - Token verifizieren
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
     jwt_required,
     get_jwt_identity,
-    current_user
+    get_jwt,
+    current_user,
+    set_access_cookies,
+    set_refresh_cookies,
+    unset_jwt_cookies,
+    get_csrf_token
 )
+from app.utils.token_blocklist import token_blocklist
 from marshmallow import ValidationError
 from app.extensions import db, limiter
 from app.models.user import Benutzer
@@ -112,7 +118,7 @@ def login():
         # Der user_identity_loader in extensions.py konvertiert zu String
         access_token = create_access_token(identity=int(user.id))
         refresh_token = create_refresh_token(identity=int(user.id))
-        
+
         user.aktualisiere_letzten_login()
 
         # Security Logging: Successful login
@@ -123,22 +129,30 @@ def login():
             reason='success'
         )
 
-        return jsonify({
+        # ✅ SECURITY FIX: Tokens als httpOnly Cookies setzen (XSS-sicher)
+        response = make_response(jsonify({
             'success': True,
             'message': 'Login erfolgreich',
             'data': {
-                'access_token': access_token,
-                'refresh_token': refresh_token,
-                'user': user.to_dict()
+                'user': user.to_dict(),
+                # CSRF-Token für Double Submit Cookie Pattern
+                'csrf_token': get_csrf_token(access_token)
             }
-        }), 200
+        }), 200)
+
+        # Setze httpOnly Cookies (nicht via JavaScript auslesbar)
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
+
+        return response
         
     except Exception as e:
-        current_app.logger.error(f"Login Error: {e}", exc_info=True)
+        # ✅ SECURITY: Keine internen Details an Client
+        current_app.logger.exception(f"[Auth] Login error")
         return jsonify({
             'success': False,
             'message': 'Fehler beim Login',
-            'errors': [str(e)]
+            'errors': ['Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.']
         }), 500
 
 
@@ -160,35 +174,74 @@ def register():
 @jwt_required(refresh=True)
 @limiter.limit("10 per minute")  # ✅ Rate Limiting für Token Refresh
 def refresh():
-    """Token erneuern mit Refresh Token - Rate Limited"""
+    """
+    Token erneuern mit Refresh Token - Rate Limited
+
+    ✅ SECURITY FIX: Neues Access Token als httpOnly Cookie
+    """
     try:
         user_id = get_jwt_identity()
         access_token = create_access_token(identity=user_id)
-        
-        return jsonify({
+
+        response = make_response(jsonify({
             'success': True,
             'data': {
-                'access_token': access_token
+                # CSRF-Token für Double Submit Cookie Pattern
+                'csrf_token': get_csrf_token(access_token)
             }
-        }), 200
-        
+        }), 200)
+
+        # Setze neues Access Token als Cookie
+        set_access_cookies(response, access_token)
+
+        return response
+
     except Exception as e:
         current_app.logger.error(f"Token Refresh Error: {e}")
         return jsonify({
             'success': False,
             'message': 'Fehler beim Token-Refresh',
-            'errors': [str(e)]
+            'errors': ['Ein Fehler ist aufgetreten']  # Keine internen Details
         }), 500
 
 
 @api_auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    """Logout (Token invalidieren)"""
-    return jsonify({
-        'success': True,
-        'message': 'Logout erfolgreich'
-    }), 200
+    """
+    Logout - Invalidiert Token und löscht Cookies
+
+    ✅ SECURITY FIX:
+    1. Token wird zur Blocklist hinzugefügt (serverseitig invalidiert)
+    2. Cookies werden gelöscht (httpOnly)
+    """
+    try:
+        # ✅ SECURITY: Token zur Blocklist hinzufügen
+        jwt_payload = get_jwt()
+        jti = jwt_payload.get('jti')
+        exp = jwt_payload.get('exp')
+
+        if jti:
+            token_blocklist.add(jti, exp)
+            current_app.logger.info(f"[Auth] Token {jti[:8]}... added to blocklist")
+
+        response = make_response(jsonify({
+            'success': True,
+            'message': 'Logout erfolgreich'
+        }), 200)
+
+        # Lösche alle JWT Cookies
+        unset_jwt_cookies(response)
+
+        return response
+    except Exception as e:
+        # ✅ SECURITY: Keine internen Details
+        current_app.logger.exception("[Auth] Logout error")
+        return jsonify({
+            'success': False,
+            'message': 'Fehler beim Logout',
+            'errors': ['Ein Fehler ist aufgetreten']
+        }), 500
 
 
 @api_auth_bp.route('/verify', methods=['GET'])
@@ -208,10 +261,12 @@ def verify():
         }), 200
         
     except Exception as e:
+        # ✅ SECURITY: Keine internen Details
+        current_app.logger.warning(f"[Auth] Token verification failed: {e}")
         return jsonify({
             'success': False,
             'message': 'Token ungültig',
-            'errors': [str(e)]
+            'errors': ['Bitte melden Sie sich erneut an']
         }), 401
 
 
@@ -239,11 +294,12 @@ def me():
         }), 200
         
     except Exception as e:
-        current_app.logger.error(f"Get User Error: {e}")
+        # ✅ SECURITY: Keine internen Details
+        current_app.logger.exception("[Auth] Get user error")
         return jsonify({
             'success': False,
             'message': 'Fehler beim Laden des Users',
-            'errors': [str(e)]
+            'errors': ['Ein Fehler ist aufgetreten']
         }), 500
 
 
@@ -259,13 +315,20 @@ def profile():
             }), 404
         
         stats = {}
-        
+
         if current_user.ist_professor() or current_user.ist_lehrbeauftragter():
-            stats['anzahl_planungen'] = current_user.semesterplanungen.count()
-            stats['anzahl_freigegeben'] = current_user.semesterplanungen.filter_by(status='freigegeben').count()
-        
+            try:
+                stats['anzahl_planungen'] = current_user.semesterplanungen.count() if current_user.semesterplanungen else 0
+                stats['anzahl_freigegeben'] = current_user.semesterplanungen.filter_by(status='freigegeben').count() if current_user.semesterplanungen else 0
+            except Exception:
+                stats['anzahl_planungen'] = 0
+                stats['anzahl_freigegeben'] = 0
+
         if current_user.ist_dekan():
-            stats['anzahl_freigaben'] = current_user.freigegebene_planungen.count()
+            try:
+                stats['anzahl_freigaben'] = current_user.freigegebene_planungen.count() if current_user.freigegebene_planungen else 0
+            except Exception:
+                stats['anzahl_freigaben'] = 0
         
         return jsonify({
             'success': True,
@@ -276,11 +339,12 @@ def profile():
         }), 200
         
     except Exception as e:
-        current_app.logger.error(f"Get Profile Error: {e}")
+        # ✅ SECURITY: Keine internen Details
+        current_app.logger.exception("[Auth] Get profile error")
         return jsonify({
             'success': False,
             'message': 'Fehler beim Laden des Profils',
-            'errors': [str(e)]
+            'errors': ['Ein Fehler ist aufgetreten']
         }), 500
 
 
@@ -362,18 +426,21 @@ def update_profile():
         }), 200
         
     except ValueError as e:
+        # ✅ SECURITY: Validierungsfehler können gezeigt werden (keine internen Details)
+        current_app.logger.warning(f"[Auth] Profile validation error: {e}")
         return jsonify({
             'success': False,
             'message': 'Validierungsfehler',
-            'errors': [str(e)]
+            'errors': ['Die eingegebenen Daten sind ungültig']
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Update Profile Error: {e}")
+        # ✅ SECURITY: Keine internen Details
+        current_app.logger.exception("[Auth] Update profile error")
         db.session.rollback()
         return jsonify({
             'success': False,
             'message': 'Fehler beim Aktualisieren des Profils',
-            'errors': [str(e)]
+            'errors': ['Ein Fehler ist aufgetreten']
         }), 500
 
 
@@ -448,12 +515,13 @@ def change_password():
         }), 200
         
     except Exception as e:
-        current_app.logger.error(f"Change Password Error: {e}")
+        # ✅ SECURITY: Keine internen Details
+        current_app.logger.exception("[Auth] Change password error")
         db.session.rollback()
         return jsonify({
             'success': False,
             'message': 'Fehler beim Ändern des Passworts',
-            'errors': [str(e)]
+            'errors': ['Ein Fehler ist aufgetreten']
         }), 500
 
 

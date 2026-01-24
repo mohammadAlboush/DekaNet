@@ -34,6 +34,10 @@ import { Modul, ModulLehrform } from '../../types/modul.types';
 import templateService, { TemplateModul, AddTemplateModulData } from '../../services/templateService';
 import api from '../../services/api';
 import { useToastStore } from '../common/Toast';
+import useAuthStore from '../../store/authStore';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('TemplateModulDialog');
 
 interface Dozent {
   id: number;
@@ -99,6 +103,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
   onSave,
 }) => {
   const showToast = useToastStore((state) => state.showToast);
+  const { user } = useAuthStore();
 
   const [formData, setFormData] = useState<ModulFormData>(initialFormData);
   const [alleModule, setAlleModule] = useState<Modul[]>([]);
@@ -122,19 +127,32 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
   const loadData = async () => {
     setLoading(true);
     try {
-      // Lade alle Module
-      const modulResponse = await api.get('/module');
-      if (modulResponse.data.success) {
-        setAlleModule(modulResponse.data.data || []);
+      // Lade NUR EIGENE Module (wenn dozent_id vorhanden)
+      // Backend liefert bereits deduplizierte Module mit vollständigen Daten
+      if (user?.dozent_id) {
+        log.debug('Loading own modules for dozent_id:', user.dozent_id);
+        const modulResponse = await api.get(`/dozenten/${user.dozent_id}/module`);
+        if (modulResponse.data.success) {
+          const modules = modulResponse.data.data || [];
+          log.debug('Loaded', modules.length, 'own modules');
+          setAlleModule(modules);
+        }
+      } else {
+        // Fallback: Lade alle Module (für Admins ohne dozent_id)
+        log.debug('No dozent_id, loading all modules');
+        const modulResponse = await api.get('/module');
+        if (modulResponse.data.success) {
+          setAlleModule(modulResponse.data.data || []);
+        }
       }
 
-      // Lade alle Dozenten
+      // Lade alle Dozenten (für Mitarbeiter-Zuordnung)
       const dozentenResponse = await api.get('/dozenten');
       if (dozentenResponse.data.success) {
         setAlleDozenten(dozentenResponse.data.data || []);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      log.error('Error loading data:', error);
       showToast('Fehler beim Laden der Daten', 'error');
     } finally {
       setLoading(false);
@@ -270,7 +288,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
       onSave();
       onClose();
     } catch (error: any) {
-      console.error('Error saving module:', error);
+      log.error('Error saving module:', error);
       showToast(error.message || 'Fehler beim Speichern', 'error');
     } finally {
       setSaving(false);
@@ -377,18 +395,21 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
                       }}
                     />
                   )}
-                  renderOption={(props, option) => (
-                    <li {...props} key={option.id}>
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>
-                          {option.kuerzel}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {option.bezeichnung_de}
-                        </Typography>
-                      </Box>
-                    </li>
-                  )}
+                  renderOption={(props, option) => {
+                    const { key, ...otherProps } = props as any;
+                    return (
+                      <li key={option.id} {...otherProps}>
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {option.kuerzel}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.bezeichnung_de}
+                          </Typography>
+                        </Box>
+                      </li>
+                    );
+                  }}
                 />
               </Box>
             )}

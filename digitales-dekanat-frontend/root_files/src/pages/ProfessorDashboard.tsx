@@ -47,6 +47,9 @@ import usePlanungPhaseStore from '../store/planungPhaseStore';
 import { Semesterplanung } from '../types/planung.types';
 import { Semester } from '../types/semester.types';
 import ProfessorPhasenHistorie from '../components/planning/ProfessorPhasenHistorie';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('ProfessorDashboard');
 
 /**
  * Professor Dashboard
@@ -85,7 +88,7 @@ const ProfessorDashboard: React.FC = () => {
       // Don't pass professor's own ID - backend will use the logged-in user's ID
       await checkSubmissionStatus();
     } catch (error) {
-      console.error('Error loading phase data:', error);
+      log.error('Error loading phase data:', error);
     }
   };
 
@@ -105,14 +108,14 @@ const ProfessorDashboard: React.FC = () => {
         if (Array.isArray(planungenRes.data)) {
           setPlanungen(planungenRes.data);
         } else {
-          console.warn('API returned non-array data for planungen:', planungenRes.data);
+          log.warn('API returned non-array data for planungen:', planungenRes.data);
           setPlanungen([]);
         }
       } else {
         setPlanungen([]);
       }
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      log.error('Error loading dashboard:', error);
       setPlanungen([]); // Ensure planungen is always an array
     } finally {
       setLoading(false);
@@ -157,7 +160,7 @@ const ProfessorDashboard: React.FC = () => {
         alert('Fehler beim Erstellen der Planung');
       }
     } catch (error) {
-      console.error('Error creating planung:', error);
+      log.error('Error creating planung:', error);
       alert('Fehler beim Erstellen der Planung');
     } finally {
       setLoading(false);

@@ -38,7 +38,8 @@ Endpoints:
     GET    /api/planung/eingereicht        - Eingereichte Planungen (Dekan)
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
+from sqlalchemy.orm import joinedload
 from app.api.base import (
     ApiResponse,
     login_required,
@@ -153,8 +154,8 @@ def get_meine_aktuelle_planung():
         
         # Lade Details
         data = planung.to_dict()
-        data['geplante_module'] = [gm.to_dict() for gm in planung.geplante_module.all()]
-        data['wunsch_freie_tage'] = [w.to_dict() for w in planung.wunsch_freie_tage.all()]
+        data['geplante_module'] = [gm.to_dict() for gm in planung.geplante_module]
+        data['wunsch_freie_tage'] = [w.to_dict() for w in planung.wunsch_freie_tage]
         data['semester'] = planungs_semester.to_dict()
         
         return ApiResponse.success(
@@ -251,7 +252,7 @@ def get_professor_phasen_historie():
                 }
                 phase_data['status'] = planung.status
                 phase_data['eingereicht_am'] = planung.eingereicht_am.isoformat() if planung.eingereicht_am else None
-                phase_data['module_anzahl'] = planung.geplante_module.count()
+                phase_data['module_anzahl'] = planung.anzahl_module
 
             historie.append(phase_data)
 
@@ -297,7 +298,7 @@ def get_planung(planung_id: int):
             )
         
         # Berechtigung prüfen
-        if planung.benutzer_id != user.id and user.rolle.name != 'dekan':
+        if planung.benutzer_id != user.id and (not user.rolle or user.rolle.name != 'dekan'):
             return ApiResponse.error(
                 message='Keine Berechtigung für diese Planung',
                 status_code=403
@@ -305,8 +306,8 @@ def get_planung(planung_id: int):
         
         # Details
         data = planung.to_dict()
-        data['geplante_module'] = [gm.to_dict() for gm in planung.geplante_module.all()]
-        data['wunsch_freie_tage'] = [w.to_dict() for w in planung.wunsch_freie_tage.all()]
+        data['geplante_module'] = [gm.to_dict() for gm in planung.geplante_module]
+        data['wunsch_freie_tage'] = [w.to_dict() for w in planung.wunsch_freie_tage]
         
         return ApiResponse.success(data=data)
     
@@ -992,7 +993,7 @@ def einreichen(planung_id: int):
             )
         
         # Prüfe ob Module vorhanden sind - explizit mit count()
-        anzahl_module = planung.geplante_module.count()
+        anzahl_module = planung.anzahl_module
         if anzahl_module == 0:
             return ApiResponse.error(
                 message='Planung kann nicht eingereicht werden',
@@ -1018,7 +1019,7 @@ def einreichen(planung_id: int):
             )
         except Exception as notif_error:
             # Notification-Fehler nicht kritisch
-            print(f"Notification error: {notif_error}")
+            current_app.logger.warning(f"Notification error: {notif_error}")
         
         # Notification an Dekane
         try:
@@ -1028,7 +1029,7 @@ def einreichen(planung_id: int):
             )
         except Exception as notif_error:
             # Notification-Fehler nicht kritisch
-            print(f"Notification error: {notif_error}")
+            current_app.logger.warning(f"Notification error: {notif_error}")
         
         return ApiResponse.success(
             data=planung.to_dict(),
@@ -1081,7 +1082,7 @@ def freigeben(planung_id: int):
                 semester_kuerzel=planung.semester.kuerzel
             )
         except Exception as notif_error:
-            print(f"Notification error: {notif_error}")
+            current_app.logger.warning(f"Notification error: {notif_error}")
         
         return ApiResponse.success(
             data=planung.to_dict(),
@@ -1142,7 +1143,7 @@ def ablehnen(planung_id: int):
                 grund=grund
             )
         except Exception as notif_error:
-            print(f"Notification error: {notif_error}")
+            current_app.logger.warning(f"Notification error: {notif_error}")
         
         return ApiResponse.success(
             data=planung.to_dict(),
@@ -1274,7 +1275,7 @@ def get_eingereichte_planungen():
         items = []
         for p in planungen:
             data = p.to_dict(include_module=True)  # ✅ Module einschließen!
-            data['anzahl_module'] = p.geplante_module.count()
+            data['anzahl_module'] = p.anzahl_module
             items.append(data)
 
         return ApiResponse.success(

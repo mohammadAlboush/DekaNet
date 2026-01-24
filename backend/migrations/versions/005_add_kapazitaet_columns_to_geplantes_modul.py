@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '005_kapazitaet'
-down_revision = '004_create_modul_audit_log'
+down_revision = '004_modul_audit'
 branch_labels = None
 depends_on = None
 

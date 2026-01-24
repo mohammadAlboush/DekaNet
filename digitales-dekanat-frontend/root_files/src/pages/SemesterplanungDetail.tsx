@@ -38,6 +38,9 @@ import {
 import planungService from '../services/planungService';
 import modulService from '../services/modulService';
 import { useToastStore } from '../components/common/Toast';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('SemesterplanungDetail');
 import useAuthStore from '../store/authStore';
 
 const SemesterplanungDetail: React.FC = () => {
@@ -73,7 +76,7 @@ const SemesterplanungDetail: React.FC = () => {
   // Debug-Log für Berechtigungen
   useEffect(() => {
     if (planung && user) {
-      console.log('[SemesterplanungDetail] Berechtigungen:', {
+      log.debug(' Berechtigungen:', {
         isEdit,
         canEdit,
         planung_status: planung.status,
@@ -113,7 +116,7 @@ const SemesterplanungDetail: React.FC = () => {
         setModules(response.data || []);
       }
     } catch (error) {
-      console.error('Error loading modules:', error);
+      log.error('Error loading modules:', error);
     }
   };
 

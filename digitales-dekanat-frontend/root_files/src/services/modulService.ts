@@ -1,5 +1,8 @@
 import api, { ApiResponse, handleApiError } from './api';
 import { Modul, ModulDetails } from '../types/modul.types';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('ModulService');
 
 /**
  * Modul Service - VOLLSTÄNDIG ERWEITERTER SERVICE
@@ -87,7 +90,7 @@ class ModulService {
       const response = await api.get<ApiResponse<Modul[]>>('/module/');
       return response.data.data || [];
     } catch (error) {
-      console.error('[ModulService] Error fetching modules:', error);
+      log.error(' Error fetching modules:', error);
       return [];
     }
   }
@@ -103,7 +106,7 @@ class ModulService {
     per_page?: number;
   }): Promise<ApiResponse<Modul[]>> {
     try {
-      console.log('[ModulService] Fetching modules with params:', params);
+      log.debug(' Fetching modules with params:', params);
       
       const queryParams = new URLSearchParams();
       
@@ -124,18 +127,18 @@ class ModulService {
       }
       
       const url = `/module/${queryParams.toString() ? `?${queryParams}` : ''}`;
-      console.log('[ModulService] Request URL:', url);
+      log.debug(' Request URL:', url);
       
       const response = await api.get<ApiResponse<Modul[]>>(url);
       
-      console.log('[ModulService] Response:', {
+      log.debug(' Response:', {
         success: response.data.success,
         dataLength: response.data.data?.length || 0
       });
       
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error fetching modules:', error);
+      log.error(' Error fetching modules:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -145,14 +148,14 @@ class ModulService {
    */
   async getModulDetails(id: number): Promise<ApiResponse<ModulDetails>> {
     try {
-      console.log('[ModulService] Fetching details for module:', id);
+      log.debug(' Fetching details for module:', id);
       
       const response = await api.get<ApiResponse<ModulDetails>>(`/module/${id}`);
       
-      console.log('[ModulService] Module details received');
+      log.debug(' Module details received');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error fetching module details:', error);
+      log.error(' Error fetching module details:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -162,7 +165,7 @@ class ModulService {
    */
   async getModulDozenten(id: number, rolle?: string): Promise<ApiResponse<any[]>> {
     try {
-      console.log('[ModulService] Fetching dozenten for module:', id);
+      log.debug(' Fetching dozenten for module:', id);
       
       const url = rolle 
         ? `/module/${id}/dozenten?rolle=${rolle}`
@@ -170,10 +173,10 @@ class ModulService {
       
       const response = await api.get<ApiResponse<any[]>>(url);
       
-      console.log('[ModulService] Dozenten received:', response.data.data?.length || 0);
+      log.debug(' Dozenten received:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error fetching dozenten:', error);
+      log.error(' Error fetching dozenten:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -183,14 +186,14 @@ class ModulService {
    */
   async getModulLehrformen(id: number): Promise<ApiResponse<any[]>> {
     try {
-      console.log('[ModulService] Fetching lehrformen for module:', id);
+      log.debug(' Fetching lehrformen for module:', id);
       
       const response = await api.get<ApiResponse<any[]>>(`/module/${id}/lehrformen`);
       
-      console.log('[ModulService] Lehrformen received:', response.data.data?.length || 0);
+      log.debug(' Lehrformen received:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error fetching lehrformen:', error);
+      log.error(' Error fetching lehrformen:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -200,7 +203,7 @@ class ModulService {
    */
   async searchModules(query: string, po_id?: number): Promise<ApiResponse<Modul[]>> {
     try {
-      console.log('[ModulService] Searching modules with query:', query);
+      log.debug(' Searching modules with query:', query);
       
       const params = new URLSearchParams({ q: query });
       if (po_id) {
@@ -209,10 +212,10 @@ class ModulService {
       
       const response = await api.get<ApiResponse<Modul[]>>(`/module/search?${params}`);
       
-      console.log('[ModulService] Search results:', response.data.data?.length || 0);
+      log.debug(' Search results:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error searching modules:', error);
+      log.error(' Error searching modules:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -222,7 +225,7 @@ class ModulService {
    */
   async getStatistik(po_id?: number): Promise<ApiResponse<any>> {
     try {
-      console.log('[ModulService] Fetching statistics');
+      log.debug(' Fetching statistics');
       
       const url = po_id 
         ? `/module/statistik?po_id=${po_id}`
@@ -230,10 +233,10 @@ class ModulService {
       
       const response = await api.get<ApiResponse<any>>(url);
       
-      console.log('[ModulService] Statistics received');
+      log.debug(' Statistics received');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error fetching statistics:', error);
+      log.error(' Error fetching statistics:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -243,14 +246,14 @@ class ModulService {
    */
   async createModule(data: ModulCreateData): Promise<ApiResponse<Modul>> {
     try {
-      console.log('[ModulService] Creating module:', data.kuerzel);
+      log.debug(' Creating module:', data.kuerzel);
       
       const response = await api.post<ApiResponse<Modul>>('/module/', data);
       
-      console.log('[ModulService] ✓ Module created:', response.data.data?.id);
+      log.debug(' ✓ Module created:', response.data.data?.id);
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error creating module:', error);
+      log.error(' Error creating module:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -260,14 +263,14 @@ class ModulService {
    */
   async updateModule(id: number, data: ModulUpdateData): Promise<ApiResponse<Modul>> {
     try {
-      console.log('[ModulService] Updating module:', id);
+      log.debug(' Updating module:', id);
       
       const response = await api.put<ApiResponse<Modul>>(`/module/${id}`, data);
       
-      console.log('[ModulService] ✓ Module updated');
+      log.debug(' ✓ Module updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating module:', error);
+      log.error(' Error updating module:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -277,14 +280,14 @@ class ModulService {
    */
   async deleteModule(id: number, force: boolean = false): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Deleting module:', id, 'force:', force);
+      log.debug(' Deleting module:', id, 'force:', force);
       
       const response = await api.delete<ApiResponse>(`/module/${id}?force=${force}`);
       
-      console.log('[ModulService] ✓ Module deleted');
+      log.debug(' ✓ Module deleted');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error deleting module:', error);
+      log.error(' Error deleting module:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -298,14 +301,14 @@ class ModulService {
    */
   async addLehrform(modulId: number, data: LehrformData): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Adding lehrform to module:', modulId);
+      log.debug(' Adding lehrform to module:', modulId);
       
       const response = await api.post<ApiResponse>(`/module/${modulId}/lehrformen`, data);
       
-      console.log('[ModulService] ✓ Lehrform added');
+      log.debug(' ✓ Lehrform added');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error adding lehrform:', error);
+      log.error(' Error adding lehrform:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -315,17 +318,17 @@ class ModulService {
    */
   async updateLehrform(modulId: number, lehrformZuordnungId: number, sws: number): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Updating lehrform:', lehrformZuordnungId);
+      log.debug(' Updating lehrform:', lehrformZuordnungId);
       
       const response = await api.put<ApiResponse>(
         `/module/${modulId}/lehrformen/${lehrformZuordnungId}`,
         { sws }
       );
       
-      console.log('[ModulService] ✓ Lehrform updated');
+      log.debug(' ✓ Lehrform updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating lehrform:', error);
+      log.error(' Error updating lehrform:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -335,16 +338,16 @@ class ModulService {
    */
   async deleteLehrform(modulId: number, lehrformZuordnungId: number): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Deleting lehrform:', lehrformZuordnungId);
+      log.debug(' Deleting lehrform:', lehrformZuordnungId);
       
       const response = await api.delete<ApiResponse>(
         `/module/${modulId}/lehrformen/${lehrformZuordnungId}`
       );
       
-      console.log('[ModulService] ✓ Lehrform deleted');
+      log.debug(' ✓ Lehrform deleted');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error deleting lehrform:', error);
+      log.error(' Error deleting lehrform:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -358,14 +361,14 @@ class ModulService {
    */
   async addDozent(modulId: number, data: DozentData): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Adding dozent to module:', modulId);
+      log.debug(' Adding dozent to module:', modulId);
       
       const response = await api.post<ApiResponse>(`/module/${modulId}/dozenten`, data);
       
-      console.log('[ModulService] ✓ Dozent added');
+      log.debug(' ✓ Dozent added');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error adding dozent:', error);
+      log.error(' Error adding dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -375,17 +378,17 @@ class ModulService {
    */
   async updateDozent(modulId: number, dozentZuordnungId: number, rolle: string): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Updating dozent:', dozentZuordnungId);
+      log.debug(' Updating dozent:', dozentZuordnungId);
       
       const response = await api.put<ApiResponse>(
         `/module/${modulId}/dozenten/${dozentZuordnungId}`,
         { rolle }
       );
       
-      console.log('[ModulService] ✓ Dozent updated');
+      log.debug(' ✓ Dozent updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating dozent:', error);
+      log.error(' Error updating dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -395,16 +398,16 @@ class ModulService {
    */
   async deleteDozent(modulId: number, dozentZuordnungId: number): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Deleting dozent:', dozentZuordnungId);
+      log.debug(' Deleting dozent:', dozentZuordnungId);
 
       const response = await api.delete<ApiResponse>(
         `/module/${modulId}/dozenten/${dozentZuordnungId}`
       );
 
-      console.log('[ModulService] ✓ Dozent deleted');
+      log.debug(' ✓ Dozent deleted');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error deleting dozent:', error);
+      log.error(' Error deleting dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -414,17 +417,17 @@ class ModulService {
    */
   async updateDozentRolle(modulId: number, dozentZuordnungId: number, rolle: string): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Updating dozent rolle:', dozentZuordnungId, rolle);
+      log.debug(' Updating dozent rolle:', dozentZuordnungId, rolle);
 
       const response = await api.put<ApiResponse>(
         `/module/${modulId}/dozenten/${dozentZuordnungId}`,
         { rolle }
       );
 
-      console.log('[ModulService] ✓ Dozent rolle updated');
+      log.debug(' ✓ Dozent rolle updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating dozent rolle:', error);
+      log.error(' Error updating dozent rolle:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -434,17 +437,17 @@ class ModulService {
    */
   async replaceDozent(modulId: number, oldDozentZuordnungId: number, newDozentId: number): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Replacing dozent:', oldDozentZuordnungId, 'with', newDozentId);
+      log.debug(' Replacing dozent:', oldDozentZuordnungId, 'with', newDozentId);
 
       const response = await api.put<ApiResponse>(
         `/module/${modulId}/dozenten/${oldDozentZuordnungId}/replace`,
         { neuer_dozent_id: newDozentId }
       );
 
-      console.log('[ModulService] ✓ Dozent replaced');
+      log.debug(' ✓ Dozent replaced');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error replacing dozent:', error);
+      log.error(' Error replacing dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -458,14 +461,14 @@ class ModulService {
    */
   async addLiteratur(modulId: number, data: LiteraturData): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Adding literatur to module:', modulId);
+      log.debug(' Adding literatur to module:', modulId);
       
       const response = await api.post<ApiResponse>(`/module/${modulId}/literatur`, data);
       
-      console.log('[ModulService] ✓ Literatur added');
+      log.debug(' ✓ Literatur added');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error adding literatur:', error);
+      log.error(' Error adding literatur:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -475,17 +478,17 @@ class ModulService {
    */
   async updateLiteratur(modulId: number, literaturId: number, data: LiteraturData): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Updating literatur:', literaturId);
+      log.debug(' Updating literatur:', literaturId);
       
       const response = await api.put<ApiResponse>(
         `/module/${modulId}/literatur/${literaturId}`,
         data
       );
       
-      console.log('[ModulService] ✓ Literatur updated');
+      log.debug(' ✓ Literatur updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating literatur:', error);
+      log.error(' Error updating literatur:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -495,16 +498,16 @@ class ModulService {
    */
   async deleteLiteratur(modulId: number, literaturId: number): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Deleting literatur:', literaturId);
+      log.debug(' Deleting literatur:', literaturId);
       
       const response = await api.delete<ApiResponse>(
         `/module/${modulId}/literatur/${literaturId}`
       );
       
-      console.log('[ModulService] ✓ Literatur deleted');
+      log.debug(' ✓ Literatur deleted');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error deleting literatur:', error);
+      log.error(' Error deleting literatur:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -518,14 +521,14 @@ class ModulService {
    */
   async updatePruefung(modulId: number, data: PruefungData): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Updating pruefung for module:', modulId);
+      log.debug(' Updating pruefung for module:', modulId);
       
       const response = await api.put<ApiResponse>(`/module/${modulId}/pruefung`, data);
       
-      console.log('[ModulService] ✓ Pruefung updated');
+      log.debug(' ✓ Pruefung updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating pruefung:', error);
+      log.error(' Error updating pruefung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -539,14 +542,14 @@ class ModulService {
    */
   async updateLernergebnisse(modulId: number, data: LernergebnisseData): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Updating lernergebnisse for module:', modulId);
+      log.debug(' Updating lernergebnisse for module:', modulId);
       
       const response = await api.put<ApiResponse>(`/module/${modulId}/lernergebnisse`, data);
       
-      console.log('[ModulService] ✓ Lernergebnisse updated');
+      log.debug(' ✓ Lernergebnisse updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating lernergebnisse:', error);
+      log.error(' Error updating lernergebnisse:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -560,14 +563,14 @@ class ModulService {
    */
   async updateVoraussetzungen(modulId: number, data: VoraussetzungenData): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Updating voraussetzungen for module:', modulId);
+      log.debug(' Updating voraussetzungen for module:', modulId);
       
       const response = await api.put<ApiResponse>(`/module/${modulId}/voraussetzungen`, data);
       
-      console.log('[ModulService] ✓ Voraussetzungen updated');
+      log.debug(' ✓ Voraussetzungen updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating voraussetzungen:', error);
+      log.error(' Error updating voraussetzungen:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -581,14 +584,14 @@ class ModulService {
    */
   async updateArbeitsaufwand(modulId: number, data: ArbeitsaufwandData): Promise<ApiResponse> {
     try {
-      console.log('[ModulService] Updating arbeitsaufwand for module:', modulId);
+      log.debug(' Updating arbeitsaufwand for module:', modulId);
       
       const response = await api.put<ApiResponse>(`/module/${modulId}/arbeitsaufwand`, data);
       
-      console.log('[ModulService] ✓ Arbeitsaufwand updated');
+      log.debug(' ✓ Arbeitsaufwand updated');
       return response.data;
     } catch (error) {
-      console.error('[ModulService] Error updating arbeitsaufwand:', error);
+      log.error(' Error updating arbeitsaufwand:', error);
       throw new Error(handleApiError(error));
     }
   }

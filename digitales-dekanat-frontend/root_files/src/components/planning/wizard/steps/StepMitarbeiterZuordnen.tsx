@@ -30,6 +30,9 @@ import {
 } from '@mui/icons-material';
 import { StepMitarbeiterZuordnenProps } from '../../../../types/StepProps.types';
 import api from '../../../../services/api';
+import { createContextLogger } from '../../../../utils/logger';
+
+const log = createContextLogger('StepMitarbeiterZuordnen');
 
 interface Dozent {
   id: number;
@@ -97,7 +100,7 @@ const StepMitarbeiterZuordnen: React.FC<StepMitarbeiterZuordnenProps> = ({
         data.geplantModule.forEach((gm) => {
           // Nur zuordnen wenn noch keine Mitarbeiter zugeordnet sind
           if (!newZuordnungen.has(gm.modul_id) || newZuordnungen.get(gm.modul_id)?.length === 0) {
-            console.log('[StepMitarbeiter] 👤 Auto-assigning professor to module:', gm.modul?.kuerzel);
+            log.debug(' 👤 Auto-assigning professor to module:', gm.modul?.kuerzel);
             newZuordnungen.set(gm.modul_id, [dozentId]);
           }
         });
@@ -107,14 +110,14 @@ const StepMitarbeiterZuordnen: React.FC<StepMitarbeiterZuordnenProps> = ({
       }
 
     } catch (error) {
-      console.error('[StepMitarbeiter] Error loading data:', error);
+      log.error(' Error loading data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleZuordnungChange = (modulId: number, dozentenIds: number[]) => {
-    console.log('[StepMitarbeiter] 📝 Updating assignment for module:', modulId, 'Dozenten:', dozentenIds);
+    log.debug(' 📝 Updating assignment for module:', modulId, 'Dozenten:', dozentenIds);
     
     const newZuordnungen = new Map(zuordnungen);
     newZuordnungen.set(modulId, dozentenIds);

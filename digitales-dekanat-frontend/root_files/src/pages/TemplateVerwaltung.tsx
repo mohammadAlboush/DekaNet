@@ -46,6 +46,9 @@ import templateService, {
 } from '../services/templateService';
 import planungService from '../services/planungService';
 import { useToastStore } from '../components/common/Toast';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('TemplateVerwaltung');
 
 /**
  * TemplateVerwaltung
@@ -106,7 +109,7 @@ const TemplateVerwaltung: React.FC = () => {
         setPlanungen(planungenResponse.data);
       }
     } catch (error: any) {
-      console.error('Error loading data:', error);
+      log.error('Error loading data:', error);
       showToast('Fehler beim Laden der Daten', 'error');
     } finally {
       setLoading(false);

@@ -54,6 +54,9 @@ import dashboardService, {
 import semesterService from '../../services/semesterService';
 import dozentService from '../../services/dozentService';
 import { Semester } from '../../types/semester.types';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('NichtZugeordneteModule');
 
 /**
  * NichtZugeordneteModule Component
@@ -124,14 +127,17 @@ const NichtZugeordneteModule: React.FC<Props> = ({ semesterId: propSemesterId, p
         setAlleSemester(response.data);
       }
     } catch (err) {
-      console.error('[NichtZugeordneteModule] Error loading semesters:', err);
+      log.error(' Error loading semesters:', err);
     }
   };
 
   const getFilteredSemesterId = (): number | undefined => {
     if (filter === 'aktuell') {
-      // Verwende propSemesterId falls vorhanden, sonst aktives Semester
+      // Verwende propSemesterId falls vorhanden
       if (propSemesterId) return propSemesterId;
+      // Priorität: Semester mit aktiver Planungsphase, dann aktives Semester
+      const planungsSemester = alleSemester.find(s => s.ist_planungsphase);
+      if (planungsSemester) return planungsSemester.id;
       const aktivesSemester = alleSemester.find(s => s.ist_aktiv);
       return aktivesSemester?.id;
     }
@@ -177,7 +183,7 @@ const NichtZugeordneteModule: React.FC<Props> = ({ semesterId: propSemesterId, p
         setError(response.message || 'Fehler beim Laden der Daten');
       }
     } catch (err: any) {
-      console.error('[NichtZugeordneteModule] Error:', err);
+      log.error(' Error:', err);
       setError(err.message || 'Ein Fehler ist aufgetreten');
     } finally {
       setLoading(false);
@@ -201,7 +207,7 @@ const NichtZugeordneteModule: React.FC<Props> = ({ semesterId: propSemesterId, p
         })));
       }
     } catch (err) {
-      console.error('[NichtZugeordneteModule] Error loading dozenten:', err);
+      log.error(' Error loading dozenten:', err);
     }
   };
 
@@ -230,7 +236,7 @@ const NichtZugeordneteModule: React.FC<Props> = ({ semesterId: propSemesterId, p
     try {
       // TODO: Backend-Endpoint für Modul-Zuweisung aufrufen
       // await planungService.zuweiseModul(selectedModul.id, selectedDozent.id, propSemesterId);
-      console.log('[NichtZugeordneteModule] Zuweisung:', {
+      log.debug(' Zuweisung:', {
         modul: selectedModul.kuerzel,
         dozent: `${selectedDozent.vorname} ${selectedDozent.nachname}`,
       });
@@ -242,7 +248,7 @@ const NichtZugeordneteModule: React.FC<Props> = ({ semesterId: propSemesterId, p
       // Daten neu laden
       await loadData();
     } catch (err: any) {
-      console.error('[NichtZugeordneteModule] Error:', err);
+      log.error(' Error:', err);
       alert('Fehler bei der Zuweisung: ' + (err.message || 'Unbekannter Fehler'));
     } finally {
       setZuweisungLoading(false);
@@ -574,7 +580,7 @@ const NichtZugeordneteModule: React.FC<Props> = ({ semesterId: propSemesterId, p
                         <TableCell>
                           {hatPlanung ? (
                             <Stack spacing={0.5}>
-                              {modul.planungen!.map((planung, idx) => (
+                              {(modul.planungen ?? []).map((planung, idx) => (
                                 <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                   {getPlanungStatusIcon(planung.status)}
                                   <Typography variant="caption">

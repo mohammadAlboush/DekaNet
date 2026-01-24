@@ -1,4 +1,7 @@
 import api, { ApiResponse, handleApiError } from './api';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('ModulVerwaltung');
 
 /**
  * Modul-Verwaltung Service
@@ -108,7 +111,7 @@ class ModulVerwaltungService {
     nur_aktive?: boolean;
   }): Promise<ApiResponse<ModulMitDozenten[]>> {
     try {
-      console.log('[ModulVerwaltung] Fetching module with params:', params);
+      log.debug(' Fetching module with params:', params);
 
       const queryParams = new URLSearchParams();
       if (params?.po_id) queryParams.append('po_id', params.po_id.toString());
@@ -117,18 +120,18 @@ class ModulVerwaltungService {
       }
 
       const url = `/modul-verwaltung/${queryParams.toString() ? `?${queryParams}` : ''}`;
-      console.log('[ModulVerwaltung] Request URL:', url);
+      log.debug(' Request URL:', url);
 
       const response = await api.get<ApiResponse<ModulMitDozenten[]>>(url);
 
-      console.log('[ModulVerwaltung] Response:', {
+      log.debug(' Response:', {
         success: response.data.success,
         moduleCount: response.data.data?.length || 0
       });
 
       return response.data;
     } catch (error) {
-      console.error('[ModulVerwaltung] Error fetching module:', error);
+      log.error(' Error fetching module:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -141,17 +144,17 @@ class ModulVerwaltungService {
     data: DozentHinzufuegenData
   ): Promise<ApiResponse<any>> {
     try {
-      console.log('[ModulVerwaltung] Adding dozent to modul:', modulId, data);
+      log.debug(' Adding dozent to modul:', modulId, data);
 
       const response = await api.post<ApiResponse<any>>(
         `/modul-verwaltung/${modulId}/dozenten`,
         data
       );
 
-      console.log('[ModulVerwaltung] ✓ Dozent added to modul');
+      log.debug(' ✓ Dozent added to modul');
       return response.data;
     } catch (error) {
-      console.error('[ModulVerwaltung] Error adding dozent:', error);
+      log.error(' Error adding dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -164,17 +167,17 @@ class ModulVerwaltungService {
     data?: DozentEntfernenData
   ): Promise<ApiResponse> {
     try {
-      console.log('[ModulVerwaltung] Removing dozent:', zuordnungId);
+      log.debug(' Removing dozent:', zuordnungId);
 
       const response = await api.delete<ApiResponse>(
         `/modul-verwaltung/dozenten/${zuordnungId}`,
         { data } // Pass bemerkung in request body
       );
 
-      console.log('[ModulVerwaltung] ✓ Dozent removed from modul');
+      log.debug(' ✓ Dozent removed from modul');
       return response.data;
     } catch (error) {
-      console.error('[ModulVerwaltung] Error removing dozent:', error);
+      log.error(' Error removing dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -187,17 +190,17 @@ class ModulVerwaltungService {
     data: DozentErsetzenData
   ): Promise<ApiResponse<any>> {
     try {
-      console.log('[ModulVerwaltung] Replacing dozent:', zuordnungId, data);
+      log.debug(' Replacing dozent:', zuordnungId, data);
 
       const response = await api.put<ApiResponse<any>>(
         `/modul-verwaltung/dozenten/${zuordnungId}`,
         data
       );
 
-      console.log('[ModulVerwaltung] ✓ Dozent replaced');
+      log.debug(' ✓ Dozent replaced');
       return response.data;
     } catch (error) {
-      console.error('[ModulVerwaltung] Error replacing dozent:', error);
+      log.error(' Error replacing dozent:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -209,17 +212,17 @@ class ModulVerwaltungService {
     data: BulkTransferData
   ): Promise<ApiResponse<BulkTransferResult>> {
     try {
-      console.log('[ModulVerwaltung] Bulk transfer:', data);
+      log.debug(' Bulk transfer:', data);
 
       const response = await api.post<ApiResponse<BulkTransferResult>>(
         '/modul-verwaltung/bulk-transfer',
         data
       );
 
-      console.log('[ModulVerwaltung] ✓ Bulk transfer completed:', response.data.data);
+      log.debug(' ✓ Bulk transfer completed:', response.data.data);
       return response.data;
     } catch (error) {
-      console.error('[ModulVerwaltung] Error in bulk transfer:', error);
+      log.error(' Error in bulk transfer:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -233,7 +236,7 @@ class ModulVerwaltungService {
     limit?: number;
   }): Promise<ApiResponse<AuditLogEntry[]>> {
     try {
-      console.log('[ModulVerwaltung] Fetching audit log with params:', params);
+      log.debug(' Fetching audit log with params:', params);
 
       const queryParams = new URLSearchParams();
       if (params?.modul_id) queryParams.append('modul_id', params.modul_id.toString());
@@ -241,14 +244,14 @@ class ModulVerwaltungService {
       if (params?.limit) queryParams.append('limit', params.limit.toString());
 
       const url = `/modul-verwaltung/audit-log${queryParams.toString() ? `?${queryParams}` : ''}`;
-      console.log('[ModulVerwaltung] Request URL:', url);
+      log.debug(' Request URL:', url);
 
       const response = await api.get<ApiResponse<AuditLogEntry[]>>(url);
 
-      console.log('[ModulVerwaltung] Audit log entries:', response.data.data?.length || 0);
+      log.debug(' Audit log entries:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      console.error('[ModulVerwaltung] Error fetching audit log:', error);
+      log.error(' Error fetching audit log:', error);
       throw new Error(handleApiError(error));
     }
   }

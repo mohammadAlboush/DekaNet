@@ -67,6 +67,9 @@ def get_eigene_templates():
         )
 
     except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"get_eigene_templates error: {e}", exc_info=True)
+        db.session.rollback()
         return ApiResponse.error(
             message='Fehler beim Laden der Templates',
             errors=[str(e)],
@@ -154,6 +157,54 @@ def get_template_for_semester(semester_typ: str):
     except Exception as e:
         return ApiResponse.error(
             message='Fehler beim Laden des Templates',
+            errors=[str(e)],
+            status_code=500
+        )
+
+
+@template_api.route('/for-wizard/<semester_typ>', methods=['GET'])
+@login_required
+def get_template_for_wizard(semester_typ: str):
+    """
+    GET /api/templates/for-wizard/<typ>
+
+    Holt Template mit validierten Modulen für den Wizard.
+    Validiert ob Module noch existieren und löst Mitarbeiter-Namen auf.
+
+    Args:
+        semester_typ: 'winter' oder 'sommer'
+
+    Returns:
+        200: Template mit valid_modules/invalid_modules oder null
+    """
+    try:
+        user = get_current_user()
+
+        semester_typ = semester_typ.lower()
+        if semester_typ not in VALID_SEMESTER_TYPEN:
+            return ApiResponse.error(
+                message=f'Ungültiger Semestertyp. Erlaubt: {", ".join(VALID_SEMESTER_TYPEN)}',
+                status_code=400
+            )
+
+        wizard_template = template_service.get_template_for_wizard(user.id, semester_typ)
+
+        if wizard_template:
+            return ApiResponse.success(
+                data=wizard_template,
+                message='Template für Wizard geladen'
+            )
+        else:
+            return ApiResponse.success(
+                data=None,
+                message=f'Kein Template für {semester_typ}semester vorhanden'
+            )
+
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f"get_template_for_wizard error: {e}", exc_info=True)
+        return ApiResponse.error(
+            message='Fehler beim Laden des Wizard-Templates',
             errors=[str(e)],
             status_code=500
         )

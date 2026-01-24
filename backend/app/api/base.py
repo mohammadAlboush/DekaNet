@@ -111,9 +111,50 @@ class ApiResponse:
         
         if data:
             response['data'] = data
-        
+
         return jsonify(response), status_code
-    
+
+    @staticmethod
+    def internal_error(
+        message: str = 'Ein interner Fehler ist aufgetreten',
+        exception: Exception = None,
+        log_context: str = None
+    ):
+        """
+        ✅ SECURITY: Sichere Error Response ohne Information Leakage
+
+        Loggt den Fehler intern, gibt aber keine Details an den Client.
+
+        Args:
+            message: Benutzerfreundliche Fehlermeldung (KEINE technischen Details!)
+            exception: Die aufgetretene Exception (wird nur geloggt, nicht an Client gesendet)
+            log_context: Zusätzlicher Kontext für das Logging
+
+        Returns:
+            Flask Response mit JSON (ohne interne Details)
+
+        Example:
+            except Exception as e:
+                return ApiResponse.internal_error(
+                    message='Fehler beim Laden der Daten',
+                    exception=e,
+                    log_context='get_modules'
+                )
+        """
+        # ✅ SECURITY: Logge den echten Fehler intern
+        if exception:
+            context = f"[{log_context}] " if log_context else ""
+            current_app.logger.exception(f"{context}Internal error: {exception}")
+
+        # ✅ SECURITY: Gib nur generische Fehlermeldung an Client
+        response = {
+            'success': False,
+            'message': message,
+            'errors': ['Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.']
+        }
+
+        return jsonify(response), 500
+
     @staticmethod
     def paginated(
         items: List[Any],
@@ -168,7 +209,7 @@ class ApiResponse:
 def login_required(fn: Callable) -> Callable:
     """
     Decorator: Requires valid JWT Token
-    
+
     Usage:
         @app.route('/protected')
         @login_required
@@ -181,9 +222,11 @@ def login_required(fn: Callable) -> Callable:
             verify_jwt_in_request()
             return fn(*args, **kwargs)
         except Exception as e:
+            # ✅ SECURITY: Keine internen Details an Client
+            current_app.logger.warning(f"[Auth] Authentication failed: {e}")
             return ApiResponse.error(
-                message='Authentication required',
-                errors=[str(e)],
+                message='Authentifizierung erforderlich',
+                errors=['Bitte melden Sie sich an'],
                 status_code=401
             )
     return wrapper
@@ -221,8 +264,8 @@ def role_required(*allowed_roles: str):
                         message='Account is deactivated',
                         status_code=403
                     )
-                
-                if user.rolle.name not in allowed_roles:
+
+                if not user.rolle or user.rolle.name not in allowed_roles:
                     return ApiResponse.error(
                         message=f'Requires role: {", ".join(allowed_roles)}',
                         status_code=403
@@ -230,9 +273,11 @@ def role_required(*allowed_roles: str):
                 
                 return fn(*args, **kwargs)
             except Exception as e:
+                # ✅ SECURITY: Keine internen Details an Client
+                current_app.logger.warning(f"[Auth] Authorization failed: {e}")
                 return ApiResponse.error(
-                    message='Authorization failed',
-                    errors=[str(e)],
+                    message='Autorisierung fehlgeschlagen',
+                    errors=['Sie haben keine Berechtigung für diese Aktion'],
                     status_code=403
                 )
         return wrapper
@@ -242,10 +287,10 @@ def role_required(*allowed_roles: str):
 def get_current_user() -> Optional[Benutzer]:
     """
     Holt aktuellen eingeloggten User
-    
+
     Returns:
         Benutzer oder None
-        
+
     Usage:
         user = get_current_user()
         if user:
@@ -255,8 +300,44 @@ def get_current_user() -> Optional[Benutzer]:
         verify_jwt_in_request()
         user_id = get_jwt_identity()
         return Benutzer.query.get(user_id)
-    except:
+    except Exception:
         return None
+
+
+def is_current_user_dekan() -> bool:
+    """
+    ✅ SECURITY: Sichere Prüfung ob aktueller User Dekan ist.
+
+    Returns:
+        bool: True wenn User eingeloggt und Dekan ist
+
+    Usage:
+        if not is_current_user_dekan():
+            return ApiResponse.error('Nur für Dekane', status_code=403)
+    """
+    user = get_current_user()
+    if not user:
+        return False
+    return user.ist_dekan() if hasattr(user, 'ist_dekan') else False
+
+
+def get_user_rolle_name(user: Optional[Benutzer]) -> str:
+    """
+    ✅ SECURITY: Sichere Methode um Rollennamen zu erhalten.
+
+    Args:
+        user: Benutzer-Objekt (kann None sein)
+
+    Returns:
+        str: Rollenname oder 'unknown' wenn keine Rolle/User
+    """
+    if not user:
+        return 'unknown'
+    if hasattr(user, 'get_rolle_name'):
+        return user.get_rolle_name()
+    if user.rolle and hasattr(user.rolle, 'name'):
+        return user.rolle.name
+    return 'unknown'
 
 
 def validate_request(required_fields: List[str]):

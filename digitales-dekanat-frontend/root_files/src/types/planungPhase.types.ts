@@ -1,4 +1,9 @@
 // Planungsphase Types
+// ✅ SECURITY FIX: `any` Types durch konkrete Typen ersetzt (2026-01-24)
+import { Semesterplanung } from './planung.types';
+
+export type SemesterTyp = 'wintersemester' | 'sommersemester';
+
 export interface PlanungPhase {
   id: number;
   semester_id: number;
@@ -8,6 +13,9 @@ export interface PlanungPhase {
   ist_aktiv: boolean;
   geschlossen_am?: string; // Wann wurde die Phase geschlossen
   geschlossen_von?: number; // User ID des Dekans der die Phase geschlossen hat
+  // NEU: Strukturierte Semester-Info
+  semester_typ?: SemesterTyp;
+  semester_jahr?: number;
   anzahl_einreichungen: number; // Statistik: Wie viele Einreichungen
   anzahl_genehmigt: number; // Statistik: Wie viele genehmigt
   anzahl_abgelehnt: number; // Statistik: Wie viele abgelehnt
@@ -15,11 +23,12 @@ export interface PlanungPhase {
   updated_at: string;
 }
 
+// NEU: Vereinfachte DTO für Phase-Erstellung mit Dropdown-Auswahl
 export interface CreatePlanungPhaseDto {
-  semester_id: number;
-  name: string;
-  startdatum: string;
-  enddatum?: string; // Optional: Deadline
+  semester_typ: SemesterTyp;
+  semester_jahr: number;
+  startdatum: string;  // ISO DateTime
+  enddatum: string;    // ISO DateTime - PFLICHT
 }
 
 export interface ClosePlanungPhaseDto {
@@ -51,7 +60,7 @@ export interface ArchiviertePlanung {
   status_bei_archivierung: string;
   archiviert_am: string;
   archiviert_grund: 'phase_geschlossen' | 'manuell' | 'system';
-  planung_daten: any; // JSON der ursprünglichen Planung
+  planung_daten: Partial<Semesterplanung>; // ✅ TYPESAFE: JSON der ursprünglichen Planung
 }
 
 // Filter für Archiv-Suche
@@ -102,4 +111,19 @@ export interface PhaseHistoryEntry {
   phase: PlanungPhase;
   statistik: PhaseStatistik;
   eigene_einreichung?: ProfessorPhaseSubmission;
+}
+
+// NEU: Response für /active-with-semester endpoint
+export interface ActivePhaseWithSemesterResponse {
+  success: boolean;
+  phase: PlanungPhase | null;
+  semester: {
+    id: number;
+    bezeichnung: string;
+    kuerzel: string;
+    start_datum: string;
+    ende_datum: string;
+    ist_aktiv: boolean;
+    ist_planungsphase: boolean;
+  } | null;
 }

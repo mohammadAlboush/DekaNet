@@ -51,6 +51,9 @@ import { BaseStepProps } from '../../../../types/StepProps.types';
 import auftragService from '../../../../services/auftragService';
 import { Auftrag, SemesterAuftrag } from '../../../../types/auftrag.types';
 import useAuftragStore from '../../../../store/auftragStore';
+import { createContextLogger } from '../../../../utils/logger';
+
+const log = createContextLogger('StepSemesterauftraege');
 
 interface StepSemesterauftraegeProps extends BaseStepProps {}
 
@@ -94,9 +97,9 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
       const meineResponse = await auftragService.getMeineAuftraege(data.semesterId);
       setMeineAuftraege(meineResponse);
 
-      console.log('[StepAuftraege] Loaded:', auftraegeResponse.length, 'aufträge,', meineResponse.length, 'meine');
+      log.debug(' Loaded:', auftraegeResponse.length, 'aufträge,', meineResponse.length, 'meine');
     } catch (error: any) {
-      console.error('[StepAuftraege] Error loading data:', error);
+      log.error(' Error loading data:', error);
       setError(error.message || 'Fehler beim Laden der Aufträge');
     } finally {
       setLoading(false);
@@ -143,9 +146,9 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
       }
 
       handleCloseBeantragDialog();
-      console.log('[StepAuftraege] ✅ Auftrag beantragt:', newAuftrag);
+      log.debug(' ✅ Auftrag beantragt:', newAuftrag);
     } catch (error: any) {
-      console.error('[StepAuftraege] Error beantragen:', error);
+      log.error(' Error beantragen:', error);
       setError(error.response?.data?.message || error.message || 'Fehler beim Beantragen');
     } finally {
       setSubmitting(false);
@@ -168,9 +171,9 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
         await triggerRefresh(data.semesterId);
       }
 
-      console.log('[StepAuftraege] ✅ Auftrag zurückgezogen:', semesterAuftragId);
+      log.debug(' ✅ Auftrag zurückgezogen:', semesterAuftragId);
     } catch (error: any) {
-      console.error('[StepAuftraege] Error deleting:', error);
+      log.error(' Error deleting:', error);
       setError(error.response?.data?.message || error.message || 'Fehler beim Löschen');
     }
   };

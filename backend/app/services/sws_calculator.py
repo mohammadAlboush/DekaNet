@@ -10,6 +10,7 @@ Der Calculator nutzt die bestehende modul_lehrform Tabelle um:
 """
 
 from typing import Dict, List, Optional, Any
+from sqlalchemy.orm import joinedload
 from app.models import Modul, ModulLehrform, GeplantesModul, Lehrform
 from app.extensions import db
 
@@ -54,18 +55,20 @@ class SWSCalculator:
             >>> calculator.get_modul_basis_sws(1, 1)
             {'V': 2.0, 'Ü': 2.0, 'P': 2.0}
         """
-        # Hole alle Lehrformen fÃ¼r dieses Modul
-        lehrformen = ModulLehrform.query.filter_by(
+        # Hole alle Lehrformen für dieses Modul (mit Eager Loading)
+        lehrformen = ModulLehrform.query.options(
+            joinedload(ModulLehrform.lehrform)
+        ).filter_by(
             modul_id=modul_id,
             po_id=po_id
         ).all()
-        
+
         # Baue Dictionary
         sws_dict = {}
         for lf in lehrformen:
             kuerzel = lf.lehrform.kuerzel
             sws_dict[kuerzel] = lf.sws
-        
+
         return sws_dict
     
     def get_modul_gesamt_sws(
@@ -185,28 +188,27 @@ class SWSCalculator:
     ) -> float:
         """
         Berechnet Gesamt-SWS einer Semesterplanung
-        
+
         Args:
             semesterplanung_id: Semesterplanung ID
-            
+
         Returns:
             float: Gesamt-SWS
-            
+
         Example:
             >>> calculator.berechne_planung_gesamt_sws(1)
             24.5
         """
-        from app.models import Semesterplanung
-        
-        planung = Semesterplanung.query.get(semesterplanung_id)
-        if not planung:
-            return 0.0
-        
-        total = 0.0
-        for geplantes_modul in planung.geplante_module.all():
-            total += geplantes_modul.sws_gesamt or 0.0
-        
-        return total
+        from sqlalchemy import func
+
+        # Optimiert: Berechne Summe direkt in der DB statt Loop
+        result = db.session.query(
+            func.coalesce(func.sum(GeplantesModul.sws_gesamt), 0.0)
+        ).filter(
+            GeplantesModul.semesterplanung_id == semesterplanung_id
+        ).scalar()
+
+        return float(result) if result else 0.0
     
     def update_planung_gesamt_sws(
         self,
@@ -242,28 +244,30 @@ class SWSCalculator:
         semesterplanung_id: int
     ) -> List[GeplantesModul]:
         """
-        Updated SWS fÃ¼r alle geplanten Module einer Planung
-        
+        Updated SWS für alle geplanten Module einer Planung
+
         Args:
             semesterplanung_id: Semesterplanung ID
-            
+
         Returns:
             Liste von aktualisierten GeplantesModul Objekten
         """
-        from app.models import Semesterplanung
-        
-        planung = Semesterplanung.query.get(semesterplanung_id)
-        if not planung:
+        # Optimiert: Lade alle geplanten Module mit einer Query
+        geplante_module = GeplantesModul.query.filter_by(
+            semesterplanung_id=semesterplanung_id
+        ).all()
+
+        if not geplante_module:
             return []
-        
+
         updated = []
-        for geplantes_modul in planung.geplante_module.all():
+        for geplantes_modul in geplante_module:
             self.update_geplantes_modul_sws(geplantes_modul)
             updated.append(geplantes_modul)
-        
+
         # Update Planung Gesamt-SWS
         self.update_planung_gesamt_sws(semesterplanung_id)
-        
+
         return updated
     
     # =========================================================================
@@ -380,11 +384,13 @@ class SWSCalculator:
                 {'kuerzel': 'Ü', 'bezeichnung': 'Übung', 'sws': 2.0}
             ]
         """
-        lehrformen = ModulLehrform.query.filter_by(
+        lehrformen = ModulLehrform.query.options(
+            joinedload(ModulLehrform.lehrform)
+        ).filter_by(
             modul_id=modul_id,
             po_id=po_id
         ).all()
-        
+
         result = []
         for lf in lehrformen:
             result.append({
@@ -392,7 +398,7 @@ class SWSCalculator:
                 'bezeichnung': lf.lehrform.bezeichnung,
                 'sws': lf.sws
             })
-        
+
         return result
 
 

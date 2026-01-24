@@ -1,11 +1,15 @@
 """
-Flask Application Factory - 
+Flask Application Factory -
 ==========================================
 
 WICHTIG: Config MUSS vor init_extensions() komplett geladen sein!
 """
 
 import os
+
+# Lade .env Datei (für DATABASE_URL etc.)
+from dotenv import load_dotenv
+load_dotenv()
 from datetime import timedelta
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -147,41 +151,59 @@ def create_app(config_name=None):
     
     @app.errorhandler(401)
     def unauthorized(error):
-        """401 Unauthorized"""
-        app.logger.error(f"401 Unauthorized: {error}")
+        """401 Unauthorized - ✅ SECURITY: Keine internen Details"""
+        app.logger.warning(f"401 Unauthorized: {error}")
         return jsonify({
             'success': False,
-            'message': 'Unauthorized - Authentifizierung erforderlich',
-            'errors': [str(error)]
+            'message': 'Authentifizierung erforderlich',
+            'errors': ['Bitte melden Sie sich an']
         }), 401
-    
+
     @app.errorhandler(403)
     def forbidden(error):
-        """403 Forbidden"""
-        app.logger.error(f"403 Forbidden: {error}")
+        """403 Forbidden - ✅ SECURITY: Keine internen Details"""
+        app.logger.warning(f"403 Forbidden: {error}")
         return jsonify({
             'success': False,
-            'message': 'Forbidden - Keine Berechtigung',
-            'errors': [str(error)]
+            'message': 'Keine Berechtigung',
+            'errors': ['Sie haben keine Berechtigung für diese Aktion']
         }), 403
-    
+
     @app.errorhandler(404)
     def not_found(error):
-        """404 Not Found"""
+        """404 Not Found - ✅ SECURITY: Keine internen Details"""
         return jsonify({
             'success': False,
-            'message': 'Resource not found',
-            'errors': [str(error)]
+            'message': 'Ressource nicht gefunden',
+            'errors': ['Die angeforderte Ressource existiert nicht']
         }), 404
-    
+
     @app.errorhandler(500)
     def internal_error(error):
-        """500 Internal Server Error"""
-        app.logger.error(f'Internal Server Error: {error}', exc_info=True)
+        """500 Internal Server Error - ✅ SECURITY: Keine internen Details"""
+        # Logge den echten Fehler intern
+        app.logger.exception(f'Internal Server Error: {error}')
+        # Gib nur generische Meldung an Client
         return jsonify({
             'success': False,
-            'message': 'Internal Server Error',
-            'errors': [str(error)]
+            'message': 'Ein interner Fehler ist aufgetreten',
+            'errors': ['Bitte versuchen Sie es später erneut']
+        }), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(error):
+        """
+        Globaler Exception Handler - ✅ SECURITY: Fängt alle unbehandelten Exceptions ab
+
+        Verhindert Information Leakage bei unerwarteten Fehlern.
+        """
+        # Logge den echten Fehler intern
+        app.logger.exception(f'Unhandled Exception: {error}')
+        # Gib nur generische Meldung an Client
+        return jsonify({
+            'success': False,
+            'message': 'Ein unerwarteter Fehler ist aufgetreten',
+            'errors': ['Bitte versuchen Sie es später erneut']
         }), 500
     
     # =========================================================================

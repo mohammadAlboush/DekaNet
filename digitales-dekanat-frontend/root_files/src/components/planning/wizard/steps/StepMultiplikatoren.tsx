@@ -41,6 +41,9 @@ import {
 } from '@mui/icons-material';
 import { GeplantesModul } from '../../../../types/planung.types';
 import planungService from '../../../../services/planungService';
+import { createContextLogger } from '../../../../utils/logger';
+
+const log = createContextLogger('StepMultiplikatoren');
 
 interface StepProps {
   data: any;
@@ -177,7 +180,7 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
           editing.values
         );
       } catch (error) {
-        console.error('Error saving multipliers:', error);
+        log.error('Error saving multipliers:', error);
       } finally {
         setSaving(false);
       }
@@ -528,7 +531,7 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                               <Typography variant="subtitle2" gutterBottom>
                                 Lehrformen-Übersicht
                               </Typography>
-                              <Chip 
+                              <Chip
                                 label={getLehrformenText(gm)}
                                 color="primary"
                                 variant="outlined"
@@ -554,6 +557,53 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                                 )}
                               </Box>
                             </Grid>
+
+                            {/* Raum-Präferenzen (aus Template oder manuell gesetzt) */}
+                            {(gm.raum_vorlesung || gm.raum_uebung || gm.raum_praktikum || gm.raum_seminar) && (
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                  Raum-Präferenzen
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                  {gm.raum_vorlesung && (
+                                    <Chip size="small" label={`V: ${gm.raum_vorlesung}`} color="info" variant="outlined" />
+                                  )}
+                                  {gm.raum_uebung && (
+                                    <Chip size="small" label={`Ü: ${gm.raum_uebung}`} color="info" variant="outlined" />
+                                  )}
+                                  {gm.raum_praktikum && (
+                                    <Chip size="small" label={`P: ${gm.raum_praktikum}`} color="info" variant="outlined" />
+                                  )}
+                                  {gm.raum_seminar && (
+                                    <Chip size="small" label={`S: ${gm.raum_seminar}`} color="info" variant="outlined" />
+                                  )}
+                                </Box>
+                              </Grid>
+                            )}
+
+                            {/* Kapazitäten (aus Template oder manuell gesetzt) */}
+                            {(gm.kapazitaet_vorlesung || gm.kapazitaet_uebung || gm.kapazitaet_praktikum || gm.kapazitaet_seminar) && (
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                  Kapazitäten
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                  {gm.kapazitaet_vorlesung && (
+                                    <Chip size="small" label={`V: ${gm.kapazitaet_vorlesung} Plätze`} color="secondary" variant="outlined" />
+                                  )}
+                                  {gm.kapazitaet_uebung && (
+                                    <Chip size="small" label={`Ü: ${gm.kapazitaet_uebung} Plätze`} color="secondary" variant="outlined" />
+                                  )}
+                                  {gm.kapazitaet_praktikum && (
+                                    <Chip size="small" label={`P: ${gm.kapazitaet_praktikum} Plätze`} color="secondary" variant="outlined" />
+                                  )}
+                                  {gm.kapazitaet_seminar && (
+                                    <Chip size="small" label={`S: ${gm.kapazitaet_seminar} Plätze`} color="secondary" variant="outlined" />
+                                  )}
+                                </Box>
+                              </Grid>
+                            )}
+
                             {gm.anmerkungen && (
                               <Grid item xs={12}>
                                 <Typography variant="subtitle2" gutterBottom>
@@ -561,6 +611,17 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                                 </Typography>
                                 <Typography variant="body2">
                                   {gm.anmerkungen}
+                                </Typography>
+                              </Grid>
+                            )}
+
+                            {gm.raumbedarf && (
+                              <Grid item xs={12}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                  Raumbedarf
+                                </Typography>
+                                <Typography variant="body2">
+                                  {gm.raumbedarf}
                                 </Typography>
                               </Grid>
                             )}

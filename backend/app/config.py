@@ -34,30 +34,39 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
     # JWT Token Location - WO der Token gesucht wird
-    JWT_TOKEN_LOCATION = ['headers']
+    # ✅ SECURITY FIX: Cookies statt Headers für XSS-Schutz
+    JWT_TOKEN_LOCATION = ['cookies']
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
 
-    # JWT Cookie Security
+    # JWT Cookie Security - KRITISCH für Sicherheit!
     JWT_COOKIE_SECURE = False  # ✅ In Production: True (nur HTTPS)
     JWT_COOKIE_CSRF_PROTECT = True  # ✅ CSRF Protection für JWT Cookies
     JWT_COOKIE_SAMESITE = 'Lax'  # ✅ CSRF Protection
+    JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
+    JWT_REFRESH_COOKIE_NAME = 'refresh_token_cookie'
+    JWT_ACCESS_COOKIE_PATH = '/api/'
+    JWT_REFRESH_COOKIE_PATH = '/api/auth/refresh'
+    JWT_COOKIE_DOMAIN = None  # Automatisch aus Request
+    JWT_SESSION_COOKIE = False  # Persistente Cookies (nicht nur Session)
 
     # JWT Error Messages
     JWT_ERROR_MESSAGE_KEY = 'message'
     
     # =========================================================================
-    # DATABASE
+    # DATABASE - PostgreSQL Required (no SQLite fallback)
     # =========================================================================
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        f'sqlite:///{BASE_DIR / "dekanat_new.db"}'
-    
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
     SQLALCHEMY_RECORD_QUERIES = True
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 3600,
+        'pool_size': 20,
+        'max_overflow': 40,
+        'pool_timeout': 30,
     }
     
     # =========================================================================
@@ -225,6 +234,27 @@ class ProductionConfig(Config):
             raise ValueError(
                 "JWT_SECRET_KEY muss in Production explizit gesetzt sein!\n"
                 "Setze die Environment Variable: export JWT_SECRET_KEY='your-jwt-secret-key'"
+            )
+
+        # Validiere Cookie-Sicherheit für HTTPS
+        if not cls.SESSION_COOKIE_SECURE:
+            app.logger.warning(
+                "⚠️  WARNUNG: SESSION_COOKIE_SECURE ist False! "
+                "Setze SESSION_COOKIE_SECURE=true für HTTPS-Produktion."
+            )
+
+        # Validiere CORS-Origins
+        if not cls.CORS_ORIGINS or cls.CORS_ORIGINS == [''] or 'your-domain.com' in str(cls.CORS_ORIGINS):
+            app.logger.warning(
+                "⚠️  WARNUNG: CORS_ORIGINS nicht konfiguriert! "
+                "Setze CORS_ORIGINS auf deine Produktions-Domain."
+            )
+
+        # Validiere Placeholder-Werte
+        if 'CHANGE_ME' in str(cls.SECRET_KEY) or 'CHANGE_ME' in str(cls.JWT_SECRET_KEY):
+            raise ValueError(
+                "SECRET_KEY und JWT_SECRET_KEY enthalten Placeholder-Werte!\n"
+                "Generiere neue Keys: python -c \"import secrets; print(secrets.token_hex(32))\""
             )
 
 

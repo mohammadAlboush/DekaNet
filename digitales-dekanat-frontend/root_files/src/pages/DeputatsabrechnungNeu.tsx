@@ -68,6 +68,9 @@ import {
   DeputatsLehrtaetigkeit,
 } from '../types/deputat.types';
 import { useToastStore } from '../components/common/Toast';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('DeputatsabrechnungNeu');
 
 // Wochentage für Anzeige
 const WOCHENTAG_REVERSE_MAP: Record<Wochentag, string> = {
@@ -166,7 +169,7 @@ const DeputatsabrechnungNeu: React.FC = () => {
           }
         }
       } catch (error) {
-        console.error('Error loading planungsphasen:', error);
+        log.error('Error loading planungsphasen:', error);
       }
     };
 
@@ -180,7 +183,7 @@ const DeputatsabrechnungNeu: React.FC = () => {
         const response = await modulService.getAllModule();
         setModule(response || []);
       } catch (error) {
-        console.error('Error loading module:', error);
+        log.error('Error loading module:', error);
       }
     };
     loadModule();
@@ -193,7 +196,7 @@ const DeputatsabrechnungNeu: React.FC = () => {
         const response = await auftragService.getAlleAuftraege();
         setAuftraege(response || []);
       } catch (error) {
-        console.error('Error loading auftraege:', error);
+        log.error('Error loading auftraege:', error);
       }
     };
     loadAuftraege();
@@ -216,7 +219,7 @@ const DeputatsabrechnungNeu: React.FC = () => {
       });
       setAbrechnung(data);
     } catch (error) {
-      console.error('Error loading abrechnung:', error);
+      log.error('Error loading abrechnung:', error);
       showToast('Fehler beim Laden der Abrechnung', 'error');
     } finally {
       setLoading(false);

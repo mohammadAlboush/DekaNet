@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -22,6 +21,9 @@ import {
   ListItemText,
   Chip,
 } from '@mui/material';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('WizardView');
 import {
   CheckCircle,
   Warning,
@@ -165,7 +167,7 @@ const WizardView: React.FC = () => {
       loadPlanung(parseInt(id));
     } else {
       // Reset for new planung - aber lösche NICHT LocalStorage!
-      console.log('[Wizard] Starting new wizard');
+      log.debug(' Starting new wizard');
       // Versuche aus LocalStorage zu laden
       const restored = loadFromLocalStorage();
       if (restored) {
@@ -198,21 +200,21 @@ const WizardView: React.FC = () => {
         // Show warning but don't prevent wizard - professor may be editing draft
       }
     } catch (error) {
-      console.error('Error checking phase status:', error);
+      log.error('Error checking phase status:', error);
     }
   };
 
   const loadPlanung = async (planungId: number) => {
     setLoading(true);
     try {
-      console.log('[Wizard] 📥 Loading planung:', planungId);
+      log.debug(' 📥 Loading planung:', planungId);
       
       const response = await planungService.getPlanung(planungId);
       
       if (response.success && response.data) {
         const planung = response.data;
         
-        console.log('[Wizard] ✅ Planung loaded:', planung);
+        log.debug(' ✅ Planung loaded:', planung);
         
         // Populate store from existing planung
         setWizardData({
@@ -227,7 +229,7 @@ const WizardView: React.FC = () => {
         setPlanungId(planung.id);
       }
     } catch (error: any) {
-      console.error('[Wizard] ❌ Error loading planung:', error);
+      log.error(' ❌ Error loading planung:', error);
       showToast('Fehler beim Laden der Planung', 'error');
       setError(error.message);
     } finally {
@@ -259,18 +261,18 @@ const WizardView: React.FC = () => {
 
     try {
       const semesterTyp = getSemesterTyp();
-      console.log('[Wizard] Loading template for:', semesterTyp);
+      log.debug(' Loading template for:', semesterTyp);
 
       const response = await templateService.getTemplateForSemester(semesterTyp);
       if (response.success && response.data) {
         setAvailableTemplate(response.data);
-        console.log('[Wizard] Template found:', response.data.name, 'with', response.data.anzahl_module, 'modules');
+        log.debug(' Template found:', response.data.name, 'with', response.data.anzahl_module, 'modules');
       } else {
         setAvailableTemplate(null);
-        console.log('[Wizard] No template found for', semesterTyp);
+        log.debug(' No template found for', semesterTyp);
       }
     } catch (error) {
-      console.error('[Wizard] Error loading template:', error);
+      log.error(' Error loading template:', error);
       setAvailableTemplate(null);
     }
   };
@@ -309,14 +311,29 @@ const WizardView: React.FC = () => {
   }, [currentStep, availableTemplate, templateApplied, templatePromptShown, geplantModule, planungId]);
 
   /**
-   * Wendet Template auf aktuelle Planung an
+   * Helper: Mitarbeiter-Zuordnung aus geplante_module extrahieren
    */
-  const handleApplyTemplate = async (clearExisting: boolean = false) => {
+  const buildMitarbeiterMap = (modules: any[]): Map<number, number[]> => {
+    const map = new Map<number, number[]>();
+    modules.forEach(gm => {
+      if (gm.mitarbeiter_ids && gm.mitarbeiter_ids.length > 0) {
+        map.set(gm.modul_id, gm.mitarbeiter_ids);
+      }
+    });
+    return map;
+  };
+
+  /**
+   * Wendet Template auf aktuelle Planung an
+   * @param clearExisting - Bestehende Module löschen?
+   * @param goToSummary - Direkt zur Zusammenfassung navigieren (Schnellstart)?
+   */
+  const handleApplyTemplate = async (clearExisting: boolean = false, goToSummary: boolean = false) => {
     if (!availableTemplate || !planungId) return;
 
     setApplyingTemplate(true);
     try {
-      console.log('[Wizard] Applying template:', availableTemplate.id, 'to planung:', planungId);
+      log.debug(' Applying template:', availableTemplate.id, 'to planung:', planungId, 'goToSummary:', goToSummary);
 
       const response = await templateService.applyToPlanung(
         availableTemplate.id,
@@ -327,28 +344,34 @@ const WizardView: React.FC = () => {
       if (response.success) {
         const { hinzugefuegt, uebersprungen } = response.data;
 
-        // Reload planung to get updated modules
+        // Reload planung to get ALL data from backend (including mitarbeiter)
         const planungResponse = await planungService.getPlanung(planungId);
         if (planungResponse.success && planungResponse.data) {
-          // Update Wizard mit ALLEN Daten aus der Planung (die vom Template kamen)
+          const geplanteModule = planungResponse.data.geplante_module || [];
+
+          // Update Wizard mit ALLEN Daten aus der Planung (inkl. Mitarbeiter-Map)
           setWizardData({
-            geplantModule: planungResponse.data.geplante_module || [],
+            geplantModule: geplanteModule,
             wunschFreieTage: planungResponse.data.wunsch_freie_tage || [],
             anmerkungen: planungResponse.data.anmerkungen || planungResponse.data.notizen || '',
             raumbedarf: planungResponse.data.raumbedarf || '',
+            mitarbeiterZuordnung: buildMitarbeiterMap(geplanteModule),
+          });
+
+          log.debug(' Template data loaded:', {
+            moduleCount: geplanteModule.length,
+            wunschTageCount: planungResponse.data.wunsch_freie_tage?.length || 0,
+            hasAnmerkungen: !!planungResponse.data.anmerkungen,
+            mitarbeiterCount: buildMitarbeiterMap(geplanteModule).size
           });
         }
 
         setTemplateApplied(true);
         setShowTemplateDialog(false);
 
-        // WICHTIG: Nach Template-Anwendung zum nächsten Schritt navigieren
-        // damit die importierten Module sichtbar werden (Schritt 2)
-        nextStep();
-
         // Zeige detaillierte Erfolgsmeldung
         const modulInfo = `${hinzugefuegt} Module`;
-        const skipInfo = uebersprungen > 0 ? `, ${uebersprungen} uebersprungen` : '';
+        const skipInfo = uebersprungen > 0 ? `, ${uebersprungen} übersprungen` : '';
         const wunschTageInfo = availableTemplate.wunsch_freie_tage?.length
           ? `, ${availableTemplate.wunsch_freie_tage.length} Wunsch-Tage`
           : '';
@@ -356,13 +379,24 @@ const WizardView: React.FC = () => {
           ? ', Zusatzinfos'
           : '';
 
-        showToast(
-          `Template angewendet: ${modulInfo}${skipInfo}${wunschTageInfo}${extraInfo}`,
-          'success'
-        );
+        if (goToSummary) {
+          // Schnellstart: Direkt zur Zusammenfassung (Schritt 7)
+          setCurrentStep(7);
+          showToast(
+            `Schnellstart: ${modulInfo}${skipInfo}${wunschTageInfo}${extraInfo} geladen. Prüfen & einreichen!`,
+            'success'
+          );
+        } else {
+          // Laden & Bearbeiten: Zum nächsten Schritt navigieren
+          nextStep();
+          showToast(
+            `Template angewendet: ${modulInfo}${skipInfo}${wunschTageInfo}${extraInfo}`,
+            'success'
+          );
+        }
       }
     } catch (error: any) {
-      console.error('[Wizard] Error applying template:', error);
+      log.error(' Error applying template:', error);
       showToast(error.message || 'Fehler beim Anwenden des Templates', 'error');
     } finally {
       setApplyingTemplate(false);
@@ -432,7 +466,7 @@ const WizardView: React.FC = () => {
 
     setLoading(true);
     try {
-      console.log('[Wizard] 📤 Submitting planung:', planungId);
+      log.debug(' 📤 Submitting planung:', planungId);
       
       const response = await planungService.submitPlanung(planungId!);
 
@@ -441,9 +475,9 @@ const WizardView: React.FC = () => {
         if (activePhase) {
           try {
             await recordNewSubmission(planungId!);
-            console.log('[Wizard] 📊 Submission recorded in phase system');
+            log.debug(' 📊 Submission recorded in phase system');
           } catch (phaseError) {
-            console.error('[Wizard] Error recording submission in phase:', phaseError);
+            log.error(' Error recording submission in phase:', phaseError);
             // Continue even if phase recording fails - submission was successful
           }
         }
@@ -452,7 +486,7 @@ const WizardView: React.FC = () => {
 
         // Clear LocalStorage nach erfolgreichem Submit
         clearLocalStorage();
-        console.log('[Wizard] 🗑️ LocalStorage cleared after successful submit');
+        log.debug(' 🗑️ LocalStorage cleared after successful submit');
 
         resetWizard();
         navigate('/semesterplanung');
@@ -462,7 +496,7 @@ const WizardView: React.FC = () => {
         setError(response.message || 'Fehler beim Einreichen');
       }
     } catch (error: any) {
-      console.error('[Wizard] ❌ Error submitting planung:', error);
+      log.error(' ❌ Error submitting planung:', error);
       showToast(error.message || 'Fehler beim Einreichen der Planung', 'error');
       setError(error.message);
     } finally {
@@ -471,13 +505,13 @@ const WizardView: React.FC = () => {
   };
 
   const handleStepUpdate = (data: any) => {
-    console.log('[Wizard] 💾 Step update:', Object.keys(data));
+    log.debug(' 💾 Step update:', Object.keys(data));
     setWizardData(data);
     // Auto-Save läuft automatisch im Store
   };
 
   const handleStepNext = () => {
-    console.log('[Wizard] ➡️ Next step');
+    log.debug(' ➡️ Next step');
     nextStep();
   };
 
@@ -578,6 +612,7 @@ const WizardView: React.FC = () => {
             onBack={previousStep}
             onSubmit={handleSubmit}
             planungId={planungId ?? undefined}
+            onGoToStep={setCurrentStep}
           />
         );
       
@@ -993,7 +1028,7 @@ const WizardView: React.FC = () => {
               <Button
                 variant="outlined"
                 color="warning"
-                onClick={() => handleApplyTemplate(true)}
+                onClick={() => handleApplyTemplate(true, false)}
                 disabled={applyingTemplate}
                 size="small"
               >
@@ -1002,7 +1037,7 @@ const WizardView: React.FC = () => {
             )}
             <Button
               variant="outlined"
-              onClick={() => handleApplyTemplate(false)}
+              onClick={() => handleApplyTemplate(false, false)}
               disabled={applyingTemplate}
               startIcon={applyingTemplate ? <CircularProgress size={16} /> : <ContentPaste />}
             >
@@ -1012,11 +1047,7 @@ const WizardView: React.FC = () => {
               variant="contained"
               color="success"
               size="large"
-              onClick={async () => {
-                await handleApplyTemplate(false);
-                // Nach erfolgreichem Laden direkt zur Zusammenfassung
-                setTimeout(() => setCurrentStep(7), 100);
-              }}
+              onClick={() => handleApplyTemplate(false, true)}
               disabled={applyingTemplate}
               startIcon={applyingTemplate ? <CircularProgress size={16} /> : <CheckCircle />}
             >

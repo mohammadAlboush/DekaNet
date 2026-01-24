@@ -24,5 +24,63 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  // ============================================================================
+  // BUILD OPTIMIERUNGEN FÜR PRODUKTION
+  // ============================================================================
+  build: {
+    // Chunk-Größen-Warnung
+    chunkSizeWarningLimit: 500,
+
+    // Komprimierte Größe anzeigen
+    reportCompressedSize: true,
+
+    // Source Maps für Produktion (auskommentieren für Debugging)
+    sourcemap: false,
+
+    // Rollup Optionen für besseres Chunking
+    rollupOptions: {
+      output: {
+        // Manuelle Chunk-Aufteilung für besseres Caching
+        manualChunks: {
+          // Vendor Chunks - werden selten aktualisiert
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-mui': ['@mui/material', '@mui/icons-material', '@mui/x-date-pickers'],
+          'vendor-utils': ['axios', 'zustand', 'date-fns'],
+        },
+        // Chunk-Dateinamen mit Hash für Caching
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
+      }
+    },
+
+    // Minifizierung
+    minify: 'esbuild',
+
+    // Target für moderne Browser
+    target: 'es2020'
+  },
+
+  // ============================================================================
+  // OPTIMIERUNGEN
+  // ============================================================================
+  optimizeDeps: {
+    // Pre-bundle diese Abhängigkeiten
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@mui/material',
+      '@mui/icons-material',
+      'axios',
+      'zustand',
+      'date-fns'
+    ]
+  },
+
+  // CSS Code-Splitting
+  css: {
+    devSourcemap: true
   }
 });

@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import auftragService from '../services/auftragService';
 import { SemesterAuftrag } from '../types/auftrag.types';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('AuftragStore');
 
 /**
  * Auftrag Store - SYNCHRONISATION
@@ -40,7 +43,7 @@ const useAuftragStore = create<AuftragState>()(
 
       // Lade Aufträge für ein Semester
       loadAuftraege: async (semesterId: number) => {
-        console.log('[AuftragStore] Loading auftraege for semester:', semesterId);
+        log.debug(' Loading auftraege for semester:', semesterId);
         set({ isLoading: true });
 
         try {
@@ -55,16 +58,16 @@ const useAuftragStore = create<AuftragState>()(
             lastUpdate: Date.now(),
           }));
 
-          console.log('[AuftragStore] ✓ Loaded', auftraege.length, 'auftraege');
+          log.debug(' ✓ Loaded', auftraege.length, 'auftraege');
         } catch (error) {
-          console.error('[AuftragStore] ✗ Error loading auftraege:', error);
+          log.error(' ✗ Error loading auftraege:', error);
           set({ isLoading: false });
         }
       },
 
       // Füge neuen Auftrag hinzu
       addAuftrag: (semesterId: number, auftrag: SemesterAuftrag) => {
-        console.log('[AuftragStore] Adding auftrag:', auftrag.id);
+        log.debug(' Adding auftrag:', auftrag.id);
 
         set((state) => {
           const current = state.semesterAuftraege[semesterId] || [];
@@ -80,7 +83,7 @@ const useAuftragStore = create<AuftragState>()(
 
       // Aktualisiere existierenden Auftrag
       updateAuftrag: (semesterId: number, auftragId: number, data: Partial<SemesterAuftrag>) => {
-        console.log('[AuftragStore] Updating auftrag:', auftragId, data);
+        log.debug(' Updating auftrag:', auftragId, data);
 
         set((state) => {
           const current = state.semesterAuftraege[semesterId] || [];
@@ -100,7 +103,7 @@ const useAuftragStore = create<AuftragState>()(
 
       // Entferne Auftrag
       removeAuftrag: (semesterId: number, auftragId: number) => {
-        console.log('[AuftragStore] Removing auftrag:', auftragId);
+        log.debug(' Removing auftrag:', auftragId);
 
         set((state) => {
           const current = state.semesterAuftraege[semesterId] || [];
@@ -118,7 +121,7 @@ const useAuftragStore = create<AuftragState>()(
 
       // Lösche alle Aufträge für ein Semester
       clearAuftraege: (semesterId: number) => {
-        console.log('[AuftragStore] Clearing auftraege for semester:', semesterId);
+        log.debug(' Clearing auftraege for semester:', semesterId);
 
         set((state) => {
           const updated = { ...state.semesterAuftraege };
@@ -133,7 +136,7 @@ const useAuftragStore = create<AuftragState>()(
 
       // Trigger manuellen Refresh (nach Änderungen)
       triggerRefresh: async (semesterId: number) => {
-        console.log('[AuftragStore] ⟳ Triggering refresh for semester:', semesterId);
+        log.debug(' ⟳ Triggering refresh for semester:', semesterId);
         await get().loadAuftraege(semesterId);
       },
     }),

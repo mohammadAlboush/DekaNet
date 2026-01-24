@@ -34,6 +34,9 @@ import { Semesterplanung, GeplantesModul } from '../../types/planung.types';
 import { Semester } from '../../types/semester.types';
 import { Modul } from '../../types/modul.types';
 import { useToastStore } from '../../components/common/Toast';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('SemesterplanungWizard');
 
 interface WizardData {
   semesterId: number | null;
@@ -98,7 +101,7 @@ const SemesterplanungWizard: React.FC = () => {
         // Populate wizard data from existing planung
         setWizardData({
           semesterId: response.data.semester_id,
-          semester: response.data.semester,
+          semester: response.data.semester ?? null,  // ✅ Convert undefined to null
           selectedModules: [],
           geplantModule: response.data.geplante_module || [],
           mitarbeiterZuordnung: new Map(),
@@ -139,8 +142,9 @@ const SemesterplanungWizard: React.FC = () => {
           notizen: wizardData.anmerkungen,
         });
         if (response.success && response.data) {
-          setPlanung(response.data);
-          setWizardData(prev => ({ ...prev, planungId: response.data!.id }));
+          const newPlanung = response.data;
+          setPlanung(newPlanung);
+          setWizardData(prev => ({ ...prev, planungId: newPlanung.id }));
         }
       }
       showToast('Zwischenstand gespeichert', 'success');
@@ -161,8 +165,8 @@ const SemesterplanungWizard: React.FC = () => {
       setLoading(true);
       try {
         // ✅ WICHTIG: Erst alle Zusatzinfos speichern (anmerkungen, raumbedarf, wunschFreieTage, etc.)
-        console.log('[Wizard] Saving zusatzinfos before submit...');
-        console.log('[Wizard] WizardData:', {
+        log.debug(' Saving zusatzinfos before submit...');
+        log.debug(' WizardData:', {
           anmerkungen: wizardData.anmerkungen,
           raumbedarf: wizardData.raumbedarf,
           roomRequirements: (wizardData as any).roomRequirements,
@@ -182,14 +186,14 @@ const SemesterplanungWizard: React.FC = () => {
             grund: tag.grund || '',
           })) || [],
         });
-        console.log('[Wizard] Zusatzinfos saved successfully');
+        log.debug(' Zusatzinfos saved successfully');
 
         // Dann einreichen
         await planungService.submitPlanung(planung.id);
         showToast('Planung erfolgreich eingereicht', 'success');
         navigate('/semesterplanung');
       } catch (error) {
-        console.error('[Wizard] Error during submit:', error);
+        log.error(' Error during submit:', error);
         showToast('Fehler beim Einreichen', 'error');
       } finally {
         setLoading(false);

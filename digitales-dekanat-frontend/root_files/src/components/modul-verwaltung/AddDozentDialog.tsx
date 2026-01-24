@@ -21,6 +21,9 @@ import { Add, Close } from '@mui/icons-material';
 import modulVerwaltungService from '../../services/modulVerwaltungService';
 import dozentService, { Dozent } from '../../services/dozentService';
 import poService, { Pruefungsordnung } from '../../services/poService';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('AddDozentDialog');
 
 interface AddDozentDialogProps {
   open: boolean;
@@ -68,7 +71,7 @@ const AddDozentDialog: React.FC<AddDozentDialogProps> = ({
         setDozenten(response.data || []);
       }
     } catch (error: any) {
-      console.error('Error loading dozenten:', error);
+      log.error('Error loading dozenten:', error);
     } finally {
       setLoadingDozenten(false);
     }
@@ -86,7 +89,7 @@ const AddDozentDialog: React.FC<AddDozentDialogProps> = ({
         }
       }
     } catch (error: any) {
-      console.error('Error loading Prüfungsordnungen:', error);
+      log.error('Error loading Prüfungsordnungen:', error);
     } finally {
       setLoadingPOs(false);
     }

@@ -1,4 +1,10 @@
 // types/planung_types.ts - KORRIGIERTE VERSION
+// ✅ SECURITY FIX: `any` Types durch konkrete Typen ersetzt (2026-01-24)
+
+import { Semester } from './semester.types';
+import { User } from './auth.types';
+import { PlanungPhase } from './planungPhase.types';
+import { Modul } from './modul.types';
 
 // ✅ Interfaces für room_requirements und special_requests
 export interface RoomRequirement {
@@ -37,9 +43,9 @@ export interface Semesterplanung {
   gesamt_sws: number;
   created_at: string;
   updated_at: string;
-  semester?: any;
-  benutzer?: any;
-  planungsphase?: any;                // ✅ HINZUGEFÜGT
+  semester?: Semester;                 // ✅ TYPESAFE: Konkreter Typ statt any
+  benutzer?: User;                     // ✅ TYPESAFE: Konkreter Typ statt any
+  planungsphase?: PlanungPhase;        // ✅ TYPESAFE: Konkreter Typ statt any
   geplante_module?: GeplantesModul[];
   wunsch_freie_tage?: WunschFreierTag[];
 }
@@ -62,7 +68,7 @@ export interface GeplantesModul {
   anmerkungen?: string;
   raumbedarf?: string;
   mitarbeiter_ids?: number[];
-  modul?: any;
+  modul?: Modul;                       // ✅ TYPESAFE: Konkreter Typ statt any
   // Raum-Planung pro Lehrform
   raum_vorlesung?: string;
   raum_uebung?: string;

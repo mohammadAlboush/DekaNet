@@ -26,6 +26,10 @@ import {
   Tab,
   Paper,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -50,6 +54,9 @@ import { de } from 'date-fns/locale';
 import { format, differenceInDays, differenceInHours } from 'date-fns';
 import usePlanungPhaseStore from '../../store/planungPhaseStore';
 import useAuthStore from '../../store/authStore';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('PlanungsphasenManager');
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -102,10 +109,22 @@ const PlanungsphasenManager: React.FC = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openReminderDialog, setOpenReminderDialog] = useState(false);
 
-  // Form States for Start Phase Dialog
-  const [phaseName, setPhaseName] = useState('');
+  // Form States for Start Phase Dialog - NEU: Strukturierte Semester-Auswahl
+  const [semesterTyp, setSemesterTyp] = useState<'wintersemester' | 'sommersemester' | ''>('');
+  const [semesterJahr, setSemesterJahr] = useState<number>(new Date().getFullYear());
+  const [phaseStartdatum, setPhaseStartdatum] = useState<Date | null>(new Date());
   const [phaseDeadline, setPhaseDeadline] = useState<Date | null>(null);
-  const [hasDeadline, setHasDeadline] = useState(false);
+  const currentYear = new Date().getFullYear();
+
+  // Helper für Namen-Generierung
+  const generatePhaseName = (): string => {
+    if (!semesterTyp) return '';
+    const typDisplay = semesterTyp === 'wintersemester' ? 'Wintersemester' : 'Sommersemester';
+    const jahrDisplay = semesterTyp === 'wintersemester'
+      ? `${semesterJahr}/${semesterJahr + 1}`
+      : `${semesterJahr}`;
+    return `${typDisplay} ${jahrDisplay} - Planungsphase`;
+  };
 
   // Form States for Close Phase Dialog
   const [archiveEntwuerfe, setArchiveEntwuerfe] = useState(false);
@@ -146,41 +165,41 @@ const PlanungsphasenManager: React.FC = () => {
     };
   }, [activePhase]);
 
-  // Auto-generate phase name
+  // Auto-select default semester type based on current month
   useEffect(() => {
-    if (openStartDialog && !phaseName) {
-      const currentDate = new Date();
-      const month = currentDate.getMonth();
-      const year = currentDate.getFullYear();
-      const semester = month >= 3 && month <= 8 ? 'Sommersemester' : 'Wintersemester';
-      const phaseNumber = allPhases.filter(p =>
-        p.name.includes(semester) && p.name.includes(year.toString())
-      ).length + 1;
-      setPhaseName(`${semester} ${year} - Phase ${phaseNumber}`);
+    if (openStartDialog && !semesterTyp) {
+      const month = new Date().getMonth();
+      // April-September = Sommersemester, sonst Wintersemester
+      const defaultTyp = month >= 3 && month <= 8 ? 'sommersemester' : 'wintersemester';
+      setSemesterTyp(defaultTyp);
     }
-  }, [openStartDialog, allPhases]);
+  }, [openStartDialog]);
 
   const handleStartPhase = async () => {
-    if (!phaseName.trim()) {
-      alert('Bitte geben Sie einen Namen für die Phase ein.');
+    if (!semesterTyp || !semesterJahr || !phaseStartdatum || !phaseDeadline) {
+      alert('Bitte füllen Sie alle Pflichtfelder aus.');
       return;
     }
 
     try {
-      await startNewPhase(
-        phaseName,
-        1, // TODO: Get actual semester ID
-        hasDeadline && phaseDeadline ? phaseDeadline.toISOString() : undefined
-      );
+      await startNewPhase({
+        semester_typ: semesterTyp,
+        semester_jahr: semesterJahr,
+        startdatum: phaseStartdatum.toISOString(),
+        enddatum: phaseDeadline.toISOString()
+      });
       setOpenStartDialog(false);
-      setPhaseName('');
+
+      // Reset form
+      setSemesterTyp('');
+      setSemesterJahr(new Date().getFullYear());
+      setPhaseStartdatum(new Date());
       setPhaseDeadline(null);
-      setHasDeadline(false);
 
       // Reload data
       fetchActivePhase();
     } catch (error) {
-      console.error('Fehler beim Starten der Phase:', error);
+      log.error('Fehler beim Starten der Phase:', error);
     }
   };
 
@@ -199,7 +218,7 @@ const PlanungsphasenManager: React.FC = () => {
       // Reload data
       fetchActivePhase();
     } catch (error) {
-      console.error('Fehler beim Schließen der Phase:', error);
+      log.error('Fehler beim Schließen der Phase:', error);
       alert('Fehler beim Schließen der Phase. Bitte versuchen Sie es erneut.');
     }
   };
@@ -212,7 +231,7 @@ const PlanungsphasenManager: React.FC = () => {
       setOpenReminderDialog(false);
       alert('Erinnerungen wurden erfolgreich versendet.');
     } catch (error) {
-      console.error('Fehler beim Senden der Erinnerungen:', error);
+      log.error('Fehler beim Senden der Erinnerungen:', error);
     }
   };
 
@@ -505,54 +524,88 @@ const PlanungsphasenManager: React.FC = () => {
           </Typography>
         </TabPanel>
 
-        {/* Start Phase Dialog */}
+        {/* Start Phase Dialog - NEU mit Dropdowns */}
         <Dialog open={openStartDialog} onClose={() => setOpenStartDialog(false)} maxWidth="sm" fullWidth>
           <DialogTitle>Neue Planungsphase Starten</DialogTitle>
           <DialogContent>
-            <Box sx={{ mt: 2 }}>
-              <TextField
-                fullWidth
-                label="Phasenname"
-                value={phaseName}
-                onChange={(e) => setPhaseName(e.target.value)}
-                placeholder="z.B. Sommersemester 2024 - Phase 1"
-                sx={{ mb: 3 }}
-              />
+            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={hasDeadline}
-                    onChange={(e) => setHasDeadline(e.target.checked)}
-                  />
-                }
-                label="Deadline festlegen"
-                sx={{ mb: 2 }}
-              />
+              {/* Semester-Typ Dropdown */}
+              <FormControl fullWidth required>
+                <InputLabel>Semester-Typ</InputLabel>
+                <Select
+                  value={semesterTyp}
+                  onChange={(e) => setSemesterTyp(e.target.value as 'wintersemester' | 'sommersemester')}
+                  label="Semester-Typ"
+                >
+                  <MenuItem value="wintersemester">Wintersemester</MenuItem>
+                  <MenuItem value="sommersemester">Sommersemester</MenuItem>
+                </Select>
+              </FormControl>
 
-              {hasDeadline && (
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
-                  <DateTimePicker
-                    label="Deadline"
-                    value={phaseDeadline}
-                    onChange={setPhaseDeadline}
-                    format="dd.MM.yyyy HH:mm"
-                    ampm={false}
-                    minDate={new Date()}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        helperText: 'Nach dieser Zeit können keine Einreichungen mehr gemacht werden'
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
+              {/* Jahr Auswahl */}
+              <FormControl fullWidth required>
+                <InputLabel>Jahr</InputLabel>
+                <Select
+                  value={semesterJahr}
+                  onChange={(e) => setSemesterJahr(e.target.value as number)}
+                  label="Jahr"
+                >
+                  {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map(year => (
+                    <MenuItem key={year} value={year}>{year}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Auto-generierter Name Preview */}
+              {semesterTyp && (
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    Phase: <strong>{generatePhaseName()}</strong>
+                  </Typography>
+                </Alert>
               )}
+
+              {/* Startdatum */}
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                <DateTimePicker
+                  label="Startdatum"
+                  value={phaseStartdatum}
+                  onChange={setPhaseStartdatum}
+                  format="dd.MM.yyyy HH:mm"
+                  ampm={false}
+                  slotProps={{ textField: { fullWidth: true, required: true } }}
+                />
+              </LocalizationProvider>
+
+              {/* Deadline - PFLICHT */}
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                <DateTimePicker
+                  label="Deadline (Pflicht)"
+                  value={phaseDeadline}
+                  onChange={setPhaseDeadline}
+                  format="dd.MM.yyyy HH:mm"
+                  ampm={false}
+                  minDate={phaseStartdatum || new Date()}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true,
+                      helperText: 'Bis wann müssen Professoren ihre Planung einreichen?'
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+
             </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenStartDialog(false)}>Abbrechen</Button>
-            <Button onClick={handleStartPhase} variant="contained" color="primary">
+            <Button
+              onClick={handleStartPhase}
+              variant="contained"
+              disabled={!semesterTyp || !semesterJahr || !phaseStartdatum || !phaseDeadline}
+            >
               Phase Starten
             </Button>
           </DialogActions>

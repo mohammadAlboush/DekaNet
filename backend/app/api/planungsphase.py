@@ -9,29 +9,12 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from sqlalchemy import desc
 
-from functools import wraps
 from app.extensions import db
 from app.models.planungsphase import Planungsphase, PhaseSubmission, ArchiviertePlanung
 from app.models.user import Benutzer as User
 from app.models.planung import Semesterplanung
 from app.models.semester import Semester
-
-# Role required decorator
-def role_required(role):
-    """Decorator to require a specific role"""
-    def decorator(f):
-        @wraps(f)
-        @jwt_required()
-        def decorated_function(*args, **kwargs):
-            user_id = get_jwt_identity()
-            user = User.query.get(user_id)
-
-            if not user or not user.rolle or user.rolle.name != role:
-                return jsonify({'success': False, 'message': 'Nicht autorisiert'}), 403
-
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
+from app.api.base import role_required
 
 # Blueprint erstellen
 planungsphase_api = Blueprint('planungsphase_api', __name__, url_prefix='/api/planungphase')
@@ -49,41 +32,77 @@ VALID_STATUS_VALUES = {'entwurf', 'eingereicht', 'freigegeben', 'abgelehnt'}
 @jwt_required()
 @role_required('dekan')
 def start_phase():
-    """Startet eine neue Planungsphase"""
+    """Startet eine neue Planungsphase mit strukturierter Semester-Auswahl"""
     try:
         data = request.get_json()
         user_id = get_jwt_identity()
 
-        # Validierung
-        if not data.get('semester_id'):
-            return jsonify({'success': False, 'message': 'Semester ID erforderlich'}), 400
+        # Validierung der neuen Felder
+        semester_typ = data.get('semester_typ')
+        semester_jahr = data.get('semester_jahr')
+        startdatum_str = data.get('startdatum')
+        enddatum_str = data.get('enddatum')
 
-        if not data.get('name'):
-            return jsonify({'success': False, 'message': 'Phasenname erforderlich'}), 400
+        if semester_typ not in ['wintersemester', 'sommersemester']:
+            return jsonify({
+                'success': False,
+                'message': 'semester_typ muss "wintersemester" oder "sommersemester" sein'
+            }), 400
 
-        # Parse Enddatum wenn vorhanden
-        enddatum = None
-        if data.get('enddatum'):
-            try:
-                enddatum = datetime.fromisoformat(data['enddatum'].replace('Z', '+00:00'))
-            except:
-                return jsonify({'success': False, 'message': 'Ungültiges Enddatum'}), 400
+        if not all([semester_jahr, startdatum_str, enddatum_str]):
+            return jsonify({
+                'success': False,
+                'message': 'semester_jahr, startdatum und enddatum sind Pflichtfelder'
+            }), 400
 
-        # Starte neue Phase
+        # Parse Daten
+        try:
+            startdatum = datetime.fromisoformat(startdatum_str.replace('Z', '+00:00'))
+            enddatum = datetime.fromisoformat(enddatum_str.replace('Z', '+00:00'))
+        except (ValueError, TypeError) as e:
+            current_app.logger.warning(f"Invalid date format: {e}")
+            return jsonify({'success': False, 'message': 'Ungültiges Datumsformat'}), 400
+
+        # Semester erstellen/finden
+        from app.services.semester_service import SemesterService
+        semester_service = SemesterService()
+        semester = semester_service.get_or_create_semester_for_phase(semester_typ, semester_jahr)
+
+        # Name auto-generieren
+        typ_display = "Wintersemester" if semester_typ == 'wintersemester' else "Sommersemester"
+        jahr_display = f"{semester_jahr}/{semester_jahr+1}" if semester_typ == 'wintersemester' else str(semester_jahr)
+        name = f"{typ_display} {jahr_display} - Planungsphase"
+
+        # Phase erstellen
         phase = Planungsphase.start_phase(
-            semester_id=data['semester_id'],
-            name=data['name'],
+            semester_id=semester.id,
+            name=name,
             enddatum=enddatum,
             user_id=user_id
         )
 
+        # Neue Felder setzen
+        phase.semester_typ = semester_typ
+        phase.semester_jahr = semester_jahr
+        phase.startdatum = startdatum
+
+        # WICHTIG: Phase explizit als aktiv markieren
+        phase.ist_aktiv = True
+
+        # Semester aktivieren
+        semester.ist_aktiv = True
+        semester.ist_planungsphase = True
+        db.session.commit()
+
         return jsonify({
             'success': True,
-            'phase': phase.to_dict()
+            'phase': phase.to_dict(),
+            'semester': semester.to_dict()
         }), 201
 
     except Exception as e:
         current_app.logger.error(f"Error starting phase: {e}")
+        db.session.rollback()
         return jsonify({
             'success': False,
             'message': 'Fehler beim Starten der Planungsphase',
@@ -175,6 +194,25 @@ def get_active_phase():
             'message': 'Fehler beim Abrufen der aktiven Phase',
             'error': str(e)
         }), 500
+
+
+@planungsphase_api.route('/active-with-semester', methods=['GET'])
+@jwt_required()
+def get_active_phase_with_semester():
+    """Gibt aktive Phase MIT Semester-Daten zurück (für Professor-Wizard)"""
+    try:
+        phase = Planungsphase.get_active_phase()
+        if not phase:
+            return jsonify({'success': True, 'phase': None, 'semester': None})
+
+        return jsonify({
+            'success': True,
+            'phase': phase.to_dict(),
+            'semester': phase.semester.to_dict() if phase.semester else None
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting active phase with semester: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @planungsphase_api.route('/<int:phase_id>', methods=['PUT'])
@@ -373,7 +411,11 @@ def get_phase_submissions(phase_id):
                     'eingereicht_am': submission.eingereicht_am.isoformat() if submission.eingereicht_am else None
                 })
 
-        return jsonify(submission_list)
+        return jsonify({
+            'success': True,
+            'data': submission_list,
+            'total': len(submission_list)
+        })
 
     except Exception as e:
         current_app.logger.error(f"Error getting submissions: {e}")
@@ -591,7 +633,7 @@ def get_archived_planungen():
         }
 
         # Professoren sehen nur ihre eigenen
-        if user.rolle in ['Professor', 'Lehrbeauftragter']:
+        if user.rolle.name in ['Professor', 'Lehrbeauftragter']:
             filter_dict['professor_id'] = user_id
 
         # Remove None values

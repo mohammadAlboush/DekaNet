@@ -35,6 +35,9 @@ import {
 import semesterService from '../../services/semesterService';
 import { Semester } from '../../types/semester.types';
 import { useToastStore } from '../common/Toast';
+import { createContextLogger } from '../../utils/logger';
+
+const log = createContextLogger('SemesterManagement');
 
 /**
  * SemesterManagement Component
@@ -94,7 +97,7 @@ const SemesterManagement: React.FC = () => {
         setAutoSuggestion(suggestionResponse.data);
       }
     } catch (error: any) {
-      console.error('[SemesterManagement] Error loading data:', error);
+      log.error(' Error loading data:', error);
       showToast('Fehler beim Laden der Daten', 'error');
     } finally {
       setLoading(false);
@@ -149,7 +152,7 @@ const SemesterManagement: React.FC = () => {
       // Reload data
       await loadData();
     } catch (error: any) {
-      console.error('[SemesterManagement] Error executing action:', error);
+      log.error(' Error executing action:', error);
       showToast(error.message || 'Fehler bei der Aktion', 'error');
     } finally {
       setActionLoading(false);

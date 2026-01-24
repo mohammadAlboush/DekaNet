@@ -109,19 +109,21 @@ class Semesterplanung(db.Model):
     )
     
     # Geplante Module (Hauptdetails)
+    # ✅ PERFORMANCE FIX: lazy='selectin' statt 'dynamic' für besseres Batch-Loading
     geplante_module = db.relationship(
         'GeplantesModul',
         back_populates='semesterplanung',
         cascade='all, delete-orphan',
-        lazy='dynamic'
+        lazy='selectin'
     )
-    
+
     # Wunsch-freie Tage
+    # ✅ PERFORMANCE FIX: lazy='selectin' statt 'dynamic' für besseres Batch-Loading
     wunsch_freie_tage = db.relationship(
         'WunschFreierTag',
         back_populates='semesterplanung',
         cascade='all, delete-orphan',
-        lazy='dynamic'
+        lazy='selectin'
     )
     
     # ✅ UNIQUE Constraint: Ein User kann EINE Planung pro Planungsphase haben
@@ -166,7 +168,7 @@ class Semesterplanung(db.Model):
     
     def kann_eingereicht_werden(self):
         """Kann die Planung eingereicht werden?"""
-        return self.status == 'entwurf' and self.geplante_module.count() > 0
+        return self.status == 'entwurf' and len(self.geplante_module) > 0
     
     def kann_freigegeben_werden(self):
         """Kann die Planung freigegeben werden? (nur Dekan)"""
@@ -292,7 +294,7 @@ class Semesterplanung(db.Model):
         Returns:
             float: Gesamt-SWS
         """
-        total = sum(modul.sws_gesamt or 0 for modul in self.geplante_module.all())
+        total = sum(modul.sws_gesamt or 0 for modul in self.geplante_module)
         self.gesamt_sws = total
         return total
     
@@ -312,8 +314,9 @@ class Semesterplanung(db.Model):
         Returns:
             GeplantesModul: Das neu erstellte geplante Modul
         """
-        # PrÃ¼fe ob Modul bereits existiert
-        existing = self.geplante_module.filter_by(modul_id=modul_id).first()
+        # Prüfe ob Modul bereits existiert
+        # ✅ PERFORMANCE FIX: List comprehension statt filter_by für selectin-Beziehung
+        existing = next((gm for gm in self.geplante_module if gm.modul_id == modul_id), None)
         if existing:
             raise ValueError(f"Modul {modul_id} ist bereits in der Planung")
         
@@ -334,11 +337,12 @@ class Semesterplanung(db.Model):
     def remove_modul(self, modul_id):
         """
         Entfernt ein Modul aus der Planung
-        
+
         Args:
             modul_id: ID des Moduls
         """
-        geplantes_modul = self.geplante_module.filter_by(modul_id=modul_id).first()
+        # ✅ PERFORMANCE FIX: List comprehension statt filter_by für selectin-Beziehung
+        geplantes_modul = next((gm for gm in self.geplante_module if gm.modul_id == modul_id), None)
         if geplantes_modul:
             db.session.delete(geplantes_modul)
             db.session.commit()
@@ -351,7 +355,8 @@ class Semesterplanung(db.Model):
     @property
     def anzahl_module(self):
         """Anzahl geplanter Module"""
-        return self.geplante_module.count()
+        # ✅ PERFORMANCE FIX: len() statt count() für selectin-Beziehung
+        return len(self.geplante_module)
     
     # =========================================================================
     # HELPER METHODS
@@ -399,8 +404,8 @@ class Semesterplanung(db.Model):
         }
 
         if include_module:
-            data['geplante_module'] = [m.to_dict() for m in self.geplante_module.all()]
-            data['wunsch_freie_tage'] = [t.to_dict() for t in self.wunsch_freie_tage.all()]
+            data['geplante_module'] = [m.to_dict() for m in self.geplante_module]
+            data['wunsch_freie_tage'] = [t.to_dict() for t in self.wunsch_freie_tage]
 
         return data
     
@@ -512,8 +517,9 @@ class GeplantesModul(db.Model):
     
     # Relationships
     semesterplanung = db.relationship('Semesterplanung', back_populates='geplante_module')
-    modul = db.relationship('Modul')  # Zu bestehendem Modul-Model
-    pruefungsordnung = db.relationship('Pruefungsordnung')
+    # ✅ PERFORMANCE FIX: lazy='joined' für eager loading des Moduls bei to_dict()
+    modul = db.relationship('Modul', lazy='joined')
+    pruefungsordnung = db.relationship('Pruefungsordnung', lazy='joined')
     
     # UNIQUE Constraint: Ein Modul kann nur EINMAL pro Planung sein
     __table_args__ = (

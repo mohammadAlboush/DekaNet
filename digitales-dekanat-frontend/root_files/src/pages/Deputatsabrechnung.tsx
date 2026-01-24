@@ -47,6 +47,10 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import deputatService from '../services/deputatService';
 import planungPhaseService from '../services/planungPhaseService';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('Deputatsabrechnung');
+
 import {
   Deputatsabrechnung as DeputatsabrechnungType,
   CreateLehrtaetigkeitData,
@@ -172,7 +176,7 @@ const Deputatsabrechnung: React.FC = () => {
           }
         }
       } catch (error) {
-        console.error('Error loading planungsphasen:', error);
+        log.error('Error loading planungsphasen:', error);
       }
     };
 
@@ -196,7 +200,7 @@ const Deputatsabrechnung: React.FC = () => {
       });
       setAbrechnung(data);
     } catch (error) {
-      console.error('Error loading abrechnung:', error);
+      log.error('Error loading abrechnung:', error);
       showToast('Fehler beim Laden der Abrechnung', 'error');
     } finally {
       setLoading(false);

@@ -48,6 +48,9 @@ import planungService from '../services/planungService';
 import semesterService from '../services/semesterService';
 import dozentService from '../services/dozentService';
 import { useToastStore } from '../components/common/Toast';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('DekanPlanungView');
 import { Semesterplanung } from '../types/planung.types';
 import { Semester } from '../types/semester.types';
 import usePlanungPhaseStore from '../store/planungPhaseStore';
@@ -116,7 +119,7 @@ const DekanPlanungView: React.FC = () => {
       const dozentenRes = await dozentService.getAllDozenten();
       if (dozentenRes.success && dozentenRes.data) {
         setDozenten(dozentenRes.data);
-        console.log('[DekanPlanungView] Dozenten loaded:', dozentenRes.data.length);
+        log.debug(' Dozenten loaded:', dozentenRes.data.length);
       }
 
       // Load planning semester
@@ -132,20 +135,20 @@ const DekanPlanungView: React.FC = () => {
 
         if (planungenRes.success && planungenRes.data) {
           setPlanungen(planungenRes.data);
-          console.log('[DekanPlanungView] Planungen loaded (nur aktive Phase):', planungenRes.data.length);
+          log.debug(' Planungen loaded (nur aktive Phase):', planungenRes.data.length);
 
           // Log Phase-Info
           if (activePhase) {
-            console.log('[DekanPlanungView] Active phase:', activePhase.name);
+            log.debug(' Active phase:', activePhase.name);
             const withPhase = planungenRes.data.filter(p => p.planungsphase?.id === activePhase.id).length;
-            console.log('[DekanPlanungView] Planungen in aktiver Phase:', withPhase);
+            log.debug(' Planungen in aktiver Phase:', withPhase);
           } else {
-            console.log('[DekanPlanungView] WARNUNG: Keine aktive Phase, zeige trotzdem Planungen');
+            log.debug(' WARNUNG: Keine aktive Phase, zeige trotzdem Planungen');
           }
         }
       }
     } catch (error) {
-      console.error('[DekanPlanungView] Error loading data:', error);
+      log.error(' Error loading data:', error);
       showToast('Fehler beim Laden der Planungen', 'error');
     } finally {
       setLoading(false);
@@ -168,7 +171,7 @@ const DekanPlanungView: React.FC = () => {
         showToast(response.message || 'Fehler beim Freigeben', 'error');
       }
     } catch (error: any) {
-      console.error('[DekanPlanungView] Error approving:', error);
+      log.error(' Error approving:', error);
       showToast(error.message || 'Fehler beim Freigeben', 'error');
     } finally {
       setLoading(false);
@@ -206,7 +209,7 @@ const DekanPlanungView: React.FC = () => {
         showToast(response.message || 'Fehler beim Ablehnen', 'error');
       }
     } catch (error: any) {
-      console.error('[DekanPlanungView] Error rejecting:', error);
+      log.error(' Error rejecting:', error);
       showToast(error.message || 'Fehler beim Ablehnen', 'error');
     } finally {
       setLoading(false);

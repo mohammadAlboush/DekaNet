@@ -81,11 +81,10 @@ def init_extensions(app):
     # VALIDATION: JWT Config MUSS existieren!
     # =====================================================================
     
+    # Cookie-basierte JWT Authentication - nur diese Config ist erforderlich
     required_jwt_config = [
         'JWT_SECRET_KEY',
         'JWT_TOKEN_LOCATION',
-        'JWT_HEADER_NAME',
-        'JWT_HEADER_TYPE'
     ]
     
     missing = [key for key in required_jwt_config if key not in app.config]
@@ -250,14 +249,32 @@ def init_extensions(app):
     
     @jwt.revoked_token_loader
     def revoked_token_callback(jwt_header, jwt_payload):
-        """Token wurde widerrufen"""
+        """Token wurde widerrufen - ✅ SECURITY: Keine internen Details"""
         app.logger.warning(f"[JWT] [REVOKED] Token revoked for user: {jwt_payload.get('sub')}")
         return {
             'success': False,
             'message': 'Token wurde widerrufen',
-            'errors': ['Token revoked']
+            'errors': ['Bitte melden Sie sich erneut an']
         }, 401
-    
+
+    # =====================================================================
+    # TOKEN BLOCKLIST - ✅ SECURITY: Token-Invalidierung bei Logout
+    # =====================================================================
+    # In-Memory Blocklist (für Production: Redis verwenden)
+    # Tokens werden bei Logout zur Blocklist hinzugefügt
+
+    from app.utils.token_blocklist import token_blocklist
+
+    @jwt.token_in_blocklist_loader
+    def check_if_token_in_blocklist(jwt_header, jwt_payload):
+        """
+        Prüft ob Token in Blocklist ist.
+
+        ✅ SECURITY: Invalidierte Tokens werden abgelehnt.
+        """
+        jti = jwt_payload.get('jti')
+        return token_blocklist.is_blocked(jti)
+
     # =====================================================================
     # JWT REQUEST LOGGING (DEBUG MODE ONLY)
     # =====================================================================

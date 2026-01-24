@@ -1,4 +1,7 @@
 import api, { ApiResponse, handleApiError } from './api';
+import { createContextLogger } from '../utils/logger';
+
+const log = createContextLogger('TemplateService');
 
 /**
  * Template Types
@@ -97,6 +100,46 @@ export interface AddTemplateModulData {
 }
 
 /**
+ * Wizard Template Types
+ * =====================
+ * Extended types for wizard integration
+ */
+
+export interface MitarbeiterInfo {
+  id: number;
+  username: string;
+  name: string;
+}
+
+export interface WizardTemplateModul extends TemplateModul {
+  mitarbeiter?: MitarbeiterInfo[];
+  invalid_mitarbeiter?: number[];
+}
+
+export interface InvalidModul {
+  id: number;
+  modul_id: number;
+  reason: string;
+}
+
+export interface WizardTemplate {
+  id: number;
+  benutzer_id: number;
+  semester_typ: 'winter' | 'sommer';
+  name?: string;
+  beschreibung?: string;
+  ist_aktiv: boolean;
+  wunsch_freie_tage?: WunschFreierTag[];
+  anmerkungen?: string;
+  raumbedarf?: string;
+  valid_modules: WizardTemplateModul[];
+  invalid_modules: InvalidModul[];
+  has_invalid_modules: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
  * Template Service
  * ================
  * Service für Planungs-Templates
@@ -121,7 +164,7 @@ class TemplateService {
       const response = await api.get<ApiResponse<PlanungsTemplate[]>>('/templates');
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error fetching templates:', error);
+      log.error(' Error fetching templates:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -134,7 +177,7 @@ class TemplateService {
       const response = await api.get<ApiResponse<PlanungsTemplate>>(`/templates/${id}`);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error fetching template:', error);
+      log.error(' Error fetching template:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -147,7 +190,21 @@ class TemplateService {
       const response = await api.get<ApiResponse<PlanungsTemplate | null>>(`/templates/semester/${semesterTyp}`);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error fetching template for semester:', error);
+      log.error(' Error fetching template for semester:', error);
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  /**
+   * Holt Template mit validierten Modulen für den Wizard
+   * Validiert ob Module noch existieren und löst Mitarbeiter-Namen auf
+   */
+  async getTemplateForWizard(semesterTyp: 'winter' | 'sommer'): Promise<ApiResponse<WizardTemplate | null>> {
+    try {
+      const response = await api.get<ApiResponse<WizardTemplate | null>>(`/templates/for-wizard/${semesterTyp}`);
+      return response.data;
+    } catch (error) {
+      log.error(' Error fetching wizard template:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -160,7 +217,7 @@ class TemplateService {
       const response = await api.post<ApiResponse<PlanungsTemplate>>('/templates', data);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error creating template:', error);
+      log.error(' Error creating template:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -173,7 +230,7 @@ class TemplateService {
       const response = await api.put<ApiResponse<PlanungsTemplate>>(`/templates/${id}`, data);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error updating template:', error);
+      log.error(' Error updating template:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -186,7 +243,7 @@ class TemplateService {
       const response = await api.delete<ApiResponse<void>>(`/templates/${id}`);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error deleting template:', error);
+      log.error(' Error deleting template:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -203,7 +260,7 @@ class TemplateService {
       const response = await api.post<ApiResponse<TemplateModul>>(`/templates/${templateId}/modul`, data);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error adding modul:', error);
+      log.error(' Error adding modul:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -216,7 +273,7 @@ class TemplateService {
       const response = await api.put<ApiResponse<TemplateModul>>(`/templates/${templateId}/modul/${modulId}`, data);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error updating modul:', error);
+      log.error(' Error updating modul:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -229,7 +286,7 @@ class TemplateService {
       const response = await api.delete<ApiResponse<void>>(`/templates/${templateId}/modul/${modulId}`);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error removing modul:', error);
+      log.error(' Error removing modul:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -250,7 +307,7 @@ class TemplateService {
       });
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error creating from planung:', error);
+      log.error(' Error creating from planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -263,7 +320,7 @@ class TemplateService {
       const response = await api.post<ApiResponse<PlanungsTemplate>>(`/templates/${templateId}/aus-planung/${planungId}`);
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error updating from planung:', error);
+      log.error(' Error updating from planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -278,7 +335,7 @@ class TemplateService {
       });
       return response.data;
     } catch (error) {
-      console.error('[TemplateService] Error applying to planung:', error);
+      log.error(' Error applying to planung:', error);
       throw new Error(handleApiError(error));
     }
   }

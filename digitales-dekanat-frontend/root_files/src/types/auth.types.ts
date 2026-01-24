@@ -27,21 +27,29 @@ export interface LoginCredentials {
   password: string;
 }
 
+/**
+ * Login Response
+ * ✅ SECURITY: Tokens werden als httpOnly Cookies gesetzt
+ * Response enthält nur User und CSRF-Token
+ */
 export interface LoginResponse {
   success: boolean;
   message?: string;
   data?: {
-    access_token: string;
-    refresh_token: string;
     user: User;
+    // CSRF-Token für Double Submit Cookie Pattern
+    csrf_token?: string;
   };
   errors?: string[];
 }
 
+/**
+ * Auth State
+ * ✅ SECURITY: Keine Token-Speicherung im State
+ * Tokens werden als httpOnly Cookies verwaltet
+ */
 export interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }

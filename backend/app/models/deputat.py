@@ -109,36 +109,36 @@ class Deputatsabrechnung(db.Model):
         foreign_keys=[genehmigt_von]
     )
 
-    # Child-Tabellen
+    # Child-Tabellen - Using 'selectin' for efficient batch loading
     lehrtaetigkeiten = db.relationship(
         'DeputatsLehrtaetigkeit',
         back_populates='deputatsabrechnung',
         cascade='all, delete-orphan',
-        lazy='dynamic'
+        lazy='selectin'
     )
     lehrexporte = db.relationship(
         'DeputatsLehrexport',
         back_populates='deputatsabrechnung',
         cascade='all, delete-orphan',
-        lazy='dynamic'
+        lazy='selectin'
     )
     vertretungen = db.relationship(
         'DeputatsVertretung',
         back_populates='deputatsabrechnung',
         cascade='all, delete-orphan',
-        lazy='dynamic'
+        lazy='selectin'
     )
     ermaessigungen = db.relationship(
         'DeputatsErmaessigung',
         back_populates='deputatsabrechnung',
         cascade='all, delete-orphan',
-        lazy='dynamic'
+        lazy='selectin'
     )
     betreuungen = db.relationship(
         'DeputatsBetreuung',
         back_populates='deputatsabrechnung',
         cascade='all, delete-orphan',
-        lazy='dynamic'
+        lazy='selectin'
     )
 
     # UNIQUE Constraint: Ein User kann EINE Abrechnung pro Planungsphase haben
@@ -264,7 +264,7 @@ class Deputatsabrechnung(db.Model):
         sws_seminar_master = 0.0
         sws_sonstige = 0.0
 
-        for lt in self.lehrtaetigkeiten.all():
+        for lt in self.lehrtaetigkeiten:
             if lt.kategorie == 'praxisseminar':
                 sws_praxisseminar += lt.sws
             elif lt.kategorie == 'projektveranstaltung':
@@ -287,16 +287,16 @@ class Deputatsabrechnung(db.Model):
         )
 
         # Lehrexport
-        sws_lehrexport = sum(le.sws for le in self.lehrexporte.all())
+        sws_lehrexport = sum(le.sws for le in self.lehrexporte)
 
         # Vertretungen
-        sws_vertretungen = sum(v.sws for v in self.vertretungen.all())
+        sws_vertretungen = sum(v.sws for v in self.vertretungen)
 
         # Ermäßigungen
-        sws_ermaessigungen = sum(e.sws for e in self.ermaessigungen.all())
+        sws_ermaessigungen = sum(e.sws for e in self.ermaessigungen)
 
         # Betreuungen (mit Obergrenze)
-        sws_betreuungen_roh = sum(b.sws for b in self.betreuungen.all())
+        sws_betreuungen_roh = sum(b.sws for b in self.betreuungen)
         sws_betreuungen_angerechnet = min(sws_betreuungen_roh, einstellungen.max_sws_betreuung)
 
         # Gesamtdeputat (erbrachte Lehre + Funktionen/Semesteraufträge)
@@ -371,11 +371,11 @@ class Deputatsabrechnung(db.Model):
             'warnungen': warnungen,
 
             # Anzahlen
-            'anzahl_lehrtaetigkeiten': self.lehrtaetigkeiten.count(),
-            'anzahl_lehrexporte': self.lehrexporte.count(),
-            'anzahl_vertretungen': self.vertretungen.count(),
-            'anzahl_ermaessigungen': self.ermaessigungen.count(),
-            'anzahl_betreuungen': self.betreuungen.count(),
+            'anzahl_lehrtaetigkeiten': len(self.lehrtaetigkeiten),
+            'anzahl_lehrexporte': len(self.lehrexporte),
+            'anzahl_vertretungen': len(self.vertretungen),
+            'anzahl_ermaessigungen': len(self.ermaessigungen),
+            'anzahl_betreuungen': len(self.betreuungen),
         }
 
     # =========================================================================
@@ -426,11 +426,11 @@ class Deputatsabrechnung(db.Model):
             }
 
         if include_details:
-            data['lehrtaetigkeiten'] = [lt.to_dict() for lt in self.lehrtaetigkeiten.all()]
-            data['lehrexporte'] = [le.to_dict() for le in self.lehrexporte.all()]
-            data['vertretungen'] = [v.to_dict() for v in self.vertretungen.all()]
-            data['ermaessigungen'] = [e.to_dict() for e in self.ermaessigungen.all()]
-            data['betreuungen'] = [b.to_dict() for b in self.betreuungen.all()]
+            data['lehrtaetigkeiten'] = [lt.to_dict() for lt in self.lehrtaetigkeiten]
+            data['lehrexporte'] = [le.to_dict() for le in self.lehrexporte]
+            data['vertretungen'] = [v.to_dict() for v in self.vertretungen]
+            data['ermaessigungen'] = [e.to_dict() for e in self.ermaessigungen]
+            data['betreuungen'] = [b.to_dict() for b in self.betreuungen]
 
         if include_summen:
             try:
