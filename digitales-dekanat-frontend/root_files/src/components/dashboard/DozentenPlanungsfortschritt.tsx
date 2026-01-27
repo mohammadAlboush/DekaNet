@@ -36,7 +36,6 @@ import {
 } from '@mui/icons-material';
 import {
   getDozentenPlanungsfortschritt,
-  DozentPlanungsfortschritt,
   DozentenPlanungsfortschrittResponse,
 } from '../../services/dashboardService';
 import { createContextLogger } from '../../utils/logger';

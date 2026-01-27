@@ -411,7 +411,8 @@ class TemplateModul(db.Model):
     po_id = db.Column(
         db.Integer,
         db.ForeignKey('pruefungsordnung.id', ondelete='CASCADE'),
-        nullable=False
+        nullable=False,
+        index=True  # Performance: Index für Filterung nach PO
     )
 
     # MULTIPLIKATOREN
@@ -441,10 +442,10 @@ class TemplateModul(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # Relationships
+    # Relationships - mit eager loading für Performance
     template = db.relationship('PlanungsTemplate', back_populates='template_module')
-    modul = db.relationship('Modul')
-    pruefungsordnung = db.relationship('Pruefungsordnung')
+    modul = db.relationship('Modul', lazy='joined')  # Verhindert N+1 Queries
+    pruefungsordnung = db.relationship('Pruefungsordnung', lazy='joined')
 
     # UNIQUE Constraint: Ein Modul kann nur EINMAL pro Template sein
     __table_args__ = (
@@ -483,19 +484,45 @@ class TemplateModul(db.Model):
 
     def to_dict(self) -> Dict[str, Any]:
         """Konvertiert zu Dictionary (für API)"""
+        # Modul-Daten mit Lehrformen für SWS-Berechnung im Frontend
+        modul_data = None
+        if self.modul:
+            # Berechne sws_gesamt aus Lehrformen
+            sws_gesamt = 0.0
+            lehrformen_list = []
+            try:
+                # Lehrformen laden für SWS-Berechnung
+                for lf in self.modul.lehrformen:
+                    if lf.lehrform:
+                        lf_sws = float(lf.sws) if lf.sws else 0.0
+                        sws_gesamt += lf_sws
+                        lehrformen_list.append({
+                            'id': lf.id,
+                            'lehrform_id': lf.lehrform_id,
+                            'bezeichnung': lf.lehrform.bezeichnung,
+                            'kuerzel': lf.lehrform.kuerzel,
+                            'sws': lf_sws
+                        })
+            except Exception:
+                pass  # Falls Lehrformen nicht ladbar
+
+            modul_data = {
+                'id': self.modul.id,
+                'kuerzel': self.modul.kuerzel,
+                'bezeichnung_de': self.modul.bezeichnung_de,
+                'leistungspunkte': self.modul.leistungspunkte,
+                'sws_gesamt': sws_gesamt,
+                'lehrformen': lehrformen_list
+            }
+
         return {
             'id': self.id,
             'template_id': self.template_id,
             'modul_id': self.modul_id,
             'po_id': self.po_id,
 
-            # Modul-Daten
-            'modul': {
-                'id': self.modul.id,
-                'kuerzel': self.modul.kuerzel,
-                'bezeichnung_de': self.modul.bezeichnung_de,
-                'leistungspunkte': self.modul.leistungspunkte
-            } if self.modul else None,
+            # Modul-Daten mit Lehrformen
+            'modul': modul_data,
 
             # Multiplikatoren
             'anzahl_vorlesungen': self.anzahl_vorlesungen,

@@ -36,7 +36,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import auftragService from '../services/auftragService';
-import { Auftrag, CreateAuftragData, UpdateAuftragData } from '../types/auftrag.types';
+import { Auftrag, CreateAuftragData } from '../types/auftrag.types';
 import { useToastStore } from '../components/common/Toast';
 import { createContextLogger } from '../utils/logger';
 

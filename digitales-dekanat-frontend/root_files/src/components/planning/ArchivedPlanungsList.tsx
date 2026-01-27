@@ -78,9 +78,11 @@ const ArchivedPlanungsList: React.FC = () => {
   const [dateTo, setDateTo] = useState<Date | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Pagination
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // Pagination - for future use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_page, _setPage] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_rowsPerPage, _setRowsPerPage] = useState(10);
 
   // Dialog States
   const [selectedArchiv, setSelectedArchiv] = useState<ArchiviertePlanung | null>(null);
@@ -200,10 +202,8 @@ const ArchivedPlanungsList: React.FC = () => {
   // Convert to array and sort by phase_id descending (newest first)
   const phaseGroups = Object.values(groupedByPhase).sort((a, b) => b.phase_id - a.phase_id);
 
-  const paginatedPlanungen = filteredPlanungen.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  // Pagination prepared for future use (when implementing pagination UI)
+  // const paginatedPlanungen = filteredPlanungen.slice(_page * _rowsPerPage, _page * _rowsPerPage + _rowsPerPage);
 
   return (
     <Box>

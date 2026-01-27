@@ -39,7 +39,7 @@ const DekanPlanungView = React.lazy(() => import('./pages/DekanPlanungView'));
 // Pages - Module & Dozenten (lazy)
 const ModulePage = React.lazy(() => import('./pages/Module'));
 const DozentenPage = React.lazy(() => import('./pages/Dozenten'));
-const AuftraegeVerwaltung = React.lazy(() => import('./pages/AuftraegeVerwaltung'));
+// Note: AuftraegeVerwaltung route redirects to /einstellungen
 const SemesterPage = React.lazy(() => import('./pages/SemesterPage'));
 const EinstellungenPage = React.lazy(() => import('./pages/EinstellungenPage'));
 

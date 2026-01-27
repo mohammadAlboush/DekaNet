@@ -391,12 +391,11 @@ class TemplateService(BaseService):
         hinzugefuegt = 0
         uebersprungen = 0
 
-        # Optional: Bestehende Module löschen
+        # Optional: Bestehende Module löschen (Batch-Delete für Performance)
         if clear_existing:
-            for gm in planung.geplante_module:
-                db.session.delete(gm)
-            for wt in planung.wunsch_freie_tage:
-                db.session.delete(wt)
+            # Batch-Delete statt Einzellöschungen für bessere Performance
+            GeplantesModul.query.filter_by(semesterplanung_id=planung.id).delete()
+            WunschFreierTag.query.filter_by(semesterplanung_id=planung.id).delete()
             db.session.flush()
 
         # Wunsch-freie Tage übernehmen (nur wenn clear_existing oder keine vorhanden)

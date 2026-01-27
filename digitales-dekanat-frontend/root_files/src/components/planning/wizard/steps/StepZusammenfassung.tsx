@@ -7,7 +7,6 @@ import {
   Grid,
   Card,
   CardContent,
-  Divider,
   Chip,
   Alert,
   Table,
@@ -20,7 +19,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  IconButton,
   Tooltip,
 } from '@mui/material';
 import {
@@ -31,7 +29,6 @@ import {
   CalendarMonth,
   School,
   Schedule,
-  Person,
   EventNote,
   Info,
   Edit as EditIcon,

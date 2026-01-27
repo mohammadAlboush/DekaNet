@@ -43,7 +43,6 @@ import {
   School,
   TrendingUp,
   Download,
-  ExpandMore,
   Timer,
   DateRange,
   Group,
@@ -74,7 +73,8 @@ const PhaseHistoryDialog: React.FC<PhaseHistoryDialogProps> = ({ open, onClose }
     clearError,
   } = usePlanungPhaseStore();
 
-  const [selectedPhase, setSelectedPhase] = useState<PhaseHistoryEntry | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_selectedPhase, _setSelectedPhase] = useState<PhaseHistoryEntry | null>(null);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
 
   const isDekan = user?.rolle === 'Dekan';

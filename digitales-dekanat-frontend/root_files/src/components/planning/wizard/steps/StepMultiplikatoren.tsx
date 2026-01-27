@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -18,12 +18,6 @@ import {
   Card,
   CardContent,
   Collapse,
-  Tooltip,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from '@mui/material';
 import {
   NavigateNext,
@@ -33,15 +27,14 @@ import {
   Cancel,
   ExpandMore,
   ExpandLess,
-  Calculate,
   Info,
   Warning,
   CheckCircle,
-  School,
 } from '@mui/icons-material';
 import { GeplantesModul } from '../../../../types/planung.types';
 import planungService from '../../../../services/planungService';
 import { createContextLogger } from '../../../../utils/logger';
+import { MULTIPLIKATOR_LIMITS } from '../../../../constants/planning.constants';
 
 const log = createContextLogger('StepMultiplikatoren');
 
@@ -86,26 +79,39 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
   const [showInfo, setShowInfo] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Calculate SWS for a module
+  // Calculate SWS for a module using real Lehrformen data from backend
   const calculateModulSWS = (gm: GeplantesModul) => {
-    // Base SWS from module (would come from backend)
-    const baseSWS = {
-      vorlesung: 2, // Example base values
-      uebung: 2,
-      praktikum: 2,
-      seminar: 2,
+    // Use pre-calculated SWS if available (already computed by backend)
+    if (gm.sws_gesamt && gm.sws_gesamt > 0) {
+      return {
+        sws_vorlesung: gm.sws_vorlesung || 0,
+        sws_uebung: gm.sws_uebung || 0,
+        sws_praktikum: gm.sws_praktikum || 0,
+        sws_seminar: gm.sws_seminar || 0,
+        sws_gesamt: gm.sws_gesamt,
+      };
+    }
+
+    // Fallback: Calculate from Modul-Lehrformen (real SWS from database)
+    const lehrformen = gm.modul?.lehrformen || [];
+
+    // Helper to get base SWS for a teaching form by its abbreviation
+    const getBaseSWS = (kuerzel: string): number => {
+      const lehrform = lehrformen.find(l => l.kuerzel === kuerzel);
+      return lehrform?.sws || 0;
     };
 
+    const sws_vorlesung = gm.anzahl_vorlesungen * getBaseSWS('V');
+    const sws_uebung = gm.anzahl_uebungen * getBaseSWS('Ü');
+    const sws_praktikum = gm.anzahl_praktika * getBaseSWS('P');
+    const sws_seminar = gm.anzahl_seminare * getBaseSWS('S');
+
     return {
-      sws_vorlesung: gm.anzahl_vorlesungen * baseSWS.vorlesung,
-      sws_uebung: gm.anzahl_uebungen * baseSWS.uebung,
-      sws_praktikum: gm.anzahl_praktika * baseSWS.praktikum,
-      sws_seminar: gm.anzahl_seminare * baseSWS.seminar,
-      sws_gesamt: 
-        (gm.anzahl_vorlesungen * baseSWS.vorlesung) +
-        (gm.anzahl_uebungen * baseSWS.uebung) +
-        (gm.anzahl_praktika * baseSWS.praktikum) +
-        (gm.anzahl_seminare * baseSWS.seminar),
+      sws_vorlesung,
+      sws_uebung,
+      sws_praktikum,
+      sws_seminar,
+      sws_gesamt: sws_vorlesung + sws_uebung + sws_praktikum + sws_seminar,
     };
   };
 
@@ -123,8 +129,8 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                   gm.anzahl_praktika + gm.anzahl_seminare;
     
     if (total === 0) return 'error';
-    if (total > 10) return 'warning';
-    if (gm.anzahl_vorlesungen > 5 || gm.anzahl_uebungen > 5) return 'warning';
+    if (total > MULTIPLIKATOR_LIMITS.warningThreshold) return 'warning';
+    if (gm.anzahl_vorlesungen > MULTIPLIKATOR_LIMITS.vorlesungWarning || gm.anzahl_uebungen > MULTIPLIKATOR_LIMITS.uebungWarning) return 'warning';
     return 'success';
   };
 
@@ -409,7 +415,7 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                               anzahl_vorlesungen: parseInt(e.target.value) || 0
                             }
                           })}
-                          inputProps={{ min: 0, max: 10 }}
+                          inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                           sx={{ width: 70 }}
                         />
                       ) : (
@@ -429,7 +435,7 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                               anzahl_uebungen: parseInt(e.target.value) || 0
                             }
                           })}
-                          inputProps={{ min: 0, max: 10 }}
+                          inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                           sx={{ width: 70 }}
                         />
                       ) : (
@@ -449,7 +455,7 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                               anzahl_praktika: parseInt(e.target.value) || 0
                             }
                           })}
-                          inputProps={{ min: 0, max: 10 }}
+                          inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                           sx={{ width: 70 }}
                         />
                       ) : (
@@ -469,7 +475,7 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                               anzahl_seminare: parseInt(e.target.value) || 0
                             }
                           })}
-                          inputProps={{ min: 0, max: 10 }}
+                          inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                           sx={{ width: 70 }}
                         />
                       ) : (

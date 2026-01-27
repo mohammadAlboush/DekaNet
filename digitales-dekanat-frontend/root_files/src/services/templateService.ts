@@ -8,6 +8,14 @@ const log = createContextLogger('TemplateService');
  * ==============
  */
 
+export interface TemplateModulLehrform {
+  id: number;
+  lehrform_id: number;
+  bezeichnung: string;
+  kuerzel: string;
+  sws: number;
+}
+
 export interface TemplateModul {
   id: number;
   template_id: number;
@@ -18,6 +26,8 @@ export interface TemplateModul {
     kuerzel: string;
     bezeichnung_de: string;
     leistungspunkte: number;
+    sws_gesamt?: number;
+    lehrformen?: TemplateModulLehrform[];
   };
   anzahl_vorlesungen: number;
   anzahl_uebungen: number;

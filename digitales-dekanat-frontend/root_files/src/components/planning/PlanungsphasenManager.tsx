@@ -37,13 +37,9 @@ import {
   History,
   Archive,
   Assessment,
-  Notifications,
   Edit,
-  Download,
-  Warning,
   CheckCircle,
   Cancel,
-  Schedule,
   People,
   Email,
 } from '@mui/icons-material';
@@ -51,9 +47,8 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { de } from 'date-fns/locale';
-import { format, differenceInDays, differenceInHours } from 'date-fns';
+import { format } from 'date-fns';
 import usePlanungPhaseStore from '../../store/planungPhaseStore';
-import useAuthStore from '../../store/authStore';
 import { createContextLogger } from '../../utils/logger';
 
 const log = createContextLogger('PlanungsphasenManager');
@@ -81,22 +76,16 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const PlanungsphasenManager: React.FC = () => {
-  const { user } = useAuthStore();
   const {
     activePhase,
-    allPhases,
-    submissionStatus,
     currentPhaseStatistics,
     phaseSubmissions,
     loading,
     error,
-    isPhaseActive,
-    canSubmit,
     getTimeRemaining,
     fetchActivePhase,
     startNewPhase,
     closeCurrentPhase,
-    updatePhase,
     fetchPhaseSubmissions,
     fetchPhaseStatistics,
     sendRemindersToProfs,

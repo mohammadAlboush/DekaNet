@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Container,
-  Grid,
   Paper,
   Typography,
   Box,
@@ -18,29 +17,15 @@ import {
   Alert,
   Tabs,
   Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Tooltip,
   AlertTitle,
 } from '@mui/material';
 import {
   Add,
   Edit,
-  Delete,
   Send,
   Visibility,
   CheckCircle,
-  Schedule,
-  School,
-  Calculate,
-  FileDownload,
 } from '@mui/icons-material';
 import { createContextLogger } from '../utils/logger';
 
@@ -68,10 +53,12 @@ const SemesterplanungPage: React.FC = () => {
 
   // State
   const [planungen, setPlanungen] = useState<Semesterplanung[]>([]);
-  const [activeSemester, setActiveSemester] = useState<Semester | null>(null);
+  const [_activeSemester, setActiveSemester] = useState<Semester | null>(null);
   const [planningSemester, setPlanningSemester] = useState<Semester | null>(null);
-  const [selectedPlanung, setSelectedPlanung] = useState<Semesterplanung | null>(null);
-  const [openDialog, setOpenDialog] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_selectedPlanung, _setSelectedPlanung] = useState<Semesterplanung | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_openDialog, _setOpenDialog] = useState(false);
 
   useEffect(() => {
     loadData();

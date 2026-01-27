@@ -7,7 +7,6 @@ import {
   PhaseHistoryEntry,
   ProfessorPhaseSubmission,
   PhaseStatistik,
-  SemesterTyp,
   CreatePlanungPhaseDto,
   ArchivFilter
 } from '../types/planungPhase.types';

@@ -36,6 +36,7 @@ import api from '../../services/api';
 import { useToastStore } from '../common/Toast';
 import useAuthStore from '../../store/authStore';
 import { createContextLogger } from '../../utils/logger';
+import { DEFAULT_CAPACITIES, MULTIPLIKATOR_LIMITS } from '../../constants/planning.constants';
 
 const log = createContextLogger('TemplateModulDialog');
 
@@ -83,10 +84,10 @@ const initialFormData: ModulFormData = {
   raum_uebung: '',
   raum_praktikum: '',
   raum_seminar: '',
-  kapazitaet_vorlesung: 30,
-  kapazitaet_uebung: 20,
-  kapazitaet_praktikum: 15,
-  kapazitaet_seminar: 20,
+  kapazitaet_vorlesung: DEFAULT_CAPACITIES.vorlesung,
+  kapazitaet_uebung: DEFAULT_CAPACITIES.uebung,
+  kapazitaet_praktikum: DEFAULT_CAPACITIES.praktikum,
+  kapazitaet_seminar: DEFAULT_CAPACITIES.seminar,
 };
 
 /**
@@ -186,10 +187,10 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
       raum_uebung: editingModul.raum_uebung || '',
       raum_praktikum: editingModul.raum_praktikum || '',
       raum_seminar: editingModul.raum_seminar || '',
-      kapazitaet_vorlesung: editingModul.kapazitaet_vorlesung || 30,
-      kapazitaet_uebung: editingModul.kapazitaet_uebung || 20,
-      kapazitaet_praktikum: editingModul.kapazitaet_praktikum || 15,
-      kapazitaet_seminar: editingModul.kapazitaet_seminar || 20,
+      kapazitaet_vorlesung: editingModul.kapazitaet_vorlesung || DEFAULT_CAPACITIES.vorlesung,
+      kapazitaet_uebung: editingModul.kapazitaet_uebung || DEFAULT_CAPACITIES.uebung,
+      kapazitaet_praktikum: editingModul.kapazitaet_praktikum || DEFAULT_CAPACITIES.praktikum,
+      kapazitaet_seminar: editingModul.kapazitaet_seminar || DEFAULT_CAPACITIES.seminar,
     });
   };
 
@@ -488,7 +489,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
                             </InputAdornment>
                           ),
                         }}
-                        inputProps={{ min: 0, max: 10 }}
+                        inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                       />
                     </Grid>
                   )}
@@ -511,7 +512,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
                             </InputAdornment>
                           ),
                         }}
-                        inputProps={{ min: 0, max: 10 }}
+                        inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                       />
                     </Grid>
                   )}
@@ -534,7 +535,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
                             </InputAdornment>
                           ),
                         }}
-                        inputProps={{ min: 0, max: 10 }}
+                        inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                       />
                     </Grid>
                   )}
@@ -557,7 +558,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
                             </InputAdornment>
                           ),
                         }}
-                        inputProps={{ min: 0, max: 10 }}
+                        inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                       />
                     </Grid>
                   )}
@@ -575,7 +576,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
                             ...formData,
                             anzahl_vorlesungen: Math.max(0, parseInt(e.target.value) || 0)
                           })}
-                          inputProps={{ min: 0, max: 10 }}
+                          inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                         />
                       </Grid>
                       <Grid item xs={6}>
@@ -588,7 +589,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
                             ...formData,
                             anzahl_uebungen: Math.max(0, parseInt(e.target.value) || 0)
                           })}
-                          inputProps={{ min: 0, max: 10 }}
+                          inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                         />
                       </Grid>
                     </>

@@ -224,6 +224,37 @@ const TemplateDetail: React.FC = () => {
     }), { v: 0, u: 0, p: 0, s: 0 });
   };
 
+  /**
+   * Berechnet die Gesamt-SWS für das Template basierend auf echten Lehrformen-Daten
+   */
+  const getTotalSWS = (): number => {
+    if (!template?.template_module) return 0;
+
+    return template.template_module.reduce((total, m) => {
+      const lehrformen = m.modul?.lehrformen || [];
+
+      // Helper to get base SWS for a teaching form by its abbreviation
+      const getBaseSWS = (kuerzel: string): number => {
+        const lehrform = lehrformen.find(l => l.kuerzel === kuerzel);
+        return lehrform?.sws || 0;
+      };
+
+      const sws_vorlesung = (m.anzahl_vorlesungen || 0) * getBaseSWS('V');
+      const sws_uebung = (m.anzahl_uebungen || 0) * getBaseSWS('Ü');
+      const sws_praktikum = (m.anzahl_praktika || 0) * getBaseSWS('P');
+      const sws_seminar = (m.anzahl_seminare || 0) * getBaseSWS('S');
+
+      let modulSws = sws_vorlesung + sws_uebung + sws_praktikum + sws_seminar;
+
+      // Fallback: Use modul.sws_gesamt if lehrformen calculation yields 0
+      if (modulSws === 0 && m.modul?.sws_gesamt) {
+        modulSws = m.modul.sws_gesamt;
+      }
+
+      return total + modulSws;
+    }, 0);
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -447,6 +478,11 @@ const TemplateDetail: React.FC = () => {
                       <Typography variant="body2">Module:</Typography>
                       <Typography variant="body2" fontWeight={600}>{template.anzahl_module}</Typography>
                     </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', bgcolor: 'primary.50', p: 0.5, borderRadius: 1 }}>
+                      <Typography variant="body2" fontWeight={600} color="primary.main">Gesamt-SWS:</Typography>
+                      <Typography variant="body2" fontWeight={700} color="primary.main">{getTotalSWS().toFixed(1)}</Typography>
+                    </Box>
+                    <Divider sx={{ my: 0.5 }} />
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="body2">Vorlesungen:</Typography>
                       <Typography variant="body2" fontWeight={600}>{lehrformen.v}</Typography>

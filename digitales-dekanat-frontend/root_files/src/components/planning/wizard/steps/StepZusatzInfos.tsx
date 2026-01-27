@@ -11,8 +11,6 @@ import {
   Chip,
   FormControlLabel,
   Switch,
-  Card,
-  CardContent,
   IconButton,
   List,
   ListItem,
@@ -37,6 +35,7 @@ import {
   Group,
   Info,
 } from '@mui/icons-material';
+import { DEFAULT_CAPACITIES } from '../../../../constants/planning.constants';
 
 interface StepProps {
   data: any;
@@ -89,7 +88,7 @@ const StepZusatzInfos: React.FC<StepProps> = ({
   const [newRoom, setNewRoom] = useState<RoomRequirement>({
     id: '',
     type: 'Seminarraum',
-    capacity: 30,
+    capacity: DEFAULT_CAPACITIES.vorlesung,
     equipment: [],
     notes: '',
   });
@@ -141,7 +140,7 @@ const StepZusatzInfos: React.FC<StepProps> = ({
       setNewRoom({
         id: Date.now().toString(),
         type: 'Seminarraum',
-        capacity: 30,
+        capacity: DEFAULT_CAPACITIES.vorlesung,
         equipment: [],
         notes: '',
       });
@@ -155,7 +154,7 @@ const StepZusatzInfos: React.FC<StepProps> = ({
     setNewRoom({
       id: '',
       type: 'Seminarraum',
-      capacity: 30,
+      capacity: DEFAULT_CAPACITIES.vorlesung,
       equipment: [],
       notes: '',
     });

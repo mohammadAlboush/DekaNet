@@ -28,7 +28,6 @@ import {
   Cancel,
   Assignment,
   Work,
-  School,
   Description,
 } from '@mui/icons-material';
 import adminService, { ResetPreview } from '../../services/adminService';

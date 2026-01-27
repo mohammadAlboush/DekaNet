@@ -44,6 +44,7 @@ import planungService from '../../../../services/planungService';
 import { useToastStore } from '../../../../components/common/Toast';
 import api from '../../../../services/api';
 import { logger } from '../../../../utils/logger';
+import { DEFAULT_CAPACITIES, MULTIPLIKATOR_LIMITS, PERFORMANCE_LIMITS } from '../../../../constants/planning.constants';
 
 interface ModulFormData {
   modul: Modul;
@@ -176,11 +177,11 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
       raum_uebung: '',
       raum_praktikum: '',
       raum_seminar: '',
-      // Kapazität (Standard: 30 für Vorlesung, 20 für Rest)
-      kapazitaet_vorlesung: 30,
-      kapazitaet_uebung: 20,
-      kapazitaet_praktikum: 15,
-      kapazitaet_seminar: 20,
+      // Kapazität (Standardwerte aus Konstanten)
+      kapazitaet_vorlesung: DEFAULT_CAPACITIES.vorlesung,
+      kapazitaet_uebung: DEFAULT_CAPACITIES.uebung,
+      kapazitaet_praktikum: DEFAULT_CAPACITIES.praktikum,
+      kapazitaet_seminar: DEFAULT_CAPACITIES.seminar,
     });
     setEditingModul(null);
     setDialogOpen(true);
@@ -202,10 +203,10 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
       raum_praktikum: geplantesModul.raum_praktikum || '',
       raum_seminar: geplantesModul.raum_seminar || '',
       // Kapazität
-      kapazitaet_vorlesung: geplantesModul.kapazitaet_vorlesung || 30,
-      kapazitaet_uebung: geplantesModul.kapazitaet_uebung || 20,
-      kapazitaet_praktikum: geplantesModul.kapazitaet_praktikum || 15,
-      kapazitaet_seminar: geplantesModul.kapazitaet_seminar || 20,
+      kapazitaet_vorlesung: geplantesModul.kapazitaet_vorlesung || DEFAULT_CAPACITIES.vorlesung,
+      kapazitaet_uebung: geplantesModul.kapazitaet_uebung || DEFAULT_CAPACITIES.uebung,
+      kapazitaet_praktikum: geplantesModul.kapazitaet_praktikum || DEFAULT_CAPACITIES.praktikum,
+      kapazitaet_seminar: geplantesModul.kapazitaet_seminar || DEFAULT_CAPACITIES.seminar,
     });
     setEditingModul(geplantesModul);
     setDialogOpen(true);
@@ -643,7 +644,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
 
             return true;
           })
-          .slice(0, 20) // ✅ Limitiere auf 20 Module für Performance
+          .slice(0, PERFORMANCE_LIMITS.maxModuleSuggestions) // Limitiere für Performance
           .map((modul) => {
             return (
               <Grid item xs={12} md={6} key={modul.id}>
@@ -855,7 +856,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
                           </InputAdornment>
                         ),
                       }}
-                      inputProps={{ min: 0, max: 10 }}
+                      inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                     />
                   </Grid>
                 )}
@@ -882,7 +883,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
                           </InputAdornment>
                         ),
                       }}
-                      inputProps={{ min: 0, max: 10 }}
+                      inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                     />
                   </Grid>
                 )}
@@ -909,7 +910,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
                           </InputAdornment>
                         ),
                       }}
-                      inputProps={{ min: 0, max: 10 }}
+                      inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                     />
                   </Grid>
                 )}
@@ -936,7 +937,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
                           </InputAdornment>
                         ),
                       }}
-                      inputProps={{ min: 0, max: 10 }}
+                      inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                     />
                   </Grid>
                 )}
@@ -961,7 +962,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
                             ...formData,
                             anzahl_vorlesungen: Math.max(0, parseInt(e.target.value) || 0)
                           })}
-                          inputProps={{ min: 0, max: 10 }}
+                          inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                         />
                       </Grid>
                       <Grid item xs={6}>
@@ -974,7 +975,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
                             ...formData,
                             anzahl_uebungen: Math.max(0, parseInt(e.target.value) || 0)
                           })}
-                          inputProps={{ min: 0, max: 10 }}
+                          inputProps={{ min: 0, max: MULTIPLIKATOR_LIMITS.maxInput }}
                         />
                       </Grid>
                     </Grid>

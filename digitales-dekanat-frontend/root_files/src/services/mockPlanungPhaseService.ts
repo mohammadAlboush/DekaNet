@@ -41,7 +41,7 @@ class MockPlanungPhaseService {
   }
 
   // Mock close phase
-  async closePhase(phaseId: number, data: any): Promise<any> {
+  async closePhase(phaseId: number, _data: any): Promise<any> {
     const phase = this.phases.find(p => p.id === phaseId);
     if (phase) {
       phase.ist_aktiv = false;
@@ -57,7 +57,7 @@ class MockPlanungPhaseService {
   }
 
   // Mock submission status
-  async checkSubmissionStatus(professorId?: number): Promise<PhaseSubmissionStatus> {
+  async checkSubmissionStatus(_professorId?: number): Promise<PhaseSubmissionStatus> {
     if (!this.activePhase) {
       return {
         kann_einreichen: false,
@@ -72,7 +72,7 @@ class MockPlanungPhaseService {
   }
 
   // Mock get all phases
-  async getAllPhases(semesterId?: number): Promise<any> {
+  async getAllPhases(_semesterId?: number): Promise<any> {
     return {
       phasen: this.phases,
       total: this.phases.length,
@@ -100,12 +100,12 @@ class MockPlanungPhaseService {
   }
 
   // Mock phase history
-  async getPhaseHistory(professorId?: number): Promise<PhaseHistoryEntry[]> {
+  async getPhaseHistory(_professorId?: number): Promise<PhaseHistoryEntry[]> {
     return [];
   }
 
   // Mock archived planungen
-  async getArchivedPlanungen(filter?: any): Promise<any> {
+  async getArchivedPlanungen(_filter?: any): Promise<any> {
     return {
       planungen: [],
       total: 0,
@@ -123,7 +123,7 @@ class MockPlanungPhaseService {
     throw new Error('Phase not found');
   }
 
-  async getPhaseSubmissions(phaseId: number): Promise<ProfessorPhaseSubmission[]> {
+  async getPhaseSubmissions(_phaseId: number): Promise<ProfessorPhaseSubmission[]> {
     return [];
   }
 
@@ -137,23 +137,23 @@ class MockPlanungPhaseService {
     };
   }
 
-  async sendReminders(phaseId: number, professorIds?: number[]): Promise<any> {
+  async sendReminders(_phaseId: number, _professorIds?: number[]): Promise<any> {
     return { gesendet: 0, fehler: 0 };
   }
 
-  async getArchivedPlanungDetail(archivId: number): Promise<ArchiviertePlanung> {
+  async getArchivedPlanungDetail(_archivId: number): Promise<ArchiviertePlanung> {
     throw new Error('Not implemented');
   }
 
-  async restoreArchivedPlanung(archivId: number): Promise<any> {
+  async restoreArchivedPlanung(_archivId: number): Promise<any> {
     return { success: false, planung_id: 0 };
   }
 
-  async exportArchiv(filter?: any): Promise<Blob> {
+  async exportArchiv(_filter?: any): Promise<Blob> {
     return new Blob(['Mock Excel Data']);
   }
 
-  async generatePhaseReport(phaseId: number): Promise<Blob> {
+  async generatePhaseReport(_phaseId: number): Promise<Blob> {
     return new Blob(['Mock PDF Report']);
   }
 

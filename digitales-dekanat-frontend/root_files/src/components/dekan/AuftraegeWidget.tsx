@@ -25,9 +25,6 @@ import {
   CheckCircle,
   Cancel,
   Assignment,
-  Add,
-  Edit,
-  Delete,
   Refresh,
   Settings,
 } from '@mui/icons-material';
@@ -69,7 +66,6 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
     semesterAuftraege: storeAuftraege,
     isLoading: storeLoading,
     loadAuftraege,
-    updateAuftrag,
     triggerRefresh,
   } = useAuftragStore();
 

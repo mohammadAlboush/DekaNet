@@ -42,6 +42,9 @@ instance/
 *.sqlite
 *.sqlite3
 
+# Modulhandbuecher
+backend/Modulhandbuecher/
+
 # IDE
 .vscode/
 .idea/

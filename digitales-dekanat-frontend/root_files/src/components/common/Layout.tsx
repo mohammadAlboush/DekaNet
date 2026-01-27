@@ -26,7 +26,6 @@ import {
   Assignment,
   School,
   Group,
-  CalendarMonth,
   Settings,
   AccountCircle,
   Logout,

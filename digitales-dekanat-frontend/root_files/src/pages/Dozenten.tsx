@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -31,13 +31,11 @@ import {
   Switch,
   Tabs,
   Tab,
-  Divider,
 } from '@mui/material';
 import {
   Search,
   Person,
   Email,
-  School,
   Visibility,
   Edit,
   Add,
@@ -540,7 +538,7 @@ const DozentenPage: React.FC = () => {
             </DialogTitle>
             
             <DialogContent dividers>
-              <Tabs value={detailsTab} onChange={(e, v) => setDetailsTab(v)} sx={{ mb: 2 }}>
+              <Tabs value={detailsTab} onChange={(_e, v) => setDetailsTab(v)} sx={{ mb: 2 }}>
                 <Tab label="Übersicht" />
                 <Tab label="Module" />
                 <Tab label="Benutzer-Account" />

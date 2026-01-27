@@ -97,6 +97,34 @@ const TemplateModulList: React.FC<TemplateModulListProps> = ({
     return parts.join('+') || '-';
   };
 
+  /**
+   * Berechnet die SWS für ein Template-Modul basierend auf Lehrformen
+   * Verwendet echte SWS aus den Modul-Lehrformen statt hardcodierter Werte
+   */
+  const calculateModulSWS = (modul: TemplateModul): number => {
+    const lehrformen = modul.modul?.lehrformen || [];
+
+    // Helper to get base SWS for a teaching form by its abbreviation
+    const getBaseSWS = (kuerzel: string): number => {
+      const lehrform = lehrformen.find(l => l.kuerzel === kuerzel);
+      return lehrform?.sws || 0;
+    };
+
+    const sws_vorlesung = modul.anzahl_vorlesungen * getBaseSWS('V');
+    const sws_uebung = modul.anzahl_uebungen * getBaseSWS('Ü');
+    const sws_praktikum = modul.anzahl_praktika * getBaseSWS('P');
+    const sws_seminar = modul.anzahl_seminare * getBaseSWS('S');
+
+    const total = sws_vorlesung + sws_uebung + sws_praktikum + sws_seminar;
+
+    // Fallback: Use modul.sws_gesamt if lehrformen calculation yields 0
+    if (total === 0 && modul.modul?.sws_gesamt) {
+      return modul.modul.sws_gesamt;
+    }
+
+    return total;
+  };
+
   const hasRaumConfig = (modul: TemplateModul): boolean => {
     return !!(modul.raum_vorlesung || modul.raum_uebung || modul.raum_praktikum || modul.raum_seminar);
   };
@@ -139,6 +167,7 @@ const TemplateModulList: React.FC<TemplateModulListProps> = ({
                 <TableCell><strong>Modul</strong></TableCell>
                 <TableCell><strong>Bezeichnung</strong></TableCell>
                 <TableCell align="center"><strong>Lehrformen</strong></TableCell>
+                <TableCell align="center"><strong>SWS</strong></TableCell>
                 <TableCell align="center"><strong>Mitarbeiter</strong></TableCell>
                 <TableCell align="center"><strong>Räume</strong></TableCell>
                 {!readOnly && (
@@ -171,6 +200,13 @@ const TemplateModulList: React.FC<TemplateModulListProps> = ({
                       color="primary"
                       variant="outlined"
                     />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Tooltip title="Semesterwochenstunden (berechnet aus Lehrformen × Multiplikatoren)">
+                      <Typography variant="body2" fontWeight={600} color="primary.main">
+                        {calculateModulSWS(modul).toFixed(1)}
+                      </Typography>
+                    </Tooltip>
                   </TableCell>
                   <TableCell align="center">
                     {modul.mitarbeiter_ids && modul.mitarbeiter_ids.length > 0 ? (

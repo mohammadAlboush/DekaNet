@@ -13,22 +13,15 @@ import {
   CircularProgress,
   Divider,
   Grid,
-  Card,
-  CardContent,
   List,
   ListItem,
-  ListItemText,
-  ListItemIcon,
 } from '@mui/material';
 import {
   CheckCircle,
   Cancel,
   Schedule,
   Block,
-  Assignment,
-  TrendingUp,
   CalendarToday,
-  School,
   Description,
 } from '@mui/icons-material';
 import { format } from 'date-fns';

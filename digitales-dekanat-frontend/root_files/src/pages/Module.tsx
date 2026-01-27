@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container, Paper, Typography, Box, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Chip, IconButton, TextField,
@@ -9,9 +9,8 @@ import {
   Stack, ListItemSecondaryAction
 } from '@mui/material';
 import {
-  Search, Visibility, Edit, School, Group, Add, Delete, Warning,
-  Close, Save, Book, Assessment, WorkOutline, LibraryBooks, Cancel,
-  SwapHoriz, History
+  Search, Visibility, Edit, School, Add, Delete, Warning,
+  Close, Save, Cancel, SwapHoriz, History
 } from '@mui/icons-material';
 import modulService from '../services/modulService';
 import useAuthStore from '../store/authStore';
@@ -852,7 +851,7 @@ const ModulePage: React.FC = () => {
             </DialogTitle>
             
             <DialogContent dividers>
-              <Tabs value={detailsTab} onChange={(e, v) => setDetailsTab(v)} sx={{ mb: 2 }}>
+              <Tabs value={detailsTab} onChange={(_e, v) => setDetailsTab(v)} sx={{ mb: 2 }}>
                 <Tab label="Übersicht" />
                 <Tab label="Lehrformen" />
                 <Tab label="Dozenten" />
