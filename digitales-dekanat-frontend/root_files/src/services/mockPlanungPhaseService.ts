@@ -8,10 +8,12 @@ import {
   PhaseStatistik
 } from '../types/planungPhase.types';
 
-// Mock-specific interfaces
+// Mock-specific interfaces - Compatible with CreatePlanungPhaseDto
 interface StartPhaseData {
-  semester_id: number;
-  name: string;
+  semester_typ?: string;
+  semester_jahr?: number;
+  semester_id?: number;
+  name?: string;
   startdatum: string;
   enddatum?: string;
 }
@@ -21,7 +23,7 @@ interface ClosePhaseData {
 }
 
 interface ClosePhaseResult {
-  phase: PlanungPhase | undefined;
+  phase: PlanungPhase;
   archivierte_planungen: number;
   geloeschte_entwuerfe: number;
 }
@@ -29,7 +31,7 @@ interface ClosePhaseResult {
 interface AllPhasesResult {
   phasen: PlanungPhase[];
   total: number;
-  aktive_phase: PlanungPhase | null;
+  aktive_phase?: PlanungPhase;
 }
 
 interface ArchivFilter {
@@ -84,8 +86,8 @@ class MockPlanungPhaseService {
   async startPhase(data: StartPhaseData): Promise<PlanungPhase> {
     const newPhase: PlanungPhase = {
       id: this.nextId++,
-      semester_id: data.semester_id,
-      name: data.name,
+      semester_id: data.semester_id || 1,
+      name: data.name || `${data.semester_typ || 'Semester'} ${data.semester_jahr || new Date().getFullYear()}`,
       startdatum: data.startdatum,
       enddatum: data.enddatum,
       ist_aktiv: true,
@@ -111,8 +113,9 @@ class MockPlanungPhaseService {
       this.activePhase = null;
     }
 
+    // phase! assertion is safe here because we'll throw if not found in real usage
     return {
-      phase: phase,
+      phase: phase!,
       archivierte_planungen: 0,
       geloeschte_entwuerfe: 0
     };
@@ -138,7 +141,7 @@ class MockPlanungPhaseService {
     return {
       phasen: this.phases,
       total: this.phases.length,
-      aktive_phase: this.activePhase
+      aktive_phase: this.activePhase ?? undefined
     };
   }
 

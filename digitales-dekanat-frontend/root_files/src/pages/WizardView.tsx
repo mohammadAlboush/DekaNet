@@ -55,8 +55,8 @@ import { getErrorMessage } from '../utils/errorUtils';
 import { GeplantesModul } from '../types/planung.types';
 
 interface WizardData {
-  planungId?: number;
-  semesterId?: number;
+  planungId?: number | null;
+  semesterId?: number | null;
   semester?: unknown;
   geplantModule?: GeplantesModul[];
   wunschFreieTage?: unknown[];
