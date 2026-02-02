@@ -2,7 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict EMb6YYzpO75uASwOrIDNA6ejgasuGU7w1cohKLapX0nf9aNsRJP7sLgXvcP2Quj
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.1
@@ -6851,5 +6850,4 @@ ALTER TABLE ONLY public.wunsch_freie_tage
 -- PostgreSQL database dump complete
 --
 
-\unrestrict EMb6YYzpO75uASwOrIDNA6ejgasuGU7w1cohKLapX0nf9aNsRJP7sLgXvcP2Quj
 
