@@ -18,7 +18,7 @@ from app.services.base_service import BaseService
 from app.services.user_service import UserService
 from app.services.semester_service import SemesterService
 from app.services.modul_service import ModulService
-from app.services.dozent_service import DozentService
+from app.services.dozent_service import DozentService, DozentPositionService
 from app.services.planung_service import PlanungService
 from app.services.notification_service import NotificationService
 
@@ -43,6 +43,7 @@ user_service = UserService()
 semester_service = SemesterService()
 modul_service = ModulService()
 dozent_service = DozentService()
+dozent_position_service = DozentPositionService()
 planung_service = PlanungService()
 notification_service = NotificationService()
 sws_calculator = SWSCalculator()
@@ -64,6 +65,7 @@ __all__ = [
     'SemesterService',
     'ModulService',
     'DozentService',
+    'DozentPositionService',
     'PlanungService',
     'NotificationService',
     'SWSCalculator',
@@ -76,6 +78,7 @@ __all__ = [
     'semester_service',
     'modul_service',
     'dozent_service',
+    'dozent_position_service',
     'planung_service',
     'notification_service',
     'sws_calculator',

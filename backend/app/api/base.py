@@ -121,32 +121,21 @@ class ApiResponse:
         log_context: str = None
     ):
         """
-        ✅ SECURITY: Sichere Error Response ohne Information Leakage
-
+        Sichere Error Response ohne Information Leakage.
         Loggt den Fehler intern, gibt aber keine Details an den Client.
 
         Args:
-            message: Benutzerfreundliche Fehlermeldung (KEINE technischen Details!)
-            exception: Die aufgetretene Exception (wird nur geloggt, nicht an Client gesendet)
+            message: Benutzerfreundliche Fehlermeldung
+            exception: Die aufgetretene Exception (wird nur geloggt)
             log_context: Zusätzlicher Kontext für das Logging
 
         Returns:
-            Flask Response mit JSON (ohne interne Details)
-
-        Example:
-            except Exception as e:
-                return ApiResponse.internal_error(
-                    message='Fehler beim Laden der Daten',
-                    exception=e,
-                    log_context='get_modules'
-                )
+            Flask Response mit JSON
         """
-        # ✅ SECURITY: Logge den echten Fehler intern
         if exception:
             context = f"[{log_context}] " if log_context else ""
             current_app.logger.exception(f"{context}Internal error: {exception}")
 
-        # ✅ SECURITY: Gib nur generische Fehlermeldung an Client
         response = {
             'success': False,
             'message': message,
@@ -222,7 +211,6 @@ def login_required(fn: Callable) -> Callable:
             verify_jwt_in_request()
             return fn(*args, **kwargs)
         except Exception as e:
-            # ✅ SECURITY: Keine internen Details an Client
             current_app.logger.warning(f"[Auth] Authentication failed: {e}")
             return ApiResponse.error(
                 message='Authentifizierung erforderlich',
@@ -273,7 +261,6 @@ def role_required(*allowed_roles: str):
                 
                 return fn(*args, **kwargs)
             except Exception as e:
-                # ✅ SECURITY: Keine internen Details an Client
                 current_app.logger.warning(f"[Auth] Authorization failed: {e}")
                 return ApiResponse.error(
                     message='Autorisierung fehlgeschlagen',
@@ -306,14 +293,10 @@ def get_current_user() -> Optional[Benutzer]:
 
 def is_current_user_dekan() -> bool:
     """
-    ✅ SECURITY: Sichere Prüfung ob aktueller User Dekan ist.
+    Sichere Prüfung ob aktueller User Dekan ist.
 
     Returns:
         bool: True wenn User eingeloggt und Dekan ist
-
-    Usage:
-        if not is_current_user_dekan():
-            return ApiResponse.error('Nur für Dekane', status_code=403)
     """
     user = get_current_user()
     if not user:
@@ -323,7 +306,7 @@ def is_current_user_dekan() -> bool:
 
 def get_user_rolle_name(user: Optional[Benutzer]) -> str:
     """
-    ✅ SECURITY: Sichere Methode um Rollennamen zu erhalten.
+    Sichere Methode um Rollennamen zu erhalten.
 
     Args:
         user: Benutzer-Objekt (kann None sein)
@@ -401,7 +384,7 @@ def get_pagination_params() -> Tuple[int, int]:
     
     # Limits
     page = max(1, page)
-    per_page = min(100, max(1, per_page))
+    per_page = min(200, max(1, per_page))
     
     return page, per_page
 
@@ -507,9 +490,10 @@ def register_error_handlers(app):
     
     @app.errorhandler(500)
     def internal_error(e):
+        app.logger.exception(f"Internal Server Error: {e}")
         return ApiResponse.error(
-            message='Internal Server Error',
-            errors=[str(e)],
+            message='Ein interner Fehler ist aufgetreten',
+            errors=['Bitte versuchen Sie es später erneut'],
             status_code=500
         )
 

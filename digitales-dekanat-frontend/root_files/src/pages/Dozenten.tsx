@@ -43,8 +43,35 @@ import {
   Warning,
   Close,
 } from '@mui/icons-material';
-import dozentService, { DozentCreateData, DozentUpdateData } from '../services/dozentService';
+import dozentService, { Dozent, DozentCreateData, DozentUpdateData } from '../services/dozentService';
 import useAuthStore from '../store/authStore';
+import { getErrorMessage } from '../utils/errorUtils';
+
+interface DozentModul {
+  modul_id: number;
+  kuerzel: string;
+  bezeichnung_de: string;
+  rolle: string;
+  po_id: number;
+}
+
+interface DozentModulWithRoles extends Omit<DozentModul, 'rolle'> {
+  rollen: string[];
+}
+
+interface DozentBenutzer {
+  username: string;
+  email: string;
+  rolle: string;
+  aktiv: boolean;
+  letzter_login?: string;
+}
+
+interface DozentDetails extends Dozent {
+  module?: DozentModul[];
+  benutzer?: DozentBenutzer;
+  updated_at?: string;
+}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -74,9 +101,9 @@ const DozentenPage: React.FC = () => {
   const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [dozenten, setDozenten] = useState<any[]>([]);
+  const [dozenten, setDozenten] = useState<Dozent[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDozent, setSelectedDozent] = useState<any>(null);
+  const [selectedDozent, setSelectedDozent] = useState<DozentDetails | null>(null);
   const [detailsDialog, setDetailsDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [createDialog, setCreateDialog] = useState(false);
@@ -102,7 +129,6 @@ const DozentenPage: React.FC = () => {
     aktiv: true,
   });
 
-  // ✅ OPTIMIERT: useEffect nur einmal ausführen, statt bei jedem user-Objekt-Update
   useEffect(() => {
     const initializePage = async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -114,9 +140,8 @@ const DozentenPage: React.FC = () => {
     };
     initializePage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]); // ✅ Nur isAuthenticated als Dependency
+  }, [isAuthenticated]);
 
-  // ✅ OPTIMIERT: useCallback verhindert unnötige Re-Renders
   const loadDozenten = useCallback(async () => {
     if (!isAuthenticated) return;
 
@@ -131,8 +156,8 @@ const DozentenPage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Laden der Dozenten');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -155,8 +180,8 @@ const DozentenPage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler bei der Suche');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -176,8 +201,8 @@ const DozentenPage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Laden der Details');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -195,7 +220,7 @@ const DozentenPage: React.FC = () => {
     setCreateDialog(true);
   };
 
-  const handleOpenEdit = (dozent: any) => {
+  const handleOpenEdit = (dozent: Dozent) => {
     setEditFormData({
       titel: dozent.titel || '',
       vorname: dozent.vorname || '',
@@ -227,8 +252,8 @@ const DozentenPage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Erstellen');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -253,14 +278,14 @@ const DozentenPage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Aktualisieren');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenDelete = (dozent: any) => {
+  const handleOpenDelete = (dozent: Dozent) => {
     setSelectedDozent(dozent);
     setDeleteForce(false);
     setDeleteDialog(true);
@@ -282,8 +307,8 @@ const DozentenPage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Löschen');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -637,15 +662,15 @@ const DozentenPage: React.FC = () => {
                   <List>
                     {(() => {
                       // Deduplicate modules by kuerzel and po_id, combine roles
-                      const moduleMap = new Map();
-                      
-                      selectedDozent.module.forEach((modul: any) => {
+                      const moduleMap = new Map<string, DozentModulWithRoles>();
+
+                      selectedDozent.module.forEach((modul: DozentModul) => {
                         // Use kuerzel + po_id as unique key
                         const key = `${modul.kuerzel}-${modul.po_id}`;
-                        
+
                         if (moduleMap.has(key)) {
                           // Module exists, add role if not already present
-                          const existing = moduleMap.get(key);
+                          const existing = moduleMap.get(key)!;
                           if (!existing.rollen.includes(modul.rolle)) {
                             existing.rollen.push(modul.rolle);
                           }
@@ -657,9 +682,9 @@ const DozentenPage: React.FC = () => {
                           });
                         }
                       });
-                      
+
                       // Convert map to array and render
-                      return Array.from(moduleMap.values()).map((modul: any) => (
+                      return Array.from(moduleMap.values()).map((modul: DozentModulWithRoles) => (
                         <ListItem key={`${modul.kuerzel}-${modul.po_id}`}>
                           <ListItemText
                             primary={`${modul.kuerzel} - ${modul.bezeichnung_de}`}

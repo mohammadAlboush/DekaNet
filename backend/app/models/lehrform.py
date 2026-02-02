@@ -1,14 +1,14 @@
 """
 Lehrform Model
 ==============
-Lehrformen (Vorlesung, Ãœbung, Praktikum, etc.)
+Lehrformen (Vorlesung, Übung, Praktikum, etc.)
 """
 
 from .base import db
 
 
 class Lehrform(db.Model):
-    """Lehrformen (7 EintrÃ¤ge: V, Ãœ, P, S, etc.)"""
+    """Lehrformen (V, Ü, P, S, etc.)"""
     __tablename__ = 'lehrform'
     
     id = db.Column(db.Integer, primary_key=True)

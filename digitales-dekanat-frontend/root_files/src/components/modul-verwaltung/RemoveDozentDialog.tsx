@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { Delete, Warning, Close } from '@mui/icons-material';
 import modulVerwaltungService from '../../services/modulVerwaltungService';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 interface RemoveDozentDialogProps {
   open: boolean;
@@ -75,8 +76,8 @@ const RemoveDozentDialog: React.FC<RemoveDozentDialogProps> = ({
       } else {
         setError(response.message || 'Fehler beim Entfernen des Dozenten');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Ein Fehler ist aufgetreten'));
     } finally {
       setLoading(false);
     }

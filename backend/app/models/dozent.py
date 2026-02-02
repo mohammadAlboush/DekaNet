@@ -10,36 +10,80 @@ from datetime import datetime
 from .base import db
 
 
+class DozentPosition(db.Model):
+    """
+    DozentPosition - Platzhalter, Rollen, Gruppen
+
+    Ermöglicht Modul-Zuordnungen zu abstrakten Positionen
+    statt konkreten Dozenten (z.B. "N.N.", "Lehrbeauftragter").
+
+    Attributes:
+        bezeichnung: Name der Position (z.B. "N.N.", "Lehrbeauftragter")
+        typ: Art der Position ('platzhalter', 'rolle', 'gruppe')
+        beschreibung: Optionale Beschreibung
+        fachbereich: Zugehöriger Fachbereich
+    """
+    __tablename__ = 'dozent_position'
+
+    id = db.Column(db.Integer, primary_key=True)
+    bezeichnung = db.Column(db.String(200), nullable=False)
+    typ = db.Column(db.String(20), nullable=False)  # 'platzhalter', 'rolle', 'gruppe'
+    beschreibung = db.Column(db.Text)
+    fachbereich = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    modul_zuordnungen = db.relationship(
+        'ModulDozent',
+        back_populates='dozent_position',
+        lazy='dynamic'
+    )
+
+    def __repr__(self):
+        return f'<DozentPosition {self.bezeichnung}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'bezeichnung': self.bezeichnung,
+            'typ': self.typ,
+            'beschreibung': self.beschreibung,
+            'fachbereich': self.fachbereich
+        }
+
+
 class Dozent(db.Model):
     """
     Dozent - Lehrende
-    
+
     Professoren, Lehrbeauftragte und wissenschaftliche Mitarbeiter.
-    Bereits in DB vorhanden mit 52 EintrÃƒÂ¤gen.
-    
+    Bereits in DB vorhanden mit 52 Einträgen.
+
     Attributes:
         titel: Akademischer Titel (Prof. Dr., Dr., etc.)
         vorname: Vorname
         nachname: Nachname (required)
-        name_komplett: VollstÃƒÂ¤ndiger Name
+        name_komplett: Vollständiger Name
         email: Email-Adresse
-        fachbereich: ZugehÃƒÂ¶riger Fachbereich
+        fachbereich: Zugehöriger Fachbereich
         aktiv: Ist Dozent noch aktiv?
+        ist_platzhalter: Ist dieser Dozent ein Platzhalter?
     """
     __tablename__ = 'dozent'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    
-    # PersÃƒÂ¶nliche Daten
+
+    # Persönliche Daten
     titel = db.Column(db.String(50))  # Prof. Dr., Dr., etc.
     vorname = db.Column(db.String(100))
     nachname = db.Column(db.String(100), nullable=False)
     name_komplett = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(100))
     fachbereich = db.Column(db.String(100))
-    
+
     # Status
     aktiv = db.Column(db.Boolean, default=True, nullable=False)
+    ist_platzhalter = db.Column(db.Boolean, default=False, nullable=False)
     
     created_at = db.Column(
         db.DateTime,

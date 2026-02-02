@@ -6,7 +6,7 @@ Implementiert DRY (Don't Repeat Yourself) Prinzip.
 """
 
 from datetime import datetime
-# ⚠️ WICHTIG: db von extensions importieren, NICHT neu erstellen!
+# db von extensions importieren, NICHT neu erstellen!
 from app.extensions import db
 
 
@@ -32,8 +32,7 @@ class BaseModel(db.Model):
         nullable=False,
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
-        server_default=db.func.current_timestamp(),
-        server_onupdate=db.func.current_timestamp()
+        server_default=db.func.current_timestamp()
     )
     
     def save(self):
@@ -106,6 +105,5 @@ class TimestampMixin:
         nullable=False,
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
-        server_default=db.func.current_timestamp(),
-        server_onupdate=db.func.current_timestamp()
+        server_default=db.func.current_timestamp()
     )

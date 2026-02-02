@@ -9,14 +9,7 @@ import {
   NavigateBefore,
 } from '@mui/icons-material';
 import WunschTagEditor, { WunschTag } from '../../../common/WunschTagEditor';
-
-interface StepProps {
-  data: any;
-  onUpdate: (data: any) => void;
-  onNext: () => void;
-  onBack: () => void;
-  planungId?: number;
-}
+import { StepWunschFreieTageProps } from '../../../../types/StepProps.types';
 
 /**
  * StepWunschFreieTage
@@ -24,7 +17,7 @@ interface StepProps {
  * Wizard-Schritt für Wunsch-freie Tage.
  * Verwendet den wiederverwendbaren WunschTagEditor.
  */
-const StepWunschFreieTage: React.FC<StepProps> = ({
+const StepWunschFreieTage: React.FC<StepWunschFreieTageProps> = ({
   data,
   onUpdate,
   onNext,

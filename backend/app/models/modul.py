@@ -181,8 +181,9 @@ class Modul(db.Model):
     def get_verantwortliche(self):
         """Holt verantwortliche Dozenten"""
         # Prüfe verschiedene Schreibweisen der Rolle
+        # Filter out None dozents (kann bei Platzhalter-Zuordnungen vorkommen)
         for rolle in ['verantwortlicher', 'Modulverantwortlicher', 'modulverantwortlicher', 'Verantwortlicher']:
-            result = [dz.dozent for dz in self.dozent_zuordnungen if dz.rolle == rolle]
+            result = [dz.dozent for dz in self.dozent_zuordnungen if dz.rolle == rolle and dz.dozent is not None]
             if result:
                 return result
         return []
@@ -190,8 +191,9 @@ class Modul(db.Model):
     def get_lehrpersonen(self):
         """Holt Lehrpersonen"""
         # Prüfe verschiedene Schreibweisen der Rolle
+        # Filter out None dozents (kann bei Platzhalter-Zuordnungen vorkommen)
         for rolle in ['lehrperson', 'Lehrperson', 'Dozent', 'dozent']:
-            result = [dz.dozent for dz in self.dozent_zuordnungen if dz.rolle == rolle]
+            result = [dz.dozent for dz in self.dozent_zuordnungen if dz.rolle == rolle and dz.dozent is not None]
             if result:
                 return result
         return []
@@ -298,7 +300,14 @@ class ModulDozent(db.Model):
     dozent_id = db.Column(
         db.Integer,
         db.ForeignKey('dozent.id', ondelete='CASCADE'),
-        nullable=False,
+        nullable=True,  # Nullable für Platzhalter-Zuordnungen
+        index=True
+    )
+    # DozentPosition für Platzhalter-Zuordnungen (N.N., Lehrbeauftragter, etc.)
+    dozent_position_id = db.Column(
+        db.Integer,
+        db.ForeignKey('dozent_position.id', ondelete='SET NULL'),
+        nullable=True,
         index=True
     )
     rolle = db.Column(db.String(50), nullable=False)  # 'verantwortlicher' oder 'lehrperson'
@@ -322,6 +331,7 @@ class ModulDozent(db.Model):
     # ✅ PERFORMANCE FIX: lazy='joined' für eager loading des Dozenten
     dozent = db.relationship('Dozent', back_populates='modul_zuordnungen', foreign_keys=[dozent_id], lazy='joined')
     pruefungsordnung = db.relationship('Pruefungsordnung')
+    dozent_position = db.relationship('DozentPosition', back_populates='modul_zuordnungen')
 
     # ✨ NEW: Vertreter & Zweitprüfer Relationships
     vertreter = db.relationship(

@@ -34,7 +34,7 @@ import {
   Edit as EditIcon,
   Group,
 } from '@mui/icons-material';
-import { GeplantesModul } from '../../../../types/planung.types';
+import { GeplantesModul, WunschFreierTag } from '../../../../types/planung.types';
 import { StepZusammenfassungProps } from '../../../../types/StepProps.types';
 
 /**
@@ -71,7 +71,23 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
   };
 
   const calculateTotalSWS = () => {
-    return data.geplantModule?.reduce((sum: number, gm: GeplantesModul) => sum + (gm.sws_gesamt || 0), 0) || 0;
+    return data.geplantModule?.reduce((sum: number, gm: GeplantesModul) => {
+      // Berechne SWS aus Einzelwerten falls sws_gesamt nicht gesetzt
+      const swsGesamt = gm.sws_gesamt || (
+        (gm.sws_vorlesung || 0) +
+        (gm.sws_uebung || 0) +
+        (gm.sws_praktikum || 0) +
+        (gm.sws_seminar || 0)
+      );
+      // Falls auch keine SWS-Felder, berechne aus Anzahl * Standard-SWS (2 SWS pro Einheit)
+      const fallbackSWS = swsGesamt || (
+        ((gm.anzahl_vorlesungen || 0) * 2) +
+        ((gm.anzahl_uebungen || 0) * 2) +
+        ((gm.anzahl_praktika || 0) * 2) +
+        ((gm.anzahl_seminare || 0) * 2)
+      );
+      return sum + fallbackSWS;
+    }, 0) || 0;
   };
 
   const calculateTotalECTS = () => {
@@ -98,7 +114,7 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
     }
     // Handle plain object
     return Object.values(data.mitarbeiterZuordnung).reduce(
-      (sum: number, ids: any) => sum + (Array.isArray(ids) ? ids.length : 0),
+      (sum: number, ids: unknown) => sum + (Array.isArray(ids) ? ids.length : 0),
       0
     );
   };
@@ -413,7 +429,7 @@ const StepZusammenfassung: React.FC<StepZusammenfassungProps> = ({
           />
           <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
             <List dense>
-              {data.wunschFreieTage.map((tag: any, index: number) => {
+              {data.wunschFreieTage.map((tag: WunschFreierTag, index: number) => {
                 // Handle invalid or missing dates
                 let dateText = 'Datum nicht angegeben';
                 if (tag.datum) {

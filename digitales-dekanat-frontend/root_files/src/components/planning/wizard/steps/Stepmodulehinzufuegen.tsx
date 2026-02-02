@@ -44,6 +44,7 @@ import planungService from '../../../../services/planungService';
 import { useToastStore } from '../../../../components/common/Toast';
 import api from '../../../../services/api';
 import { logger } from '../../../../utils/logger';
+import { getErrorMessage } from '../../../../utils/errorUtils';
 import { DEFAULT_CAPACITIES, MULTIPLIKATOR_LIMITS, PERFORMANCE_LIMITS } from '../../../../constants/planning.constants';
 
 interface ModulFormData {
@@ -78,11 +79,11 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
   const [formData, setFormData] = useState<ModulFormData | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // ✅ FIX: Lade ALLE Module, nicht nur die ausgewählten
+  // Lade ALLE Module, nicht nur die ausgewählten
   const [alleModule, setAlleModule] = useState<Modul[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // ✅ Lade alle verfügbaren Module beim Mount
+  // Lade alle verfügbaren Module beim Mount
   useEffect(() => {
     loadAlleModule();
   }, []);
@@ -100,7 +101,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
     }
   };
 
-  // ✅ FIX: Korrigierte Funktion ohne semester.po_id
+  // Korrigierte Funktion ohne semester.po_id
   const getPOId = (): number => {
     // Versuche po_id aus verschiedenen Quellen zu bekommen
     
@@ -133,7 +134,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
       lehrformen: modul.lehrformen?.length || 0
     });
 
-    // ✅ VERBESSERT: Initialisierung mit korrekten SWS-Daten
+    // Initialisierung mit korrekten SWS-Daten
     let anzahl_vorlesungen = 0;
     let anzahl_uebungen = 0;
     let anzahl_praktika = 0;
@@ -233,7 +234,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
     logger.debug('StepModule', 'Saving module', {
       modul_kuerzel: formData.modul.kuerzel,
       modul_id: formData.modul.id,
-      po_id: getPOId(), // ✅ FIX: Verwende getPOId()
+      po_id: getPOId(),
       planungId,
       multiplikatoren: {
         V: formData.anzahl_vorlesungen,
@@ -299,7 +300,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
         // Add new module
         logger.debug('StepModule', 'Adding new module', { kuerzel: formData.modul.kuerzel });
         
-        // ✅ FIX: Stelle sicher dass po_id immer gesetzt ist
+        // Stelle sicher dass po_id immer gesetzt ist
         const po_id = formData.modul.po_id || getPOId();
 
         logger.debug('StepModule', 'PO-ID Debug', {
@@ -381,24 +382,10 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
       setDialogOpen(false);
       setFormData(null);
       setEditingModul(null);
-    } catch (error: any) {
-      logger.error('StepModule', 'Error saving module', {
-        error,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+    } catch (error: unknown) {
+      logger.error('StepModule', 'Error saving module', { error });
 
-      // Detaillierte Fehlermeldung
-      let errorMessage = 'Fehler beim Speichern des Moduls';
-
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.errors && error.response.data.errors.length > 0) {
-        errorMessage = error.response.data.errors.join(', ');
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
+      const errorMessage = getErrorMessage(error, 'Fehler beim Speichern des Moduls');
       logger.error('StepModule', 'Final error message', { errorMessage });
 
       showToast(errorMessage, 'error');
@@ -423,16 +410,13 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
       onUpdate({ geplantModule: updatedModule });
 
       showToast('Modul entfernt', 'success');
-    } catch (error: any) {
-      logger.error('StepModule', 'Error removing module', error);
-      showToast(
-        error.response?.data?.message || 'Fehler beim Entfernen',
-        'error'
-      );
+    } catch (error: unknown) {
+      logger.error('StepModule', 'Error removing module', { error });
+      showToast(getErrorMessage(error, 'Fehler beim Entfernen'), 'error');
     }
   };
 
-  // ✅ NEUE HILFSFUNKTION: Berechne SWS
+  // Berechne SWS
   const calculateModulSWS = (modul: Modul, formData: ModulFormData): number => {
     if (!modul.lehrformen) return 0;
     
@@ -479,7 +463,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
 
   const canProceed = data.geplantModule.length > 0;
 
-  // ✅ NEUE HILFSFUNKTION: Prüfe ob Lehrform verfügbar ist
+  // Prüfe ob Lehrform verfügbar ist
   const isLehrformAvailable = (modul: Modul, kuerzel: string): boolean => {
     if (!modul.lehrformen) return false;
     return modul.lehrformen.some((lf: ModulLehrform) => lf.kuerzel === kuerzel);
@@ -543,7 +527,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
         </Paper>
       )}
 
-      {/* ✅ NEUE SEKTION: Ausgewählte Module aus Schritt 2 */}
+      {/* Ausgewählte Module aus Schritt 2 */}
       {data.selectedModules && data.selectedModules.length > 0 && (
         <>
           <Typography variant="subtitle2" gutterBottom fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -805,7 +789,7 @@ const Stepmodulehinzufuegen: React.FC<StepModuleHinzufuegenProps> = ({
                   )}
                 </Box>
                 
-                {/* ✅ NEUE INFO: Zeige verfügbare Lehrformen */}
+                {/* Zeige verfügbare Lehrformen */}
                 {formData.modul.lehrformen && formData.modul.lehrformen.length > 0 && (
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="caption" color="text.secondary">

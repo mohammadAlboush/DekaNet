@@ -1,5 +1,5 @@
 // Planungsphase Types
-// ✅ SECURITY FIX: `any` Types durch konkrete Typen ersetzt (2026-01-24)
+// SECURITY FIX: `any` Types durch konkrete Typen ersetzt (2026-01-24)
 import { Semesterplanung } from './planung.types';
 
 export type SemesterTyp = 'wintersemester' | 'sommersemester';
@@ -60,7 +60,7 @@ export interface ArchiviertePlanung {
   status_bei_archivierung: string;
   archiviert_am: string;
   archiviert_grund: 'phase_geschlossen' | 'manuell' | 'system';
-  planung_daten: Partial<Semesterplanung>; // ✅ TYPESAFE: JSON der ursprünglichen Planung
+  planung_daten: Partial<Semesterplanung>; // JSON der ursprünglichen Planung
 }
 
 // Filter für Archiv-Suche

@@ -78,7 +78,7 @@ class Logger {
     level: LogLevel,
     context: string,
     message: string,
-    ...args: any[]
+    ...args: unknown[]
   ): void {
     if (!this.shouldLog(level)) {
       return;
@@ -105,28 +105,28 @@ class Logger {
   /**
    * Debug level logging - disabled in production
    */
-  public debug(context: string, message: string, ...args: any[]): void {
+  public debug(context: string, message: string, ...args: unknown[]): void {
     this.log(LogLevel.DEBUG, context, message, ...args);
   }
 
   /**
    * Info level logging - disabled in production
    */
-  public info(context: string, message: string, ...args: any[]): void {
+  public info(context: string, message: string, ...args: unknown[]): void {
     this.log(LogLevel.INFO, context, message, ...args);
   }
 
   /**
    * Warning level logging - enabled in production
    */
-  public warn(context: string, message: string, ...args: any[]): void {
+  public warn(context: string, message: string, ...args: unknown[]): void {
     this.log(LogLevel.WARN, context, message, ...args);
   }
 
   /**
    * Error level logging - always enabled
    */
-  public error(context: string, message: string, error?: Error | any, ...args: any[]): void {
+  public error(context: string, message: string, error?: unknown, ...args: unknown[]): void {
     if (error instanceof Error) {
       this.log(LogLevel.ERROR, context, message, error.message, error.stack, ...args);
     } else {
@@ -157,9 +157,9 @@ export { Logger };
 
 // Convenience exports for common contexts
 export const createContextLogger = (context: string) => ({
-  debug: (message: string, ...args: any[]) => logger.debug(context, message, ...args),
-  info: (message: string, ...args: any[]) => logger.info(context, message, ...args),
-  warn: (message: string, ...args: any[]) => logger.warn(context, message, ...args),
-  error: (message: string, error?: Error | any, ...args: any[]) =>
+  debug: (message: string, ...args: unknown[]) => logger.debug(context, message, ...args),
+  info: (message: string, ...args: unknown[]) => logger.info(context, message, ...args),
+  warn: (message: string, ...args: unknown[]) => logger.warn(context, message, ...args),
+  error: (message: string, error?: unknown, ...args: unknown[]) =>
     logger.error(context, message, error, ...args),
 });

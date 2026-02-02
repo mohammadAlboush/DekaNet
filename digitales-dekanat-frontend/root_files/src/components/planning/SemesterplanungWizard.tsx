@@ -23,14 +23,14 @@ import StepSemesterAuswahl from '../../components/planning/wizard/steps/StepSeme
 import StepModuleAuswahl from '../../components/planning/wizard/steps/StepModuleAuswahl';
 import StepModuleHinzufuegen from '../../components/planning/wizard/steps/Stepmodulehinzufuegen';
 import StepMitarbeiterZuordnen from '../../components/planning/wizard/steps/StepMitarbeiterZuordnen';
-// ❌ StepMultiplikatoren ENTFERNT
+// StepMultiplikatoren ENTFERNT
 import StepZusatzInfos from '../../components/planning/wizard/steps/StepZusatzInfos';
 import StepWunschFreieTage from '../../components/planning/wizard/steps/StepWunschFreieTage';
 import StepZusammenfassung from '../../components/planning/wizard/steps/StepZusammenfassung';
 
 // Services & Types
 import planungService from '../../services/planungService';
-import { Semesterplanung, GeplantesModul } from '../../types/planung.types';
+import { Semesterplanung, GeplantesModul, WunschFreierTag, RoomRequirement, SpecialRequests } from '../../types/planung.types';
 import { Semester } from '../../types/semester.types';
 import { Modul } from '../../types/modul.types';
 import { useToastStore } from '../../components/common/Toast';
@@ -44,19 +44,21 @@ interface WizardData {
   selectedModules: Modul[];
   geplantModule: GeplantesModul[];
   mitarbeiterZuordnung: Map<number, number[]>;
-  wunschFreieTage: any[];
+  wunschFreieTage: WunschFreierTag[];
   anmerkungen: string;
   raumbedarf: string;
   planungId: number | null;
+  roomRequirements?: RoomRequirement[];
+  specialRequests?: SpecialRequests;
 }
 
-// ✅ ANGEPASST: Schritt 5 (Multiplikatoren) entfernt - jetzt nur noch 7 Schritte
+// Schritt 5 (Multiplikatoren) entfernt - jetzt nur noch 7 Schritte
 const STEPS = [
   { label: 'Semester auswählen', icon: '📅' },
   { label: 'Module auswählen', icon: '📚' },
   { label: 'Module hinzufügen', icon: '➕' },
   { label: 'Mitarbeiter zuordnen', icon: '👥' },
-  // ❌ ENTFERNT: { label: 'Multiplikatoren setzen', icon: '🔢' },
+  // ENTFERNT: { label: 'Multiplikatoren setzen', icon: '...' },
   { label: 'Zusätzliche Infos', icon: '📝' },
   { label: 'Wunsch-freie Tage', icon: '📆' },
   { label: 'Zusammenfassung & Einreichen', icon: '✅' },
@@ -101,7 +103,7 @@ const SemesterplanungWizard: React.FC = () => {
         // Populate wizard data from existing planung
         setWizardData({
           semesterId: response.data.semester_id,
-          semester: response.data.semester ?? null,  // ✅ Convert undefined to null
+          semester: response.data.semester ?? null,  // Convert undefined to null
           selectedModules: [],
           geplantModule: response.data.geplante_module || [],
           mitarbeiterZuordnung: new Map(),
@@ -164,21 +166,21 @@ const SemesterplanungWizard: React.FC = () => {
     if (window.confirm('Möchten Sie die Planung wirklich einreichen? Nach dem Einreichen können keine Änderungen mehr vorgenommen werden.')) {
       setLoading(true);
       try {
-        // ✅ WICHTIG: Erst alle Zusatzinfos speichern (anmerkungen, raumbedarf, wunschFreieTage, etc.)
+        // WICHTIG: Erst alle Zusatzinfos speichern (anmerkungen, raumbedarf, wunschFreieTage, etc.)
         log.debug(' Saving zusatzinfos before submit...');
         log.debug(' WizardData:', {
           anmerkungen: wizardData.anmerkungen,
           raumbedarf: wizardData.raumbedarf,
-          roomRequirements: (wizardData as any).roomRequirements,
-          specialRequests: (wizardData as any).specialRequests,
+          roomRequirements: wizardData.roomRequirements,
+          specialRequests: wizardData.specialRequests,
           wunschFreieTage: wizardData.wunschFreieTage,
         });
 
         await planungService.updateZusatzinfos(planung.id, {
           anmerkungen: wizardData.anmerkungen || undefined,
           raumbedarf: wizardData.raumbedarf || undefined,
-          room_requirements: (wizardData as any).roomRequirements || undefined,
-          special_requests: (wizardData as any).specialRequests || undefined,
+          room_requirements: wizardData.roomRequirements || undefined,
+          special_requests: wizardData.specialRequests || undefined,
           wunsch_freie_tage: wizardData.wunschFreieTage?.map(tag => ({
             wochentag: tag.wochentag || 'montag',
             zeitraum: tag.zeitraum || 'ganztags',
@@ -213,7 +215,7 @@ const SemesterplanungWizard: React.FC = () => {
   };
 
   /**
-   * ✅ ANGEPASST: Step Content - Schritt 5 entfernt, alle nachfolgenden Steps um 1 verschoben
+   * Step Content - Schritt 5 entfernt, alle nachfolgenden Steps um 1 verschoben
    */
   const getStepContent = (step: number) => {
     switch (step) {
@@ -255,7 +257,7 @@ const SemesterplanungWizard: React.FC = () => {
             onBack={handleBack}
           />
         );
-      // ❌ ENTFERNT: case 4 (Multiplikatoren)
+      // ENTFERNT: case 4 (Multiplikatoren)
       case 4: // Zusätzliche Infos (war vorher case 5)
         return (
           <StepZusatzInfos

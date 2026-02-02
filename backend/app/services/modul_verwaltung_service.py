@@ -10,11 +10,13 @@ Feature 3: Modul-Verwaltung
 """
 
 from typing import List, Dict, Optional, Any
+from sqlalchemy.orm import subqueryload, joinedload
 from app.models import (
     db,
     Modul,
     ModulDozent,
     Dozent,
+    DozentPosition,
     Pruefungsordnung,
     ModulAuditLog,
     Semester
@@ -47,7 +49,11 @@ class ModulVerwaltungService(BaseService):
         Returns:
             Liste von Modulen mit Dozenten-Zuordnungen
         """
-        query = Modul.query
+        # Eager load dozent_zuordnungen für bessere Performance
+        query = Modul.query.options(
+            subqueryload(Modul.dozent_zuordnungen).joinedload(ModulDozent.dozent),
+            subqueryload(Modul.dozent_zuordnungen).joinedload(ModulDozent.dozent_position)
+        )
 
         # Note: Modul table has no 'aktiv' field, so we get all modules
         # and filter by active Dozenten instead if nur_aktive is True
@@ -56,13 +62,12 @@ class ModulVerwaltungService(BaseService):
 
         result = []
         for modul in module:
-            # Hole Dozenten-Zuordnungen
-            dozenten_query = ModulDozent.query.filter_by(modul_id=modul.id)
+            # Dozenten-Zuordnungen sind bereits eager-loaded
+            dozenten_zuordnungen = modul.dozent_zuordnungen
 
+            # Filter by po_id if specified
             if po_id:
-                dozenten_query = dozenten_query.filter_by(po_id=po_id)
-
-            dozenten_zuordnungen = dozenten_query.all()
+                dozenten_zuordnungen = [z for z in dozenten_zuordnungen if z.po_id == po_id]
 
             modul_dict = {
                 'id': modul.id,
@@ -88,6 +93,21 @@ class ModulVerwaltungService(BaseService):
                         'po_id': zuordnung.po_id,
                         'vertreter_id': zuordnung.vertreter_id,
                         'zweitpruefer_id': zuordnung.zweitpruefer_id,
+                        'ist_platzhalter': False,
+                    })
+                elif zuordnung.dozent_position:
+                    modul_dict['dozenten'].append({
+                        'id': None,
+                        'position_id': zuordnung.dozent_position.id,
+                        'name': zuordnung.dozent_position.bezeichnung,
+                        'name_kurz': zuordnung.dozent_position.bezeichnung,
+                        'rolle': zuordnung.rolle,
+                        'zuordnung_id': zuordnung.id,
+                        'po_id': zuordnung.po_id,
+                        'vertreter_id': None,
+                        'zweitpruefer_id': None,
+                        'ist_platzhalter': True,
+                        'position_typ': zuordnung.dozent_position.typ,
                     })
 
             result.append(modul_dict)

@@ -10,6 +10,62 @@ const log = createContextLogger('ModulService');
  * Unterstützt Bearbeitung aller Modul-Daten
  */
 
+// In-Memory Cache für statische Optionen
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+// Cache-Typen
+interface LehrformOption {
+  id: number;
+  kuerzel: string;
+  bezeichnung: string;
+}
+
+interface DozentOption {
+  id: number;
+  name_komplett: string;
+  kuerzel?: string;
+}
+
+interface StudiengangOption {
+  id: number;
+  bezeichnung: string;
+  kuerzel?: string;
+}
+
+type CacheData = LehrformOption[] | DozentOption[] | StudiengangOption[];
+
+const optionsCache: {
+  lehrformen?: CacheEntry<LehrformOption[]>;
+  dozenten?: CacheEntry<DozentOption[]>;
+  studiengaenge?: CacheEntry<StudiengangOption[]>;
+} = {};
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 Minuten Cache-TTL
+
+function getCached<T extends CacheData>(key: keyof typeof optionsCache): T | null {
+  const entry = optionsCache[key];
+  if (entry && (Date.now() - entry.timestamp) < CACHE_TTL) {
+    return entry.data as T;
+  }
+  return null;
+}
+
+function setCache(key: 'lehrformen', data: LehrformOption[]): void;
+function setCache(key: 'dozenten', data: DozentOption[]): void;
+function setCache(key: 'studiengaenge', data: StudiengangOption[]): void;
+function setCache(key: keyof typeof optionsCache, data: CacheData): void {
+  if (key === 'lehrformen') {
+    optionsCache.lehrformen = { data: data as LehrformOption[], timestamp: Date.now() };
+  } else if (key === 'dozenten') {
+    optionsCache.dozenten = { data: data as DozentOption[], timestamp: Date.now() };
+  } else if (key === 'studiengaenge') {
+    optionsCache.studiengaenge = { data: data as StudiengangOption[], timestamp: Date.now() };
+  }
+}
+
 export interface ModulCreateData {
   kuerzel: string;
   po_id: number;
@@ -597,15 +653,26 @@ class ModulService {
   }
 
   // =========================================================================
-  // OPTIONS (HILFSLISTEN)
+  // OPTIONS (HILFSLISTEN) - MIT CACHING
   // =========================================================================
 
   /**
-   * Get all lehrformen for selection
+   * Get all lehrformen for selection (cached for 5 minutes)
    */
   async getLehrformenOptions(): Promise<ApiResponse<any[]>> {
+    // Check cache first
+    const cached = getCached<any[]>('lehrformen');
+    if (cached) {
+      log.debug(' Returning cached lehrformen');
+      return { success: true, data: cached };
+    }
+
     try {
       const response = await api.get<ApiResponse<any[]>>('/module/options/lehrformen');
+      // Store in cache
+      if (response.data.success && response.data.data) {
+        setCache('lehrformen', response.data.data);
+      }
       return response.data;
     } catch (error) {
       throw new Error(handleApiError(error));
@@ -613,11 +680,22 @@ class ModulService {
   }
 
   /**
-   * Get all dozenten for selection
+   * Get all dozenten for selection (cached for 5 minutes)
    */
   async getDozentenOptions(): Promise<ApiResponse<any[]>> {
+    // Check cache first
+    const cached = getCached<any[]>('dozenten');
+    if (cached) {
+      log.debug(' Returning cached dozenten');
+      return { success: true, data: cached };
+    }
+
     try {
       const response = await api.get<ApiResponse<any[]>>('/module/options/dozenten');
+      // Store in cache
+      if (response.data.success && response.data.data) {
+        setCache('dozenten', response.data.data);
+      }
       return response.data;
     } catch (error) {
       throw new Error(handleApiError(error));
@@ -625,15 +703,36 @@ class ModulService {
   }
 
   /**
-   * Get all studiengaenge for selection
+   * Get all studiengaenge for selection (cached for 5 minutes)
    */
   async getStudiengaengeOptions(): Promise<ApiResponse<any[]>> {
+    // Check cache first
+    const cached = getCached<any[]>('studiengaenge');
+    if (cached) {
+      log.debug(' Returning cached studiengaenge');
+      return { success: true, data: cached };
+    }
+
     try {
       const response = await api.get<ApiResponse<any[]>>('/module/options/studiengaenge');
+      // Store in cache
+      if (response.data.success && response.data.data) {
+        setCache('studiengaenge', response.data.data);
+      }
       return response.data;
     } catch (error) {
       throw new Error(handleApiError(error));
     }
+  }
+
+  /**
+   * Clear options cache (call after data changes)
+   */
+  clearOptionsCache(): void {
+    optionsCache.lehrformen = undefined;
+    optionsCache.dozenten = undefined;
+    optionsCache.studiengaenge = undefined;
+    log.debug(' Options cache cleared');
   }
 }
 

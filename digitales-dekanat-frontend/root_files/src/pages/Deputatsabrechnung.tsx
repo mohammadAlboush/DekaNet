@@ -48,6 +48,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import deputatService from '../services/deputatService';
 import planungPhaseService from '../services/planungPhaseService';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
+import { PlanungPhase } from '../types/planungPhase.types';
 
 const log = createContextLogger('Deputatsabrechnung');
 
@@ -70,7 +72,14 @@ import {
   VertretungArt,
   BetreuungsArt,
   BetreuungStatus,
+  DeputatsLehrtaetigkeit,
+  DeputatsLehrexport,
+  DeputatsVertretung,
+  DeputatsErmaessigung,
+  DeputatsBetreuung,
 } from '../types/deputat.types';
+
+type EditItemType = DeputatsLehrtaetigkeit | DeputatsLehrexport | DeputatsVertretung | DeputatsErmaessigung | DeputatsBetreuung | null;
 import { useToastStore } from '../components/common/Toast';
 
 /**
@@ -110,7 +119,7 @@ const Deputatsabrechnung: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [abrechnung, setAbrechnung] = useState<DeputatsabrechnungType | null>(null);
-  const [planungsphasen, setPlanungsphasen] = useState<any[]>([]);
+  const [planungsphasen, setPlanungsphasen] = useState<PlanungPhase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(
     planungsphaseId ? parseInt(planungsphaseId) : null
   );
@@ -121,7 +130,7 @@ const Deputatsabrechnung: React.FC = () => {
   const [dialogType, setDialogType] = useState<
     'lehrtaetigkeit' | 'lehrexport' | 'vertretung' | 'ermaessigung' | 'betreuung' | null
   >(null);
-  const [editItem, setEditItem] = useState<any>(null);
+  const [editItem, setEditItem] = useState<EditItemType>(null);
 
   // Form States
   const [lehrtaetigkeitForm, setLehrtaetigkeitForm] = useState<CreateLehrtaetigkeitData>({
@@ -170,7 +179,7 @@ const Deputatsabrechnung: React.FC = () => {
 
         // Auto-select aktive Phase wenn keine ausgewählt
         if (!selectedPhaseId && phasen.length > 0) {
-          const aktive = response.aktive_phase || phasen.find((p: any) => p.ist_aktiv);
+          const aktive = response.aktive_phase || phasen.find((p: PlanungPhase) => p.ist_aktiv);
           if (aktive) {
             setSelectedPhaseId(aktive.id);
           }
@@ -214,8 +223,8 @@ const Deputatsabrechnung: React.FC = () => {
       await deputatService.importPlanung(abrechnung.id);
       await loadAbrechnung();
       showToast('Planung importiert', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Import', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Import'), 'error');
     }
   };
 
@@ -225,15 +234,15 @@ const Deputatsabrechnung: React.FC = () => {
       await deputatService.importSemesterauftraege(abrechnung.id);
       await loadAbrechnung();
       showToast('Semesteraufträge importiert', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Import', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Import'), 'error');
     }
   };
 
   // Dialog Handlers
   const openDialog = (
     type: 'lehrtaetigkeit' | 'lehrexport' | 'vertretung' | 'ermaessigung' | 'betreuung',
-    item?: any
+    item?: EditItemType
   ) => {
     setDialogType(type);
     setEditItem(item || null);
@@ -359,8 +368,8 @@ const Deputatsabrechnung: React.FC = () => {
       await loadAbrechnung();
       closeDialog();
       showToast('Gespeichert', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Speichern', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Speichern'), 'error');
     }
   };
 
@@ -392,8 +401,8 @@ const Deputatsabrechnung: React.FC = () => {
 
       await loadAbrechnung();
       showToast('Gelöscht', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Löschen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Löschen'), 'error');
     }
   };
 
@@ -406,8 +415,8 @@ const Deputatsabrechnung: React.FC = () => {
       await deputatService.einreichen(abrechnung.id);
       await loadAbrechnung();
       showToast('Abrechnung eingereicht', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Einreichen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Einreichen'), 'error');
     }
   };
 
@@ -419,8 +428,8 @@ const Deputatsabrechnung: React.FC = () => {
       await deputatService.zuruecksetzen(abrechnung.id);
       await loadAbrechnung();
       showToast('Abrechnung zurückgesetzt', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Zurücksetzen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Zurücksetzen'), 'error');
     }
   };
 
@@ -432,8 +441,8 @@ const Deputatsabrechnung: React.FC = () => {
       setPdfLoading(true);
       await deputatService.downloadPdf(abrechnung.id);
       showToast('PDF wurde heruntergeladen', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim PDF-Export', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim PDF-Export'), 'error');
     } finally {
       setPdfLoading(false);
     }

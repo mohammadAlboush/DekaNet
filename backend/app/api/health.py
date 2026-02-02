@@ -13,6 +13,7 @@ from flask import Blueprint, jsonify
 from datetime import datetime
 from app.extensions import db
 from sqlalchemy import text
+from app.api.base import ApiResponse
 import psutil
 import os
 
@@ -189,10 +190,11 @@ def metrics():
         return jsonify(metrics_data), 200
 
     except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'timestamp': datetime.utcnow().isoformat() + 'Z'
-        }), 500
+        return ApiResponse.internal_error(
+            message='Metrics collection failed',
+            exception=e,
+            log_context='HealthAPI'
+        )
 
 
 @health_api.route('/ping', methods=['GET'])

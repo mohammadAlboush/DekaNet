@@ -39,6 +39,7 @@ import {
   DozentenPlanungsfortschrittResponse,
 } from '../../services/dashboardService';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('DozentenPlanungsfortschritt');
 
@@ -79,9 +80,9 @@ const DozentenPlanungsfortschritt: React.FC<DozentenPlanungsfortschrittProps> = 
       } else {
         setError(response.message || 'Fehler beim Laden der Daten');
       }
-    } catch (err: any) {
-      log.error('Error loading Dozenten Planungsfortschritt:', err);
-      setError(err.response?.data?.message || 'Fehler beim Laden der Daten');
+    } catch (err: unknown) {
+      log.error('Error loading Dozenten Planungsfortschritt:', { err });
+      setError(getErrorMessage(err, 'Fehler beim Laden der Daten'));
     } finally {
       setLoading(false);
     }
@@ -234,7 +235,7 @@ const DozentenPlanungsfortschritt: React.FC<DozentenPlanungsfortschrittProps> = 
             <Select
               value={statusFilter}
               label="Status"
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as 'alle' | 'vollständig' | 'teilweise' | 'offen')}
               startAdornment={<FilterList sx={{ mr: 1, color: 'action.active' }} />}
             >
               <MenuItem value="alle">Alle</MenuItem>

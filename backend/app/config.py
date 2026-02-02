@@ -7,12 +7,18 @@ WICHTIG: JWT_TOKEN_LOCATION muss VOR init_extensions() gesetzt sein!
 """
 
 import os
+import secrets
 from datetime import timedelta
 from pathlib import Path
 
 
 # Base Directory
 BASE_DIR = Path(__file__).parent.parent
+
+
+def _generate_dev_secret():
+    """Generiert einen zufälligen Secret Key für Development."""
+    return secrets.token_hex(32)
 
 
 class Config:
@@ -24,25 +30,24 @@ class Config:
     # =========================================================================
     # SECRET KEY (WICHTIG: In Production aus Environment Variable!)
     # =========================================================================
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production-!!!-WICHTIG'
-    
+    SECRET_KEY = os.environ.get('SECRET_KEY') or _generate_dev_secret()
+
     # =========================================================================
     # JWT CONFIGURATION - KRITISCH: MUSS VOR EXTENSION INIT GESETZT SEIN!
     # =========================================================================
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-key-change-in-production'
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or _generate_dev_secret()
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
-    # JWT Token Location - WO der Token gesucht wird
-    # ✅ SECURITY FIX: Cookies statt Headers für XSS-Schutz
+    # JWT Token Location - Cookies für XSS-Schutz
     JWT_TOKEN_LOCATION = ['cookies']
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
 
-    # JWT Cookie Security - KRITISCH für Sicherheit!
-    JWT_COOKIE_SECURE = False  # ✅ In Production: True (nur HTTPS)
-    JWT_COOKIE_CSRF_PROTECT = True  # ✅ CSRF Protection für JWT Cookies
-    JWT_COOKIE_SAMESITE = 'Lax'  # ✅ CSRF Protection
+    # JWT Cookie Security
+    JWT_COOKIE_SECURE = False  # In Production: True (nur HTTPS)
+    JWT_COOKIE_CSRF_PROTECT = True  # CSRF Protection für JWT Cookies
+    JWT_COOKIE_SAMESITE = 'Lax'  # CSRF Protection
     JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
     JWT_REFRESH_COOKIE_NAME = 'refresh_token_cookie'
     JWT_ACCESS_COOKIE_PATH = '/api/'
@@ -72,15 +77,15 @@ class Config:
     # =========================================================================
     # FLASK-LOGIN & SESSION SECURITY
     # =========================================================================
-    PERMANENT_SESSION_LIFETIME = timedelta(hours=2)  # ✅ Reduziert von 24h auf 2h
-    SESSION_COOKIE_SECURE = False  # ✅ In Production: True (nur HTTPS)
-    SESSION_COOKIE_HTTPONLY = True  # ✅ XSS Protection
-    SESSION_COOKIE_SAMESITE = 'Lax'  # ✅ CSRF Protection
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
+    SESSION_COOKIE_SECURE = False  # In Production: True (nur HTTPS)
+    SESSION_COOKIE_HTTPONLY = True  # XSS Protection
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF Protection
 
-    REMEMBER_COOKIE_DURATION = timedelta(days=7)  # ✅ Reduziert von 30 auf 7 Tage
-    REMEMBER_COOKIE_SECURE = False  # ✅ In Production: True (nur HTTPS)
-    REMEMBER_COOKIE_HTTPONLY = True  # ✅ XSS Protection
-    REMEMBER_COOKIE_SAMESITE = 'Lax'  # ✅ CSRF Protection
+    REMEMBER_COOKIE_DURATION = timedelta(days=7)
+    REMEMBER_COOKIE_SECURE = False  # In Production: True (nur HTTPS)
+    REMEMBER_COOKIE_HTTPONLY = True  # XSS Protection
+    REMEMBER_COOKIE_SAMESITE = 'Lax'  # CSRF Protection
     
     # =========================================================================
     # PAGINATION
@@ -166,8 +171,7 @@ class DevelopmentConfig(Config):
     SESSION_COOKIE_SECURE = False
     REMEMBER_COOKIE_SECURE = False
 
-    # ✅ Rate Limiting für Development lockerer
-    # Verhindert Sperrung bei häufigem Testen
+    # Rate Limiting für Development lockerer
     RATELIMIT_STORAGE_URL = "memory://"
     RATELIMIT_DEFAULT = "1000 per hour"  # Sehr großzügig für Development
     RATELIMIT_HEADERS_ENABLED = True
@@ -222,39 +226,34 @@ class ProductionConfig(Config):
     def init_app(cls, app):
         """Production-spezifische Initialisierung"""
         Config.init_app(app)
-        
-        # Validiere SECRET_KEYs
-        if not cls.SECRET_KEY or cls.SECRET_KEY == 'dev-secret-key-change-in-production-!!!-WICHTIG':
+
+        # Validiere SECRET_KEYs - muessen aus Environment kommen
+        if not cls.SECRET_KEY:
             raise ValueError(
                 "SECRET_KEY muss in Production explizit gesetzt sein!\n"
-                "Setze die Environment Variable: export SECRET_KEY='your-secret-key'"
+                "Setze die Environment Variable: export SECRET_KEY='your-secret-key'\n"
+                "Generiere einen Key: python -c \"import secrets; print(secrets.token_hex(32))\""
             )
-        
-        if not cls.JWT_SECRET_KEY or cls.JWT_SECRET_KEY == 'jwt-secret-key-change-in-production':
+
+        if not cls.JWT_SECRET_KEY:
             raise ValueError(
                 "JWT_SECRET_KEY muss in Production explizit gesetzt sein!\n"
-                "Setze die Environment Variable: export JWT_SECRET_KEY='your-jwt-secret-key'"
+                "Setze die Environment Variable: export JWT_SECRET_KEY='your-jwt-secret-key'\n"
+                "Generiere einen Key: python -c \"import secrets; print(secrets.token_hex(32))\""
             )
 
         # Validiere Cookie-Sicherheit für HTTPS
         if not cls.SESSION_COOKIE_SECURE:
             app.logger.warning(
-                "⚠️  WARNUNG: SESSION_COOKIE_SECURE ist False! "
+                "WARNUNG: SESSION_COOKIE_SECURE ist False! "
                 "Setze SESSION_COOKIE_SECURE=true für HTTPS-Produktion."
             )
 
         # Validiere CORS-Origins
         if not cls.CORS_ORIGINS or cls.CORS_ORIGINS == [''] or 'your-domain.com' in str(cls.CORS_ORIGINS):
             app.logger.warning(
-                "⚠️  WARNUNG: CORS_ORIGINS nicht konfiguriert! "
+                "WARNUNG: CORS_ORIGINS nicht konfiguriert! "
                 "Setze CORS_ORIGINS auf deine Produktions-Domain."
-            )
-
-        # Validiere Placeholder-Werte
-        if 'CHANGE_ME' in str(cls.SECRET_KEY) or 'CHANGE_ME' in str(cls.JWT_SECRET_KEY):
-            raise ValueError(
-                "SECRET_KEY und JWT_SECRET_KEY enthalten Placeholder-Werte!\n"
-                "Generiere neue Keys: python -c \"import secrets; print(secrets.token_hex(32))\""
             )
 
 

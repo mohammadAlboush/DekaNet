@@ -61,7 +61,7 @@ const StepModuleAuswahl: React.FC<StepModuleAuswahlProps> = ({
     minECTS: 0,
     maxECTS: 30,
     suchbegriff: '',
-    nurMeineModule: true, // ✅ FIX: Start mit true - zeige standardmäßig nur eigene Module
+    nurMeineModule: true, // Start mit true - zeige standardmäßig nur eigene Module
   });
 
   useEffect(() => {
@@ -75,7 +75,7 @@ const StepModuleAuswahl: React.FC<StepModuleAuswahlProps> = ({
     }
   }, [data.selectedModules]);
 
-  // ✅ DEAKTIVIERT: Turnus-Filter bleibt auf "Alle" statt automatisch gesetzt zu werden
+  // DEAKTIVIERT: Turnus-Filter bleibt auf "Alle" statt automatisch gesetzt zu werden
   // useEffect(() => {
   //   if (data.semester?.kuerzel) {
   //     const semesterTurnus = determineSemesterTurnus(data.semester.kuerzel);
@@ -102,7 +102,7 @@ const StepModuleAuswahl: React.FC<StepModuleAuswahlProps> = ({
       });
 
       if (userResponse.data.success) {
-        // ✅ FIX: Backend gibt {data: {user: {...}}} zurück, nicht direkt {data: {...}}
+        // Backend gibt {data: {user: {...}}} zurück, nicht direkt {data: {...}}
         const userData = userResponse.data.data.user || userResponse.data.data;
         setCurrentUser(userData);
         logger.debug('StepModuleAuswahl', 'Current user loaded', {
@@ -144,7 +144,7 @@ const StepModuleAuswahl: React.FC<StepModuleAuswahlProps> = ({
           });
         });
 
-        // ✅ FIX: Korrekte Prüfung der Dozenten-Zuordnung
+        // Korrekte Prüfung der Dozenten-Zuordnung
         const userData = userResponse.data.data.user || userResponse.data.data;
         if (userResponse.data.success && userData.dozent_id) {
           const dozentId = userData.dozent_id;
@@ -259,7 +259,7 @@ const StepModuleAuswahl: React.FC<StepModuleAuswahlProps> = ({
       logger.debug('StepModuleAuswahl', `Max ECTS filter (<=${filters.maxECTS})`, { beforeCount, afterCount: filtered.length });
     }
 
-    // ✅ FIX: Verbesserte Suchfunktion
+    // Verbesserte Suchfunktion
     if (filters.suchbegriff && filters.suchbegriff.trim() !== '') {
       const search = filters.suchbegriff.toLowerCase().trim();
       const beforeCount = filtered.length;

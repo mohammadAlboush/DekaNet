@@ -2,7 +2,7 @@
 Token Blocklist - Sichere Token-Invalidierung
 ==============================================
 
-✅ SECURITY: Ermöglicht das Invalidieren von JWTs bei Logout.
+Ermöglicht das Invalidieren von JWTs bei Logout.
 
 In-Memory Implementation für Development.
 Für Production: Redis oder Datenbank verwenden.
@@ -27,12 +27,12 @@ class TokenBlocklist:
     """
     Thread-safe In-Memory Token Blocklist.
 
-    ✅ SECURITY FEATURES:
+    Features:
     - Automatische Bereinigung abgelaufener Tokens
     - Thread-safe durch Lock
     - TTL-basierte Speicherung (Tokens werden nach Ablauf entfernt)
 
-    ⚠️ HINWEIS: Für Production sollte Redis verwendet werden!
+    Hinweis: Für Production sollte Redis verwendet werden.
     Diese Implementation verliert Daten bei Server-Neustart.
     """
 

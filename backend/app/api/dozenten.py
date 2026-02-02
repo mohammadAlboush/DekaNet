@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, current_user
 from sqlalchemy.orm import joinedload, subqueryload
 from sqlalchemy import func
-from app.models import Dozent, Benutzer, ModulDozent, Modul
+from app.models import Dozent, DozentPosition, Benutzer, ModulDozent, Modul
 from app.extensions import db
 
 # Blueprint Definition
@@ -44,7 +44,16 @@ def get_alle_dozenten():
         aktiv = request.args.get('aktiv')
         mit_benutzer = request.args.get('mit_benutzer')
         search = request.args.get('search')
-        
+        include_platzhalter = request.args.get('include_platzhalter', 'false').lower() == 'true'
+
+        # Pre-compute module counts to avoid N+1 queries
+        modul_counts = dict(
+            db.session.query(
+                ModulDozent.dozent_id,
+                func.count(func.distinct(ModulDozent.modul_id))
+            ).group_by(ModulDozent.dozent_id).all()
+        )
+
         # Direkte Datenbankabfrage mit eager loading
         if not search and not fachbereich and mit_benutzer is None:
             if aktiv is not None:
@@ -52,22 +61,19 @@ def get_alle_dozenten():
             else:
                 aktiv_bool = True
 
-            # Pre-compute module counts to avoid N+1 queries
-            modul_counts = dict(
-                db.session.query(
-                    ModulDozent.dozent_id,
-                    func.count(func.distinct(ModulDozent.modul_id))
-                ).group_by(ModulDozent.dozent_id).all()
-            )
-
-            dozenten = Dozent.query.options(
+            query = Dozent.query.options(
                 joinedload(Dozent.benutzer)
-            ).filter_by(aktiv=aktiv_bool).all()
+            ).filter_by(aktiv=aktiv_bool)
+
+            if not include_platzhalter:
+                query = query.filter_by(ist_platzhalter=False)
+
+            dozenten = query.all()
 
             if len(dozenten) == 0:
                 dozenten = Dozent.query.options(
                     joinedload(Dozent.benutzer)
-                ).all()
+                ).filter_by(ist_platzhalter=False).all()
         else:
             # Mit Filtern
             from app.services import dozent_service
@@ -82,19 +88,12 @@ def get_alle_dozenten():
             else:
                 mit_benutzer_bool = None
 
-            # Pre-compute module counts to avoid N+1 queries
-            modul_counts = dict(
-                db.session.query(
-                    ModulDozent.dozent_id,
-                    func.count(func.distinct(ModulDozent.modul_id))
-                ).group_by(ModulDozent.dozent_id).all()
-            )
-
             dozenten = dozent_service.filter_dozenten(
                 fachbereich=fachbereich,
                 aktiv=aktiv_bool,
                 mit_benutzer=mit_benutzer_bool,
-                suchbegriff=search
+                suchbegriff=search,
+                include_platzhalter=include_platzhalter
             )
         
         # Format response - use pre-computed counts to avoid N+1 queries
@@ -110,6 +109,7 @@ def get_alle_dozenten():
                     'email': dozent.email,
                     'fachbereich': dozent.fachbereich,
                     'aktiv': dozent.aktiv,
+                    'ist_platzhalter': dozent.ist_platzhalter if hasattr(dozent, 'ist_platzhalter') else False,
                     'name_mit_titel': f"{dozent.titel or ''} {dozent.name_komplett}".strip(),
                     'hat_benutzer_account': dozent.benutzer is not None,
                     'anzahl_module': modul_counts.get(dozent.id, 0)
@@ -130,8 +130,7 @@ def get_alle_dozenten():
         current_app.logger.error(f"Error: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'message': 'Fehler beim Laden der Dozenten',
-            'error': str(e)
+            'message': 'Fehler beim Laden der Dozenten'
         }), 500
 
 
@@ -181,8 +180,7 @@ def search_dozenten():
         current_app.logger.error(f"Search error: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'message': 'Fehler bei der Suche',
-            'error': str(e)
+            'message': 'Fehler bei der Suche'
         }), 500
 
 
@@ -291,8 +289,7 @@ def get_dozent(dozent_id: int):
         current_app.logger.error(f"[DozentenAPI] Error: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'message': 'Fehler beim Laden des Dozenten',
-            'error': str(e)
+            'message': 'Fehler beim Laden des Dozenten'
         }), 500
 
 
@@ -391,8 +388,7 @@ def get_dozent_module(dozent_id: int):
         current_app.logger.error(f"Error: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'message': 'Fehler beim Laden der Module',
-            'error': str(e)
+            'message': 'Fehler beim Laden der Module'
         }), 500
 
 
@@ -405,14 +401,22 @@ def get_dozent_module(dozent_id: int):
 def create_dozent():
     """POST /api/dozenten/ - Erstellt einen neuen Dozenten"""
     try:
-        if current_user.rolle.name != 'dekan':
+        # Sichere Berechtigungsprüfung
+        if not current_user or not current_user.rolle or current_user.rolle.name != 'dekan':
             return jsonify({
                 'success': False,
                 'message': 'Keine Berechtigung'
             }), 403
-        
+
         data = request.get_json()
-        
+
+        # Null-Check für JSON-Daten
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'Ungültige Anfrage: JSON-Daten fehlen'
+            }), 400
+
         if 'nachname' not in data:
             return jsonify({
                 'success': False,
@@ -462,11 +466,10 @@ def create_dozent():
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error: {e}")
+        current_app.logger.error(f"Error creating dozent: {e}")
         return jsonify({
             'success': False,
-            'message': 'Fehler beim Erstellen',
-            'error': str(e)
+            'message': 'Fehler beim Erstellen des Dozenten'
         }), 500
 
 
@@ -475,20 +478,26 @@ def create_dozent():
 def update_dozent(dozent_id: int):
     """PUT /api/dozenten/<id> - BEARBEITET ALLE FELDER"""
     try:
-        if current_user.rolle.name != 'dekan':
+        # Sichere Berechtigungsprüfung
+        if not current_user or not current_user.rolle or current_user.rolle.name != 'dekan':
             return jsonify({
                 'success': False,
                 'message': 'Keine Berechtigung'
             }), 403
-        
+
         dozent = Dozent.query.get(dozent_id)
         if not dozent:
             return jsonify({
                 'success': False,
                 'message': 'Dozent nicht gefunden'
             }), 404
-        
+
         data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'Ungültige Anfrage: JSON-Daten fehlen'
+            }), 400
         
         # ALLE editierbaren Felder
         updateable_fields = ['titel', 'vorname', 'nachname', 'email', 'fachbereich', 'aktiv']
@@ -524,11 +533,10 @@ def update_dozent(dozent_id: int):
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error: {e}")
+        current_app.logger.error(f"Error updating dozent {dozent_id}: {e}")
         return jsonify({
             'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
+            'message': 'Fehler beim Aktualisieren des Dozenten'
         }), 500
 
 
@@ -537,12 +545,13 @@ def update_dozent(dozent_id: int):
 def delete_dozent(dozent_id: int):
     """DELETE /api/dozenten/<id> - Löscht einen Dozenten"""
     try:
-        if current_user.rolle.name != 'dekan':
+        # Sichere Berechtigungsprüfung
+        if not current_user or not current_user.rolle or current_user.rolle.name != 'dekan':
             return jsonify({
                 'success': False,
                 'message': 'Keine Berechtigung'
             }), 403
-        
+
         dozent = Dozent.query.get(dozent_id)
         if not dozent:
             return jsonify({
@@ -581,9 +590,86 @@ def delete_dozent(dozent_id: int):
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error: {e}")
+        current_app.logger.error(f"Error deleting dozent: {e}")
         return jsonify({
             'success': False,
-            'message': 'Fehler beim Löschen',
-            'error': str(e)
+            'message': 'Fehler beim Löschen'
+        }), 500
+
+
+# =========================================================================
+# POSITIONEN ENDPOINTS
+# =========================================================================
+
+@dozenten_api.route('/positionen/', methods=['GET'])
+@jwt_required()
+def get_positionen():
+    """GET /api/dozenten/positionen/ - Holt alle Dozent-Positionen (Platzhalter/Rollen/Gruppen)"""
+    try:
+        typ = request.args.get('typ')
+
+        query = DozentPosition.query
+        if typ:
+            query = query.filter_by(typ=typ)
+
+        positionen = query.order_by(DozentPosition.typ, DozentPosition.bezeichnung).all()
+
+        items = [p.to_dict() for p in positionen]
+
+        return jsonify({
+            'success': True,
+            'data': items,
+            'message': f'{len(items)} Position(en) gefunden'
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': 'Fehler beim Laden der Positionen'
+        }), 500
+
+
+@dozenten_api.route('/positionen/<int:position_id>', methods=['GET'])
+@jwt_required()
+def get_position(position_id: int):
+    """GET /api/dozenten/positionen/<id> - Details einer Position"""
+    try:
+        position = DozentPosition.query.get(position_id)
+        if not position:
+            return jsonify({
+                'success': False,
+                'message': 'Position nicht gefunden'
+            }), 404
+
+        data = position.to_dict()
+
+        # Module die dieser Position zugeordnet sind
+        zuordnungen = ModulDozent.query.filter_by(dozent_position_id=position_id).all()
+        data['module'] = []
+        modul_ids = list(set(z.modul_id for z in zuordnungen))
+        if modul_ids:
+            module = {m.id: m for m in Modul.query.filter(Modul.id.in_(modul_ids)).all()}
+            for z in zuordnungen:
+                modul = module.get(z.modul_id)
+                if modul:
+                    data['module'].append({
+                        'modul_id': modul.id,
+                        'kuerzel': modul.kuerzel,
+                        'bezeichnung_de': modul.bezeichnung_de,
+                        'rolle': z.rolle,
+                    })
+
+        data['anzahl_module'] = len(modul_ids)
+
+        return jsonify({
+            'success': True,
+            'data': data
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': 'Fehler beim Laden der Position'
         }), 500

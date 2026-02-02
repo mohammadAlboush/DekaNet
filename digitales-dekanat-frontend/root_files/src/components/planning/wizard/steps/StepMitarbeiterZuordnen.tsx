@@ -69,7 +69,7 @@ const StepMitarbeiterZuordnen: React.FC<StepMitarbeiterZuordnenProps> = ({
     loadData();
   }, []);
 
-  // ✅ Load existing assignments from wizard data
+  // Load existing assignments from wizard data
   useEffect(() => {
     if (data.mitarbeiterZuordnung) {
       setZuordnungen(new Map(data.mitarbeiterZuordnung));
@@ -86,13 +86,13 @@ const StepMitarbeiterZuordnen: React.FC<StepMitarbeiterZuordnenProps> = ({
         setCurrentUser(userResponse.data.data);
       }
 
-      // Load all active dozenten - ✅ FIXED: Korrekte Route (plural!)
+      // Load all active dozenten - Korrekte Route (plural!)
       const dozentenResponse = await api.get('/dozenten?aktiv=true');
       if (dozentenResponse.data.success) {
         setDozenten(dozentenResponse.data.data || []);
       }
 
-      // ✅ Auto-assign current professor to all modules if not already assigned
+      // Auto-assign current professor to all modules if not already assigned
       if (userResponse.data.success && userResponse.data.data.dozent_id) {
         const dozentId = userResponse.data.data.dozent_id;
         const newZuordnungen = new Map(data.mitarbeiterZuordnung || new Map());
@@ -280,7 +280,7 @@ const StepMitarbeiterZuordnen: React.FC<StepMitarbeiterZuordnenProps> = ({
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {(selected as number[]).map((value) => {
                                 const dozent = dozenten.find(d => d.id === value);
-                                // ✅ FIXED: Show warning if dozent not found (inactive or deleted)
+                                // Show warning if dozent not found (inactive or deleted)
                                 if (!dozent) {
                                   return (
                                     <Chip

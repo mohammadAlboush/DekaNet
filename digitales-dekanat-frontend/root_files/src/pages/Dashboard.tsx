@@ -48,6 +48,8 @@ import auftragService from '../services/auftragService';
 import semesterService from '../services/semesterService';
 import { Semester } from '../types/semester.types';
 import { SemesterAuftrag } from '../types/auftrag.types';
+import { Semesterplanung } from '../types/planung.types';
+import { getErrorMessage } from '../utils/errorUtils';
 import DekanStatistics from '../components/dekan/DekanStatistics';
 import NichtZugeordneteModule from '../components/dashboard/NichtZugeordneteModule';
 import DozentenPlanungsfortschritt from '../components/dashboard/DozentenPlanungsfortschritt';
@@ -151,7 +153,7 @@ const DekanDashboard: React.FC = () => {
       // Load eingereichte Planungen count (nur Status "eingereicht")
       const planungenRes = await planungService.getEingereichtePlanungen();
       const eingereichtePlanungen = planungenRes.success && planungenRes.data
-        ? planungenRes.data.filter((p: any) => p.status === 'eingereicht').length
+        ? planungenRes.data.filter((p: Semesterplanung) => p.status === 'eingereicht').length
         : 0;
 
       // Load Semesteraufträge (beantragt und genehmigt)
@@ -206,8 +208,8 @@ const DekanDashboard: React.FC = () => {
         await triggerRefresh(planningSemester.id);
       }
       setTimeout(() => setActionSuccess(null), 3000);
-    } catch (error: any) {
-      setActionError(error.response?.data?.message || 'Fehler beim Genehmigen');
+    } catch (error: unknown) {
+      setActionError(getErrorMessage(error, 'Fehler beim Genehmigen'));
     } finally {
       setActionLoading(null);
     }
@@ -236,8 +238,8 @@ const DekanDashboard: React.FC = () => {
         await triggerRefresh(planningSemester.id);
       }
       setTimeout(() => setActionSuccess(null), 3000);
-    } catch (error: any) {
-      setActionError(error.response?.data?.message || 'Fehler beim Ablehnen');
+    } catch (error: unknown) {
+      setActionError(getErrorMessage(error, 'Fehler beim Ablehnen'));
     } finally {
       setActionLoading(null);
     }

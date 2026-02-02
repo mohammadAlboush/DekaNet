@@ -11,6 +11,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
 from app.models.user import Benutzer
 from app.models.planung import Semesterplanung, GeplantesModul, WunschFreierTag
+from app.models.planungsphase import Planungsphase, ArchiviertePlanung
+from app.models.semester import Semester
 from app.models.deputat import (
     Deputatsabrechnung,
     DeputatsLehrtaetigkeit,
@@ -42,12 +44,14 @@ def check_dekan_role():
 @jwt_required()
 def reset_database():
     """
-    Setzt die Datenbank zurück (löscht Planungen und Deputatsabrechnungen)
+    Setzt die Datenbank zurück (löscht Planungen, Phasen und Deputatsabrechnungen)
 
     ACHTUNG: Diese Aktion ist nicht umkehrbar!
 
     Löscht:
     - Alle Semesterplanungen (inkl. GeplantesModul, WunschFreierTag)
+    - Alle archivierten Planungen
+    - Alle Planungsphasen
     - Alle Deputatsabrechnungen (inkl. alle Child-Tabellen)
     - Alle SemesterAufträge
 
@@ -80,6 +84,8 @@ def reset_database():
             'semesterplanungen': Semesterplanung.query.count(),
             'geplante_module': GeplantesModul.query.count(),
             'wunsch_freie_tage': WunschFreierTag.query.count(),
+            'archivierte_planungen': ArchiviertePlanung.query.count(),
+            'planungsphasen': Planungsphase.query.count(),
             'deputatsabrechnungen': Deputatsabrechnung.query.count(),
             'deputats_lehrtaetigkeiten': DeputatsLehrtaetigkeit.query.count(),
             'deputats_lehrexporte': DeputatsLehrexport.query.count(),
@@ -111,7 +117,16 @@ def reset_database():
         # 4. Semesterplanungen
         Semesterplanung.query.delete()
 
-        # 5. SemesterAufträge (Zuordnungen, nicht die Master-Liste!)
+        # 5. Archivierte Planungen (vor Planungsphasen wegen FK)
+        ArchiviertePlanung.query.delete()
+
+        # 6. Planungsphasen (nach archivierten Planungen wegen FK)
+        Planungsphase.query.delete()
+
+        # 7. Setze ist_planungsphase Flag auf allen Semestern zurück
+        Semester.query.update({'ist_planungsphase': False})
+
+        # 8. SemesterAufträge (Zuordnungen, nicht die Master-Liste!)
         SemesterAuftrag.query.delete()
 
         db.session.commit()
@@ -148,6 +163,8 @@ def preview_reset():
             'semesterplanungen': Semesterplanung.query.count(),
             'geplante_module': GeplantesModul.query.count(),
             'wunsch_freie_tage': WunschFreierTag.query.count(),
+            'archivierte_planungen': ArchiviertePlanung.query.count(),
+            'planungsphasen': Planungsphase.query.count(),
             'deputatsabrechnungen': Deputatsabrechnung.query.count(),
             'deputats_lehrtaetigkeiten': DeputatsLehrtaetigkeit.query.count(),
             'deputats_lehrexporte': DeputatsLehrexport.query.count(),

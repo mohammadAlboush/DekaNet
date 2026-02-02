@@ -28,6 +28,7 @@ import TemplateModulDialog from './TemplateModulDialog';
 import templateService from '../../services/templateService';
 import { useToastStore } from '../common/Toast';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('TemplateModulList');
 
@@ -73,9 +74,9 @@ const TemplateModulList: React.FC<TemplateModulListProps> = ({
       await templateService.removeModul(templateId, modul.id);
       showToast('Modul entfernt', 'success');
       onModuleChange();
-    } catch (error: any) {
-      log.error('Error removing module:', error);
-      showToast(error.message || 'Fehler beim Entfernen', 'error');
+    } catch (error: unknown) {
+      log.error('Error removing module:', { error });
+      showToast(getErrorMessage(error, 'Fehler beim Entfernen'), 'error');
     }
   };
 

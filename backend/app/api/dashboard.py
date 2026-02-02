@@ -4,11 +4,15 @@ Dashboard API
 REST API für Dashboard und Übersichten.
 
 Endpoints:
-    GET /api/dashboard              - Dashboard Übersicht
-    GET /api/dashboard/dozent       - Dozenten-Dashboard
-    GET /api/dashboard/dekan        - Dekan-Dashboard
-    GET /api/dashboard/statistik    - Gesamt-Statistiken
-    GET /api/dashboard/notifications - Benachrichtigungen
+    GET /api/dashboard                          - Dashboard Übersicht
+    GET /api/dashboard/dozent                   - Dozenten-Dashboard
+    GET /api/dashboard/dekan                    - Dekan-Dashboard
+    GET /api/dashboard/statistik                - Gesamt-Statistiken
+    GET /api/dashboard/statistik/phasen         - Phasen-Statistiken
+    GET /api/dashboard/notifications            - Benachrichtigungen
+    GET /api/dashboard/nicht-zugeordnete-module - Nicht zugeordnete Module
+    GET /api/dashboard/dozenten-planungsfortschritt - Planungsfortschritt
+    GET /api/dashboard/modulhandbuecher         - Modulhandbücher-Übersicht
 """
 
 from flask import Blueprint, request, current_app
@@ -31,7 +35,8 @@ from app.services import (
     dozent_service,
     notification_service
 )
-from app.models.modul import Modul, ModulDozent
+from app.models.modul import Modul, ModulDozent, ModulStudiengang
+from app.models.studiengang import Studiengang
 
 # Blueprint
 dashboard_api = Blueprint('dashboard', __name__, url_prefix='/api/dashboard')
@@ -203,13 +208,13 @@ def get_dekan_dashboard():
 def _get_dekan_dashboard_data():
     """Helper: Holt Dekan Dashboard Daten"""
     data = {}
-    
+
     # Planungssemester Statistiken
     planungs_semester = semester_service.get_planungssemester()
     if planungs_semester:
         statistik = semester_service.get_statistik(planungs_semester.id)
         data['planungssemester'] = statistik
-        
+
         # Eingereichte Planungen
         eingereichte = planung_service.get_eingereichte(planungs_semester.id)
         data['eingereichte_planungen'] = {
@@ -222,19 +227,31 @@ def _get_dekan_dashboard_data():
             'anzahl': 0,
             'liste': []
         }
-    
-    # Gesamt-Statistiken
-    data['statistiken'] = {
+
+    # ✅ PERFORMANCE: Statistiken aus Cache holen
+    data['statistiken'] = _get_cached_statistiken()
+
+    # ✅ PERFORMANCE: Semester-Liste aus Cache
+    data['alle_semester'] = _get_cached_semester_liste()
+
+    return data
+
+
+@cache.memoize(timeout=60)  # ✅ 60s Cache für Statistiken
+def _get_cached_statistiken():
+    """Cached: Gesamt-Statistiken für Dashboard"""
+    return {
         'benutzer': user_service.get_statistik(),
         'dozenten': dozent_service.get_statistik(),
         'module': modul_service.get_statistik()
     }
-    
-    # Alle Semester
+
+
+@cache.memoize(timeout=300)  # ✅ 5min Cache für Semester-Liste
+def _get_cached_semester_liste():
+    """Cached: Alle Semester"""
     alle_semester = semester_service.get_all()
-    data['alle_semester'] = [s.to_dict() for s in alle_semester]
-    
-    return data
+    return [s.to_dict() for s in alle_semester]
 
 
 # =========================================================================
@@ -602,11 +619,20 @@ def get_nicht_zugeordnete_module():
             elif semester.ist_sommersemester:
                 relevante_turnus = ['Sommersemester', 'Sommersemester, jährlich', 'Jedes Semester']
         else:
-            # Kein Semester angegeben -> "Alle" Filter
-            # Hole aktives Semester nur für Info-Anzeige
-            semester = Semester.get_aktives_semester()
-            # relevante_turnus = None bedeutet "alle Turnus"
-            relevante_turnus = None
+            # Kein Semester angegeben -> Suche aktive Planungsphase
+            # WICHTIG: Zuerst aktive Planungsphase suchen, dann Fallback auf aktives Semester
+            aktive_phase_any = Planungsphase.query.filter_by(ist_aktiv=True).first()
+            if aktive_phase_any:
+                semester = Semester.query.get(aktive_phase_any.semester_id)
+                # Bestimme relevante Turnus-Werte für dieses Semester
+                if semester and semester.ist_wintersemester:
+                    relevante_turnus = ['Wintersemester', 'Wintersemester, jährlich', 'Jedes Semester']
+                elif semester and semester.ist_sommersemester:
+                    relevante_turnus = ['Sommersemester', 'Sommersemester, jährlich', 'Jedes Semester']
+            else:
+                # Fallback: aktives Semester, aber ohne Turnus-Filter
+                semester = Semester.get_aktives_semester()
+                relevante_turnus = None
 
         # Wenn kein Semester gefunden wurde (auch nicht aktives)
         if not semester:
@@ -615,8 +641,17 @@ def get_nicht_zugeordnete_module():
                 status_code=400
             )
 
-        # Prüfe ob Planungsphase aktiv (nur wenn spezifisches Semester)
-        if semester_id and not semester.ist_planungsphase:
+        # Hole aktive Planungsphase für das gewählte Semester
+        # WICHTIG: Prüfe die Planungsphase-Tabelle UND semester.ist_planungsphase
+        aktive_phase = Planungsphase.query.filter_by(
+            semester_id=semester.id,
+            ist_aktiv=True
+        ).first()
+        # Planungsphase ist aktiv wenn Record existiert ODER semester.ist_planungsphase=True
+        planungsphase_aktiv = aktive_phase is not None or semester.ist_planungsphase
+
+        # Prüfe ob Planungsphase aktiv (nur wenn spezifisches Semester angefragt)
+        if semester_id and not planungsphase_aktiv:
             return ApiResponse.success(
                 message='Keine aktive Planungsphase',
                 data={
@@ -625,21 +660,13 @@ def get_nicht_zugeordnete_module():
                     'nicht_zugeordnete_module': [],
                     'statistik': {
                         'gesamt': 0,
-                        'nach_turnus': {}
+                        'nach_turnus': {},
+                        'alle_module': 0,
+                        'geplante_module': 0,
+                        'zuordnungsquote': 0
                     }
                 }
             )
-
-        # Hole aktive Planungsphase (falls semester_id angegeben)
-        aktive_phase = None
-        planungsphase_aktiv = False
-
-        if semester_id:
-            aktive_phase = Planungsphase.query.filter_by(
-                semester_id=semester.id,
-                ist_aktiv=True
-            ).first()
-            planungsphase_aktiv = aktive_phase is not None
 
         # Query: Alle Module des relevanten Turnus mit Eager Loading
         modul_query = Modul.query.options(
@@ -657,8 +684,8 @@ def get_nicht_zugeordnete_module():
         # Hole alle bereits geplanten Modul-IDs
         geplante_modul_ids = []
 
-        if semester_id and aktive_phase:
-            # Spezifisches Semester mit aktiver Phase
+        if aktive_phase:
+            # Aktive Planungsphase vorhanden - hole geplante Module dieser Phase
             from app.models.planung import Semesterplanung
             geplante_modul_ids = db.session.query(GeplantesModul.modul_id).join(
                 Semesterplanung,
@@ -668,8 +695,8 @@ def get_nicht_zugeordnete_module():
             ).distinct().all()
 
             geplante_modul_ids = [m[0] for m in geplante_modul_ids]
-        elif not semester_id:
-            # "Alle" Filter: Hole alle jemals geplanten Module
+        elif not aktive_phase and not semester_id:
+            # Keine aktive Phase UND kein spezifisches Semester: "Alle" Filter
             geplante_modul_ids = db.session.query(GeplantesModul.modul_id).distinct().all()
             geplante_modul_ids = [m[0] for m in geplante_modul_ids]
 
@@ -679,18 +706,18 @@ def get_nicht_zugeordnete_module():
 
         # ✅ PERFORMANCE FIX: Prefetch alle Planungen mit Benutzer-Daten VOR dem Loop
         modul_planungen_map = {}  # modul_id -> [planungen_data]
-        if semester_id and aktive_phase:
+        if aktive_phase:
             from app.models.planung import Semesterplanung
             from app.models.user import Benutzer
 
             # Hole alle Planungen für alle Module in einem Query (mit Benutzer-Join)
+            # Benutzer hat kein 'titel' Feld - nur vorname und nachname
             alle_planungen = db.session.query(
                 GeplantesModul.modul_id,
                 Semesterplanung.id.label('planung_id'),
                 Semesterplanung.status,
                 Semesterplanung.eingereicht_am,
                 Semesterplanung.benutzer_id,
-                Benutzer.titel,
                 Benutzer.vorname,
                 Benutzer.nachname
             ).join(
@@ -710,8 +737,6 @@ def get_nicht_zugeordnete_module():
 
                 # Name zusammenbauen
                 name_teile = []
-                if p.titel:
-                    name_teile.append(p.titel)
                 if p.vorname:
                     name_teile.append(p.vorname)
                 if p.nachname:
@@ -834,10 +859,15 @@ def get_dozenten_planungsfortschritt():
         else:
             semester = semester_service.get_planungssemester()
 
+        # Graceful Response: Keine Planungsphase aktiv → leere Liste zurückgeben
         if not semester:
-            return ApiResponse.error(
-                message='Kein Semester gefunden',
-                status_code=400
+            return ApiResponse.success(
+                data={
+                    'semester': None,
+                    'planungsphase_aktiv': False,
+                    'dozenten': [],
+                    'message': 'Keine offene Planungsphase'
+                }
             )
 
         # Relevante Turnus-Werte für dieses Semester
@@ -1001,6 +1031,188 @@ def get_dozenten_planungsfortschritt():
         current_app.logger.exception("Error in get_dozenten_planungsfortschritt")
         return ApiResponse.error(
             message='Fehler beim Laden des Planungsfortschritts',
+            errors=[str(e)],
+            status_code=500
+        )
+
+
+# =========================================================================
+# MODULHANDBUECHER
+# =========================================================================
+
+@dashboard_api.route('/modulhandbuecher', methods=['GET'])
+@login_required
+@cache.cached(timeout=300, query_string=True)  # 5 Minuten Cache
+def get_modulhandbuecher():
+    """
+    GET /api/dashboard/modulhandbuecher
+
+    Holt alle Module gruppiert nach Studiengang für Modulhandbücher-Übersicht.
+
+    Returns:
+        200: Studiengänge mit Modulen und Statistiken
+    """
+    try:
+        # Hole alle aktiven Studiengänge mit Eager Loading
+        studiengaenge = Studiengang.query.filter_by(aktiv=True).order_by(
+            Studiengang.kuerzel
+        ).all()
+
+        # Hole alle Module mit ihren Zuordnungen (optimiert mit Joins)
+        alle_module = Modul.query.options(
+            joinedload(Modul.studiengang_zuordnungen).joinedload(ModulStudiengang.studiengang),
+            joinedload(Modul.dozent_zuordnungen).joinedload(ModulDozent.dozent)
+        ).all()
+
+        # Sammle Module die keinem Studiengang zugeordnet sind
+        zugeordnete_modul_ids = set()
+
+        # Baue Studiengang-Daten
+        studiengaenge_data = []
+
+        for sg in studiengaenge:
+            # Hole Module für diesen Studiengang
+            modul_zuordnungen = ModulStudiengang.query.filter_by(
+                studiengang_id=sg.id
+            ).all()
+
+            module_data = []
+            kategorien = {}
+            ects_summe = 0
+            turnus_verteilung = {}
+            semester_verteilung = {}
+
+            for mz in modul_zuordnungen:
+                modul = mz.modul
+                zugeordnete_modul_ids.add(modul.id)
+
+                # Verantwortlicher
+                verantwortlicher = None
+                lehrpersonen = []
+                for dz in modul.dozent_zuordnungen:
+                    if dz.rolle == 'verantwortlicher' and dz.dozent:
+                        verantwortlicher = dz.dozent.name_komplett
+                    elif dz.rolle == 'lehrperson' and dz.dozent:
+                        lehrpersonen.append(dz.dozent.name_komplett)
+
+                # Kategorie aus pflicht/wahlpflicht ableiten
+                if mz.pflicht:
+                    kategorie = 'pflicht'
+                elif mz.wahlpflicht:
+                    kategorie = 'wahlpflicht'
+                else:
+                    kategorie = 'unbekannt'
+
+                module_data.append({
+                    'id': modul.id,
+                    'kuerzel': modul.kuerzel,
+                    'bezeichnung_de': modul.bezeichnung_de,
+                    'bezeichnung_en': modul.bezeichnung_en,
+                    'leistungspunkte': modul.leistungspunkte,
+                    'turnus': modul.turnus,
+                    'sws_gesamt': modul.get_sws_gesamt() if hasattr(modul, 'get_sws_gesamt') else 0,
+                    'semester': mz.semester,
+                    'kategorie': kategorie,
+                    'pflicht': mz.pflicht,
+                    'wahlpflicht': mz.wahlpflicht,
+                    'verantwortlicher': verantwortlicher,
+                    'lehrpersonen': lehrpersonen
+                })
+
+                # Statistiken sammeln
+                if modul.leistungspunkte:
+                    ects_summe += modul.leistungspunkte
+
+                kategorien[kategorie] = kategorien.get(kategorie, 0) + 1
+
+                # Turnus normalisieren für Frontend-Kompatibilität
+                turnus_raw = (modul.turnus or '').lower()
+                if 'wintersemester' in turnus_raw and 'sommersemester' in turnus_raw:
+                    turnus_key = 'jedes_semester'
+                elif 'jedes semester' in turnus_raw:
+                    turnus_key = 'jedes_semester'
+                elif 'wintersemester' in turnus_raw or 'winter' in turnus_raw:
+                    turnus_key = 'wintersemester'
+                elif 'sommersemester' in turnus_raw or 'sommer' in turnus_raw:
+                    turnus_key = 'sommersemester'
+                elif turnus_raw:
+                    turnus_key = 'sonstige'
+                else:
+                    turnus_key = 'unbekannt'
+                turnus_verteilung[turnus_key] = turnus_verteilung.get(turnus_key, 0) + 1
+
+                if mz.semester:
+                    sem_key = str(mz.semester)
+                    semester_verteilung[sem_key] = semester_verteilung.get(sem_key, 0) + 1
+
+            # Sortiere Module nach Semester und Kürzel
+            module_data.sort(key=lambda x: (x['semester'] or 99, x['kuerzel']))
+
+            studiengaenge_data.append({
+                'id': sg.id,
+                'kuerzel': sg.kuerzel,
+                'bezeichnung': sg.bezeichnung,
+                'abschluss': sg.abschluss,
+                'fachbereich': sg.fachbereich,
+                'regelstudienzeit': sg.regelstudienzeit,
+                'ects_gesamt': sg.ects_gesamt,
+                'module': module_data,
+                'statistik': {
+                    'anzahl_module': len(module_data),
+                    'kategorien': kategorien,
+                    'ects_summe': ects_summe,
+                    'turnus_verteilung': turnus_verteilung,
+                    'semester_verteilung': semester_verteilung
+                }
+            })
+
+        # Nicht zugeordnete Module
+        nicht_zugeordnet_data = []
+        for modul in alle_module:
+            if modul.id not in zugeordnete_modul_ids:
+                verantwortlicher = None
+                lehrpersonen = []
+                for dz in modul.dozent_zuordnungen:
+                    if dz.rolle == 'verantwortlicher' and dz.dozent:
+                        verantwortlicher = dz.dozent.name_komplett
+                    elif dz.rolle == 'lehrperson' and dz.dozent:
+                        lehrpersonen.append(dz.dozent.name_komplett)
+
+                nicht_zugeordnet_data.append({
+                    'id': modul.id,
+                    'kuerzel': modul.kuerzel,
+                    'bezeichnung_de': modul.bezeichnung_de,
+                    'bezeichnung_en': modul.bezeichnung_en,
+                    'leistungspunkte': modul.leistungspunkte,
+                    'turnus': modul.turnus,
+                    'sws_gesamt': modul.get_sws_gesamt() if hasattr(modul, 'get_sws_gesamt') else 0,
+                    'semester': None,
+                    'kategorie': 'unbekannt',  # Keine Studiengang-Zuordnung
+                    'verantwortlicher': verantwortlicher,
+                    'lehrpersonen': lehrpersonen
+                })
+
+        # Sortiere nach Kürzel
+        nicht_zugeordnet_data.sort(key=lambda x: x['kuerzel'])
+
+        return ApiResponse.success(data={
+            'studiengaenge': studiengaenge_data,
+            'nicht_zugeordnet': {
+                'module': nicht_zugeordnet_data,
+                'anzahl': len(nicht_zugeordnet_data)
+            },
+            'gesamt_statistik': {
+                'alle_module': len(alle_module),
+                'zugeordnet': len(zugeordnete_modul_ids),
+                'nicht_zugeordnet': len(nicht_zugeordnet_data),
+                'studiengaenge': len(studiengaenge)
+            }
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Error in get_modulhandbuecher")
+        return ApiResponse.error(
+            message='Fehler beim Laden der Modulhandbücher',
             errors=[str(e)],
             status_code=500
         )

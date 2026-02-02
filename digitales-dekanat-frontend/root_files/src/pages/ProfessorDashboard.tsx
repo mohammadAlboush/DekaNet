@@ -140,7 +140,7 @@ const ProfessorDashboard: React.FC = () => {
     try {
       setLoading(true);
 
-      // ✅ FIX: Erst Planung erstellen/holen, dann zum Wizard navigieren
+      // Erst Planung erstellen/holen, dann zum Wizard navigieren
       // Backend gibt entweder neue Planung oder bestehende zurück
       const response = await planungService.createPlanung({
         semester_id: planningSemester.id,
@@ -204,7 +204,7 @@ const ProfessorDashboard: React.FC = () => {
     abgelehnt: Array.isArray(planungen) ? planungen.filter(p => p.status === 'abgelehnt').length : 0,
   };
 
-  // ✅ WICHTIG: Nur Planung der AKTIVEN Planungsphase anzeigen!
+  // Nur Planung der AKTIVEN Planungsphase anzeigen
   const currentPlanung = Array.isArray(planungen) && activePhase
     ? planungen.find(p => p.planungsphase_id === activePhase.id)
     : undefined;
@@ -397,7 +397,7 @@ const ProfessorDashboard: React.FC = () => {
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <Chip 
                     label={currentPlanung.status} 
-                    color={getStatusColor(currentPlanung.status) as any}
+                    color={getStatusColor(currentPlanung.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                     size="small"
                     icon={getStatusIcon(currentPlanung.status)}
                   />
@@ -553,7 +553,7 @@ const ProfessorDashboard: React.FC = () => {
                         <Chip
                           label={planung.status}
                           size="small"
-                          color={getStatusColor(planung.status) as any}
+                          color={getStatusColor(planung.status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                           icon={getStatusIcon(planung.status)}
                         />
                       </Box>

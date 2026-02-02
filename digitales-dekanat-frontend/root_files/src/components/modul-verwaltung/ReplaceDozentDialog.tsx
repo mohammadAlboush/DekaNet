@@ -18,6 +18,7 @@ import { SwapHoriz, Close, ArrowForward } from '@mui/icons-material';
 import modulVerwaltungService from '../../services/modulVerwaltungService';
 import dozentService, { Dozent } from '../../services/dozentService';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('ReplaceDozentDialog');
 
@@ -71,8 +72,8 @@ const ReplaceDozentDialog: React.FC<ReplaceDozentDialogProps> = ({
         const filtered = (response.data || []).filter(d => d.id !== data?.zuordnung.id);
         setDozenten(filtered);
       }
-    } catch (error: any) {
-      log.error('Error loading dozenten:', error);
+    } catch (error: unknown) {
+      log.error('Error loading dozenten:', { error });
     } finally {
       setLoadingDozenten(false);
     }
@@ -113,8 +114,8 @@ const ReplaceDozentDialog: React.FC<ReplaceDozentDialogProps> = ({
       } else {
         setError(response.message || 'Fehler beim Ersetzen des Dozenten');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Ein Fehler ist aufgetreten'));
     } finally {
       setLoading(false);
     }
@@ -126,7 +127,7 @@ const ReplaceDozentDialog: React.FC<ReplaceDozentDialogProps> = ({
   if (!data) return null;
 
   const renderRolleChip = (rolle: string) => {
-    const colors: Record<string, any> = {
+    const colors: Record<string, 'default' | 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'> = {
       verantwortlich: 'primary',
       mitwirkend: 'default',
       vertreter: 'secondary',

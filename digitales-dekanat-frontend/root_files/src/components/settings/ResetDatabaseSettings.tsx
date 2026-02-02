@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material';
 import adminService, { ResetPreview } from '../../services/adminService';
 import { useToastStore } from '../common/Toast';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const CONFIRMATION_CODE = 'RESET_BESTAETIGEN';
 
@@ -67,8 +68,8 @@ const ResetDatabaseSettings: React.FC = () => {
       } else {
         setPreviewError(response.error || 'Fehler beim Laden der Vorschau');
       }
-    } catch (error: any) {
-      setPreviewError(error.message || 'Fehler beim Laden der Vorschau');
+    } catch (error: unknown) {
+      setPreviewError(getErrorMessage(error, 'Fehler beim Laden der Vorschau'));
     } finally {
       setLoading(false);
     }
@@ -108,8 +109,8 @@ const ResetDatabaseSettings: React.FC = () => {
       } else {
         showToast(response.error || 'Fehler beim Zurücksetzen', 'error');
       }
-    } catch (error: any) {
-      showToast(error.message || 'Fehler beim Zurücksetzen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Zurücksetzen'), 'error');
     } finally {
       setLoading(false);
     }

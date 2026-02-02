@@ -19,9 +19,26 @@ export interface Dozent {
   email?: string;
   fachbereich?: string;
   aktiv: boolean;
+  ist_platzhalter?: boolean;
   hat_benutzer_account?: boolean;
   anzahl_module?: number;
   created_at?: string;
+}
+
+export interface DozentPosition {
+  id: number;
+  bezeichnung: string;
+  typ: 'platzhalter' | 'rolle' | 'gruppe';
+  beschreibung?: string;
+  fachbereich?: string;
+  ist_platzhalter: true;
+  anzahl_module?: number;
+  module?: Array<{
+    modul_id: number;
+    kuerzel: string;
+    bezeichnung_de: string;
+    rolle: string;
+  }>;
 }
 
 export interface DozentCreateData {
@@ -50,14 +67,16 @@ class DozentService {
     fachbereich?: string;
     aktiv?: boolean;
     mit_benutzer?: boolean;
+    include_platzhalter?: boolean;
   }): Promise<ApiResponse<Dozent[]>> {
     try {
       log.debug(' Fetching dozenten with params:', params);
-      
+
       const queryParams = new URLSearchParams();
       if (params?.fachbereich) queryParams.append('fachbereich', params.fachbereich);
       if (params?.aktiv !== undefined) queryParams.append('aktiv', params.aktiv.toString());
       if (params?.mit_benutzer !== undefined) queryParams.append('mit_benutzer', params.mit_benutzer.toString());
+      if (params?.include_platzhalter !== undefined) queryParams.append('include_platzhalter', params.include_platzhalter.toString());
       
       // WICHTIG: Trailing slash hinzugefügt!
       const url = `/dozenten/${queryParams.toString() ? `?${queryParams}` : ''}`;
@@ -169,13 +188,48 @@ class DozentService {
   async deleteDozent(id: number, force: boolean = false): Promise<ApiResponse> {
     try {
       log.debug(' Deleting dozent:', id, 'force:', force);
-      
+
       const response = await api.delete<ApiResponse>(`/dozenten/${id}?force=${force}`);
-      
+
       log.debug(' ✓ Dozent deleted');
       return response.data;
     } catch (error) {
       log.error(' Error deleting dozent:', error);
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  /**
+   * Get all dozent positions (Platzhalter/Rollen/Gruppen)
+   */
+  async getPositionen(typ?: string): Promise<ApiResponse<DozentPosition[]>> {
+    try {
+      log.debug(' Fetching positionen');
+
+      const params = typ ? `?typ=${typ}` : '';
+      const response = await api.get<ApiResponse<DozentPosition[]>>(`/dozenten/positionen/${params}`);
+
+      log.debug(' Positionen received:', response.data.data?.length || 0);
+      return response.data;
+    } catch (error) {
+      log.error(' Error fetching positionen:', error);
+      throw new Error(handleApiError(error));
+    }
+  }
+
+  /**
+   * Get position details
+   */
+  async getPositionDetails(id: number): Promise<ApiResponse<DozentPosition>> {
+    try {
+      log.debug(' Fetching position details:', id);
+
+      const response = await api.get<ApiResponse<DozentPosition>>(`/dozenten/positionen/${id}`);
+
+      log.debug(' Position details received');
+      return response.data;
+    } catch (error) {
+      log.error(' Error fetching position details:', error);
       throw new Error(handleApiError(error));
     }
   }

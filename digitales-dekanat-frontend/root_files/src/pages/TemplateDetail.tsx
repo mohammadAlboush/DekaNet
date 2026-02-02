@@ -39,6 +39,7 @@ import { useToastStore } from '../components/common/Toast';
 import TemplateModulList from '../components/templates/TemplateModulList';
 import WunschTagEditor, { WunschTag } from '../components/common/WunschTagEditor';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const log = createContextLogger('TemplateDetail');
 
@@ -119,9 +120,9 @@ const TemplateDetail: React.FC = () => {
         showToast('Template nicht gefunden', 'error');
         navigate('/templates');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Error loading template:', error);
-      showToast(error.message || 'Fehler beim Laden', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Laden'), 'error');
       navigate('/templates');
     } finally {
       setLoading(false);
@@ -148,9 +149,9 @@ const TemplateDetail: React.FC = () => {
       showToast('Änderungen gespeichert', 'success');
       setHasUnsavedChanges(false);
       loadTemplate(template.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Error saving:', error);
-      showToast(error.message || 'Fehler beim Speichern', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Speichern'), 'error');
     } finally {
       setSaving(false);
     }
@@ -168,9 +169,9 @@ const TemplateDetail: React.FC = () => {
       showToast('Änderungen gespeichert', 'success');
       setEditingHeader(false);
       loadTemplate(template.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Error saving header:', error);
-      showToast(error.message || 'Fehler beim Speichern', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Speichern'), 'error');
     } finally {
       setSaving(false);
     }
@@ -187,9 +188,9 @@ const TemplateDetail: React.FC = () => {
       await templateService.deleteTemplate(template.id);
       showToast('Template gelöscht', 'success');
       navigate('/templates');
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Error deleting:', error);
-      showToast(error.message || 'Fehler beim Löschen', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Löschen'), 'error');
     }
   };
 

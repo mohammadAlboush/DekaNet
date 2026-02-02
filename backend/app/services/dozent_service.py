@@ -11,31 +11,69 @@ Funktionen:
 
 from typing import Optional, List, Dict, Any
 from app.services.base_service import BaseService
-from app.models import Dozent, ModulDozent, Benutzer
+from app.models import Dozent, DozentPosition, ModulDozent, Benutzer
 from app.extensions import db
+
+
+class DozentPositionService(BaseService):
+    """
+    Service für Dozent-Positionen (Platzhalter, Rollen, Gruppen)
+    """
+    model = DozentPosition
+
+    def get_by_typ(self, typ: str) -> List[DozentPosition]:
+        """Holt alle Positionen eines Typs."""
+        return DozentPosition.query.filter_by(typ=typ).order_by(DozentPosition.bezeichnung).all()
+
+    def get_all_positionen(self) -> List[Dict[str, Any]]:
+        """Holt alle Positionen als Dicts."""
+        positionen = DozentPosition.query.order_by(DozentPosition.typ, DozentPosition.bezeichnung).all()
+        return [p.to_dict() for p in positionen]
+
+    def create_position(
+        self,
+        bezeichnung: str,
+        typ: str,
+        beschreibung: Optional[str] = None,
+        fachbereich: Optional[str] = None
+    ) -> DozentPosition:
+        """Erstellt eine neue Position."""
+        return self.create(
+            bezeichnung=bezeichnung,
+            typ=typ,
+            beschreibung=beschreibung,
+            fachbereich=fachbereich
+        )
 
 
 class DozentService(BaseService):
     """
     Dozent Service
-    
+
     Verwaltet Dozenten (Professoren, Lehrbeauftragte, etc.)
+    Filtert standardmäßig Platzhalter-Dozenten aus.
     """
-    
+
     model = Dozent
     
     # =========================================================================
     # DOZENT QUERIES
     # =========================================================================
     
-    def get_aktive(self) -> List[Dozent]:
+    def get_aktive(self, include_platzhalter: bool = False) -> List[Dozent]:
         """
         Holt alle aktiven Dozenten
-        
+
+        Args:
+            include_platzhalter: Platzhalter-Dozenten mit einschließen
+
         Returns:
             Liste von aktiven Dozenten
         """
-        return self.get_all(aktiv=True)
+        query = Dozent.query.filter_by(aktiv=True)
+        if not include_platzhalter:
+            query = query.filter_by(ist_platzhalter=False)
+        return query.order_by(Dozent.nachname, Dozent.vorname).all()
     
     def get_by_fachbereich(
         self,
@@ -69,26 +107,31 @@ class DozentService(BaseService):
     
     def search(
         self,
-        suchbegriff: str
+        suchbegriff: str,
+        include_platzhalter: bool = False
     ) -> List[Dozent]:
         """
         Sucht Dozenten anhand Name oder Email
-        
+
         Args:
             suchbegriff: Suchtext
-            
+            include_platzhalter: Platzhalter-Dozenten mit einschließen
+
         Returns:
             Liste von gefundenen Dozenten
         """
         pattern = f"%{suchbegriff}%"
-        return Dozent.query.filter(
+        query = Dozent.query.filter(
             db.or_(
                 Dozent.name_komplett.ilike(pattern),
                 Dozent.email.ilike(pattern),
                 Dozent.nachname.ilike(pattern),
                 Dozent.vorname.ilike(pattern)
             )
-        ).filter_by(aktiv=True).order_by(Dozent.nachname).all()
+        ).filter_by(aktiv=True)
+        if not include_platzhalter:
+            query = query.filter_by(ist_platzhalter=False)
+        return query.order_by(Dozent.nachname).all()
     
     # =========================================================================
     # DOZENT MANAGEMENT
@@ -401,31 +444,35 @@ class DozentService(BaseService):
         fachbereich: Optional[str] = None,
         aktiv: Optional[bool] = True,
         mit_benutzer: Optional[bool] = None,
-        suchbegriff: Optional[str] = None
+        suchbegriff: Optional[str] = None,
+        include_platzhalter: bool = False
     ) -> List[Dozent]:
         """
         Filtert Dozenten mit verschiedenen Kriterien
-        
+
         Args:
             fachbereich: Optional - Filter nach Fachbereich
             aktiv: Optional - Filter nach Status (default: True)
             mit_benutzer: Optional - Hat Benutzer-Account?
             suchbegriff: Optional - Suchtext
-            
+            include_platzhalter: Platzhalter-Dozenten mit einschließen
+
         Returns:
             Liste von gefilterten Dozenten
         """
         query = Dozent.query
-        
+
         if aktiv is not None:
             query = query.filter_by(aktiv=aktiv)
-        
+
+        if not include_platzhalter:
+            query = query.filter_by(ist_platzhalter=False)
+
         if fachbereich:
             query = query.filter_by(fachbereich=fachbereich)
-        
+
         if mit_benutzer is not None:
             if mit_benutzer:
-                # Nur Dozenten mit Benutzer
                 query = query.filter(
                     Dozent.id.in_(
                         db.session.query(Benutzer.dozent_id).filter(
@@ -434,7 +481,6 @@ class DozentService(BaseService):
                     )
                 )
             else:
-                # Nur Dozenten ohne Benutzer
                 query = query.filter(
                     ~Dozent.id.in_(
                         db.session.query(Benutzer.dozent_id).filter(
@@ -442,7 +488,7 @@ class DozentService(BaseService):
                         )
                     )
                 )
-        
+
         if suchbegriff:
             pattern = f"%{suchbegriff}%"
             query = query.filter(
@@ -451,9 +497,10 @@ class DozentService(BaseService):
                     Dozent.email.ilike(pattern)
                 )
             )
-        
+
         return query.order_by(Dozent.nachname).all()
 
 
-# Singleton Instance
+# Singleton Instances
 dozent_service = DozentService()
+dozent_position_service = DozentPositionService()

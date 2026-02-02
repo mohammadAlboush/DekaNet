@@ -18,14 +18,17 @@ psycopg2-binary==2.9.9
 
 # PDF Processing
 pdfplumber==0.10.3
+PyMuPDF==1.23.8
+reportlab==4.0.8
 
 # Utilities
 python-dotenv==1.0.0
 email-validator==2.1.0
 Werkzeug==3.0.1
 bleach==6.1.0
-marshmallow==3.20.1  
-bcrypt==4.1.1  
+marshmallow==3.20.1
+bcrypt==4.1.1
+rapidfuzz>=3.0.0  # Fuzzy string matching for duplicate detection  
 
 # Testing
 pytest==7.4.3

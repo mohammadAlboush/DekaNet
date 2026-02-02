@@ -1,5 +1,5 @@
 // types/modul_types.ts - FINALE KORRIGIERTE VERSION
-// ✅ Kompatibel mit Wizard UND Module.tsx
+// Kompatibel mit Wizard UND Module.tsx
 
 export interface Modul {
   id: number;
@@ -15,7 +15,7 @@ export interface Modul {
   teilnehmerzahl?: string;
   anmeldemodalitaeten?: string;
   
-  // ✅ Für Wizard: Filter und SWS-Berechnung
+  // Für Wizard: Filter und SWS-Berechnung
   lehrformen?: ModulLehrform[];
   dozenten?: ModulDozent[];
   
@@ -27,8 +27,8 @@ export interface Modul {
   pruefung?: ModulPruefung | null;
   lernergebnisse?: ModulLernergebnisse | null;
   voraussetzungen?: ModulVoraussetzungen | null;
-  arbeitsaufwand?: ModulArbeitsaufwand[];  // ✅ KORRIGIERT: Array statt single object
-  seiten?: ModulSeite[];  // ✅ TYPESAFE: Konkreter Typ statt any
+  arbeitsaufwand?: ModulArbeitsaufwand[];  // Array statt single object
+  seiten?: ModulSeite[];  // Konkreter Typ statt any
 }
 
 export interface ModulLehrform {
@@ -110,7 +110,7 @@ export interface ModulAbhaengigkeit {
   typ: string;
 }
 
-// ✅ HINZUGEFÜGT: Konkreter Typ für Modul-Seiten (HTML-Inhalte)
+// Konkreter Typ für Modul-Seiten (HTML-Inhalte)
 export interface ModulSeite {
   id: number;
   titel: string;
@@ -129,8 +129,8 @@ export interface ModulDetails extends Modul {
   pruefung?: ModulPruefung | null;
   lernergebnisse?: ModulLernergebnisse | null;
   voraussetzungen?: ModulVoraussetzungen | null;
-  arbeitsaufwand: ModulArbeitsaufwand[];  // ✅ KORRIGIERT: Array
-  seiten?: ModulSeite[];  // ✅ TYPESAFE: Konkreter Typ statt any
+  arbeitsaufwand: ModulArbeitsaufwand[];  // Array
+  seiten?: ModulSeite[];  // Konkreter Typ statt any
 }
 
 // Legacy exports for backwards compatibility

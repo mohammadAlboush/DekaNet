@@ -33,7 +33,7 @@ class AuthService {
       });
 
       if (data.success && data.data) {
-        // ✅ SECURITY: Nur User-Daten speichern (keine Tokens!)
+        // SECURITY: Nur User-Daten speichern (keine Tokens!)
         // Tokens werden als httpOnly Cookies vom Backend gesetzt
         localStorage.setItem('user', JSON.stringify(data.data.user));
 
@@ -79,7 +79,7 @@ class AuthService {
     } catch (error) {
       logger.warn('AuthService', 'Logout API error (continuing anyway)', error);
     } finally {
-      // ✅ SECURITY: Nur User-Daten und CSRF-Token löschen
+      // SECURITY: Nur User-Daten und CSRF-Token löschen
       // Tokens sind in httpOnly Cookies und werden vom Backend gelöscht
       localStorage.removeItem('user');
       setCsrfToken(null);

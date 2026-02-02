@@ -70,7 +70,7 @@ class PlanungService(BaseService):
         WICHTIG: Mit planungsphase_id kann ein Professor mehrere Planungen pro Semester haben
                  (eine pro Phase). Ohne planungsphase_id wird nur nach (semester, benutzer) gesucht.
         """
-        # ✅ BACKEND-VALIDIERUNG: Prüfe ob Semester Planungsphase aktiv hat
+        # Prüfe ob Semester Planungsphase aktiv hat
         semester = Semester.query.get(semester_id)
         if not semester:
             raise ValueError(f"Semester mit ID {semester_id} nicht gefunden")
@@ -87,7 +87,7 @@ class PlanungService(BaseService):
             'benutzer_id': benutzer_id
         }
 
-        # ✅ WICHTIG: Wenn planungsphase_id gegeben, auch danach filtern
+        # Wenn planungsphase_id gegeben, auch danach filtern
         # Dies ermöglicht mehrere Planungen pro Semester (eine pro Phase)
         if planungsphase_id is not None:
             query_filter['planungsphase_id'] = planungsphase_id
@@ -101,7 +101,7 @@ class PlanungService(BaseService):
         planung = Semesterplanung(
             semester_id=semester_id,
             benutzer_id=benutzer_id,
-            planungsphase_id=planungsphase_id,  # ✅ Setze direkt bei Erstellung
+            planungsphase_id=planungsphase_id,
             status='entwurf',
             gesamt_sws=0.0
         )
@@ -154,12 +154,12 @@ class PlanungService(BaseService):
         mitarbeiter_ids: List[int] = None,
         anmerkungen: str = None,
         raumbedarf: str = None,
-        # ✨ NEW: Feature 4 - Raumplanung pro Lehrform
+        # Raumplanung pro Lehrform
         raum_vorlesung: str = None,
         raum_uebung: str = None,
         raum_praktikum: str = None,
         raum_seminar: str = None,
-        # ✨ NEW: Feature 4 - Kapazitäts-Anforderungen pro Lehrform
+        # Kapazitäts-Anforderungen pro Lehrform
         kapazitaet_vorlesung: int = None,
         kapazitaet_uebung: int = None,
         kapazitaet_praktikum: int = None,
@@ -239,12 +239,12 @@ class PlanungService(BaseService):
             anzahl_seminare=anzahl_seminare,
             anmerkungen=anmerkungen,
             raumbedarf=raumbedarf,
-            # ✨ NEW: Feature 4 - Raumplanung pro Lehrform
+            # Raumplanung pro Lehrform
             raum_vorlesung=raum_vorlesung,
             raum_uebung=raum_uebung,
             raum_praktikum=raum_praktikum,
             raum_seminar=raum_seminar,
-            # ✨ NEW: Feature 4 - Kapazitäts-Anforderungen pro Lehrform
+            # Kapazitäts-Anforderungen pro Lehrform
             kapazitaet_vorlesung=kapazitaet_vorlesung,
             kapazitaet_uebung=kapazitaet_uebung,
             kapazitaet_praktikum=kapazitaet_praktikum,

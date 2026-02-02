@@ -37,6 +37,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, current_user
 from datetime import datetime
 from app.services.deputat_service import deputat_service
 from app.extensions import db
+from app.api.base import ApiResponse
 
 # Blueprint Definition
 deputat_api = Blueprint('deputat', __name__, url_prefix='/api/deputat')
@@ -83,12 +84,11 @@ def get_einstellungen():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden der Einstellungen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden der Einstellungen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/einstellungen', methods=['PUT'])
@@ -118,12 +118,11 @@ def update_einstellungen():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Aktualisieren',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/einstellungen/historie', methods=['GET'])
@@ -145,12 +144,11 @@ def get_einstellungen_historie():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -176,12 +174,11 @@ def get_meine_abrechnungen():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/alle', methods=['GET'])
@@ -218,12 +215,11 @@ def get_alle_abrechnungen():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/eingereicht', methods=['GET'])
@@ -250,12 +246,11 @@ def get_eingereichte():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/', methods=['POST'])
@@ -288,12 +283,11 @@ def create_or_get_abrechnung():
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Erstellen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Erstellen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/<int:abrechnung_id>', methods=['GET'])
@@ -321,12 +315,11 @@ def get_abrechnung(abrechnung_id: int):
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/<int:abrechnung_id>', methods=['PUT'])
@@ -364,12 +357,11 @@ def update_abrechnung(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Aktualisieren',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -424,12 +416,11 @@ def sync_abrechnung(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler bei der Synchronisation',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler bei der Synchronisation',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -479,12 +470,11 @@ def import_planung(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Import',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Import',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/<int:abrechnung_id>/import/semesterauftraege', methods=['POST'])
@@ -530,12 +520,11 @@ def import_semesterauftraege(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Import',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Import',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -584,12 +573,11 @@ def add_lehrtaetigkeit(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Hinzufügen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Hinzufuegen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/lehrtaetigkeit/<int:lehrtaetigkeit_id>', methods=['PUT'])
@@ -628,12 +616,11 @@ def update_lehrtaetigkeit(lehrtaetigkeit_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Aktualisieren',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/lehrtaetigkeit/<int:lehrtaetigkeit_id>', methods=['DELETE'])
@@ -669,12 +656,11 @@ def delete_lehrtaetigkeit(lehrtaetigkeit_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Löschen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Loeschen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -721,12 +707,11 @@ def add_lehrexport(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Hinzufügen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Hinzufuegen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/lehrexport/<int:lehrexport_id>', methods=['PUT'])
@@ -765,12 +750,11 @@ def update_lehrexport(lehrexport_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Aktualisieren',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/lehrexport/<int:lehrexport_id>', methods=['DELETE'])
@@ -806,12 +790,11 @@ def delete_lehrexport(lehrexport_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Löschen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Loeschen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -859,12 +842,11 @@ def add_vertretung(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Hinzufügen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Hinzufuegen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/vertretung/<int:vertretung_id>', methods=['PUT'])
@@ -903,12 +885,11 @@ def update_vertretung(vertretung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Aktualisieren',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/vertretung/<int:vertretung_id>', methods=['DELETE'])
@@ -944,12 +925,11 @@ def delete_vertretung(vertretung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Löschen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Loeschen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -1144,12 +1124,11 @@ def add_betreuung(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Hinzufügen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Hinzufuegen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/betreuung/<int:betreuung_id>', methods=['PUT'])
@@ -1194,12 +1173,11 @@ def update_betreuung(betreuung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Aktualisieren',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/betreuung/<int:betreuung_id>', methods=['DELETE'])
@@ -1235,12 +1213,11 @@ def delete_betreuung(betreuung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Löschen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Loeschen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -1281,12 +1258,11 @@ def einreichen(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Einreichen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Einreichen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/<int:abrechnung_id>/genehmigen', methods=['PUT'])
@@ -1317,12 +1293,11 @@ def genehmigen(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Genehmigen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Genehmigen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/<int:abrechnung_id>/ablehnen', methods=['PUT'])
@@ -1356,12 +1331,11 @@ def ablehnen(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Ablehnen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Ablehnen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 @deputat_api.route('/<int:abrechnung_id>/zuruecksetzen', methods=['PUT'])
@@ -1399,12 +1373,11 @@ def zuruecksetzen(abrechnung_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Zurücksetzen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Zuruecksetzen',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -1432,12 +1405,11 @@ def get_statistik():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden der Statistiken',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden der Statistiken',
+            exception=e,
+            log_context='DeputatAPI'
+        )
 
 
 # =============================================================================
@@ -1489,14 +1461,26 @@ def export_pdf(abrechnung_id):
         )
 
     except ValueError as e:
+        import traceback
+        current_app.logger.error(f"[PDF Export] ValueError: {e}")
+        current_app.logger.error(traceback.format_exc())
         return jsonify({
             'success': False,
             'message': str(e)
         }), 400
-    except Exception as e:
-        current_app.logger.error(f"PDF Export Error: {e}", exc_info=True)
+    except ImportError as e:
+        import traceback
+        current_app.logger.error(f"[PDF Export] ImportError - Missing dependency: {e}")
+        current_app.logger.error(traceback.format_exc())
         return jsonify({
             'success': False,
-            'message': 'Fehler beim PDF-Export',
-            'error': str(e)
+            'message': f'PDF-Bibliothek fehlt: {e}. Bitte "pip install reportlab" ausführen.'
+        }), 500
+    except Exception as e:
+        import traceback
+        current_app.logger.error(f"[PDF Export] Unexpected error: {e}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'Fehler beim PDF-Export: {str(e)}'
         }), 500

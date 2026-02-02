@@ -62,7 +62,7 @@ const SemesterplanungPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    fetchActivePhase(); // ✅ Hole aktive Planungsphase
+    fetchActivePhase(); // Hole aktive Planungsphase
   }, []);
 
   const loadData = async () => {

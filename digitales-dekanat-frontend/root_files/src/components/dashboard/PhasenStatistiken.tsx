@@ -81,22 +81,26 @@ const PhasenStatistiken: React.FC<PhasenStatistikenProps> = ({
       } else {
         setError(response.message || 'Fehler beim Laden der Statistiken');
       }
-    } catch (err: any) {
-      // ✅ VERBESSERT: Detaillierte Fehlerinformationen
-      log.error('Fehler beim Laden der Phasen-Statistiken:', err);
+    } catch (err: unknown) {
+      // Detaillierte Fehlerinformationen
+      log.error('Fehler beim Laden der Phasen-Statistiken:', { err });
 
       let errorMessage = 'Ein Fehler ist aufgetreten beim Laden der Statistiken';
 
-      if (err.response?.status === 500) {
-        errorMessage = 'Server-Fehler: Der Backend-Endpoint "/dashboard/statistik/phasen" ist fehlerhaft. Bitte prüfen Sie das Backend-Log für Details.';
-      } else if (err.response?.status === 404) {
-        errorMessage = 'Der Statistik-Endpoint wurde nicht gefunden. Möglicherweise fehlt die Backend-Implementierung.';
-      } else if (err.response?.status === 403) {
-        errorMessage = 'Keine Berechtigung: Sie benötigen Dekan-Rechte für diese Statistiken.';
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
+      // Type-safe error handling for axios errors
+      if (err && typeof err === 'object') {
+        const axiosError = err as { response?: { status?: number; data?: { message?: string } }; message?: string };
+        if (axiosError.response?.status === 500) {
+          errorMessage = 'Server-Fehler: Der Backend-Endpoint "/dashboard/statistik/phasen" ist fehlerhaft. Bitte prüfen Sie das Backend-Log für Details.';
+        } else if (axiosError.response?.status === 404) {
+          errorMessage = 'Der Statistik-Endpoint wurde nicht gefunden. Möglicherweise fehlt die Backend-Implementierung.';
+        } else if (axiosError.response?.status === 403) {
+          errorMessage = 'Keine Berechtigung: Sie benötigen Dekan-Rechte für diese Statistiken.';
+        } else if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        } else if (axiosError.message) {
+          errorMessage = axiosError.message;
+        }
       }
 
       setError(errorMessage);

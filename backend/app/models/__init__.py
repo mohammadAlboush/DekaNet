@@ -26,7 +26,7 @@ Optional:
 - Benachrichtigung
 """
 
-# ⚠️ WICHTIG: db von extensions importieren, NICHT von base!
+# db von extensions importieren, NICHT von base!
 from app.extensions import db
 
 # Base Models (ohne db, da wir es schon importiert haben)
@@ -38,8 +38,8 @@ from .semester import Semester
 from .planung import Semesterplanung, GeplantesModul, WunschFreierTag
 from .planungsphase import Planungsphase, PhaseSubmission, ArchiviertePlanung
 
-# Bestehende Models (aus dekanat_professional_v4.db)
-from .dozent import Dozent
+# Bestehende Models (migriert aus Legacy-System)
+from .dozent import Dozent, DozentPosition
 from .modul import (
     Modul,
     ModulLehrform,
@@ -65,13 +65,13 @@ from .modulhandbuch import Modulhandbuch
 from .audit import AuditLog
 from .notification import Benachrichtigung
 
-# ✨ NEW: Feature 2 - Semesteraufträge
+# Semesteraufträge
 from .auftrag import Auftrag, SemesterAuftrag
 
-# ✨ NEW: Feature 3 - Modul-Verwaltung Audit Log
+# Modul-Verwaltung Audit Log
 from .modul_audit import ModulAuditLog
 
-# ✨ NEW: Feature 4 - Deputatsabrechnung
+# Deputatsabrechnung
 from .deputat_einstellungen import DeputatsEinstellungen
 from .deputat import (
     Deputatsabrechnung,
@@ -82,7 +82,7 @@ from .deputat import (
     DeputatsBetreuung,
 )
 
-# ✨ NEW: Feature 5 - Planungs-Templates
+# Planungs-Templates
 from .planungs_template import PlanungsTemplate, TemplateModul
 
 
@@ -109,6 +109,7 @@ __all__ = [
 
     # Bestehende Hauptmodels
     'Dozent',
+    'DozentPosition',
     'Modul',
     'ModulLehrform',
     'ModulDozent',

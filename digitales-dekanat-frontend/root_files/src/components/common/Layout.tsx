@@ -33,6 +33,7 @@ import {
   Calculate,
   WorkHistory,
   FileCopy,
+  MenuBook,
 } from '@mui/icons-material';
 import useAuthStore from '../../store/authStore';
 import { createContextLogger } from '../../utils/logger';
@@ -87,6 +88,7 @@ const Layout: React.FC = () => {
         { title: 'Semesterplanung', path: '/dekan/planungen', icon: <Assignment />, roles: ['dekan'] },
         { title: 'Deputat-Verwaltung', path: '/dekan/deputat', icon: <Calculate />, roles: ['dekan'] },
         { title: 'Module', path: '/module', icon: <School /> },
+        { title: 'Modulhandbücher', path: '/modulhandbuecher', icon: <MenuBook /> },
         { title: 'Dozenten', path: '/dozenten', icon: <Group /> },
         // Semester-Link versteckt - Dekan wählt Semester bei Planungsphase-Start
         // { title: 'Semester', path: '/semester', icon: <CalendarMonth />, roles: ['dekan'] },

@@ -32,19 +32,12 @@ import {
   CheckCircle,
 } from '@mui/icons-material';
 import { GeplantesModul } from '../../../../types/planung.types';
+import { StepMultiplikatorenProps } from '../../../../types/StepProps.types';
 import planungService from '../../../../services/planungService';
 import { createContextLogger } from '../../../../utils/logger';
 import { MULTIPLIKATOR_LIMITS } from '../../../../constants/planning.constants';
 
 const log = createContextLogger('StepMultiplikatoren');
-
-interface StepProps {
-  data: any;
-  onUpdate: (data: any) => void;
-  onNext: () => void;
-  onBack: () => void;
-  planungId?: number;
-}
 
 interface EditingState {
   modulId: number | null;
@@ -56,7 +49,7 @@ interface EditingState {
   };
 }
 
-const StepMultiplikatoren: React.FC<StepProps> = ({ 
+const StepMultiplikatoren: React.FC<StepMultiplikatorenProps> = ({ 
   data, 
   onUpdate, 
   onNext, 
@@ -494,7 +487,7 @@ const StepMultiplikatoren: React.FC<StepProps> = ({
                           status === 'error' ? 'Fehler' :
                           status === 'warning' ? 'Warnung' : 'OK'
                         }
-                        color={getStatusColor(status) as any}
+                        color={getStatusColor(status) as 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'}
                         variant={status === 'success' ? 'outlined' : 'filled'}
                       />
                     </TableCell>

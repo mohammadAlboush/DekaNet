@@ -16,6 +16,7 @@ import modulVerwaltungService, {
 } from '../services/modulVerwaltungService';
 import useAuthStore from '../store/authStore';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
 import AddDozentDialog from '../components/modul-verwaltung/AddDozentDialog';
 
 const log = createContextLogger('ModulVerwaltung');
@@ -106,9 +107,9 @@ const ModulVerwaltungPage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Laden der Module');
       }
-    } catch (error: any) {
-      log.error(' Error:', error);
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      log.error(' Error:', { error });
+      setError(getErrorMessage(error, 'Ein Fehler ist aufgetreten'));
     } finally {
       setLoading(false);
     }

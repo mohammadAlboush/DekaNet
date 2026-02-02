@@ -67,3 +67,26 @@ Thumbs.db
 *.bak
 *.backup
 *~
+
+# ============================================================================
+# EXCLUDED FROM GITHUB PUSH
+# ============================================================================
+
+# Database Migrations (managed locally)
+migrations/
+
+# Modulhandbücher PDFs und Reports
+Modulhandbuecher/
+
+# Development Scripts
+scripts/
+
+# Tests
+tests/
+
+# Markdown Documentation (local only)
+*.md
+!README.md
+
+# ALLOW database_dump.sql for deployment
+!database_dump.sql

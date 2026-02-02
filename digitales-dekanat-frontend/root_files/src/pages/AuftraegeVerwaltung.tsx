@@ -39,6 +39,7 @@ import auftragService from '../services/auftragService';
 import { Auftrag, CreateAuftragData } from '../types/auftrag.types';
 import { useToastStore } from '../components/common/Toast';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const log = createContextLogger('AuftraegeVerwaltung');
 
@@ -165,9 +166,9 @@ const AuftraegeVerwaltung: React.FC<AuftraegeVerwaltungProps> = ({ embedded = fa
       }
 
       handleCloseDialog();
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error saving:', error);
-      showToast(error.message || 'Fehler beim Speichern', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Speichern'), 'error');
     } finally {
       setLoading(false);
     }
@@ -183,9 +184,9 @@ const AuftraegeVerwaltung: React.FC<AuftraegeVerwaltungProps> = ({ embedded = fa
         updated.ist_aktiv ? 'Auftrag aktiviert' : 'Auftrag deaktiviert',
         'success'
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error toggling:', error);
-      showToast(error.message || 'Fehler beim Ändern', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Ändern'), 'error');
     }
   };
 
@@ -203,9 +204,9 @@ const AuftraegeVerwaltung: React.FC<AuftraegeVerwaltungProps> = ({ embedded = fa
       await auftragService.deleteAuftrag(auftrag.id);
       setAuftraege(auftraege.filter(a => a.id !== auftrag.id));
       showToast('Auftrag gelöscht', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error deleting:', error);
-      showToast(error.message || 'Fehler beim Löschen', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Löschen'), 'error');
     } finally {
       setLoading(false);
     }

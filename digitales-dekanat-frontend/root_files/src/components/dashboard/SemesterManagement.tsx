@@ -36,6 +36,7 @@ import semesterService from '../../services/semesterService';
 import { Semester } from '../../types/semester.types';
 import { useToastStore } from '../common/Toast';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('SemesterManagement');
 
@@ -96,8 +97,8 @@ const SemesterManagement: React.FC = () => {
       if (suggestionResponse.success && suggestionResponse.data) {
         setAutoSuggestion(suggestionResponse.data);
       }
-    } catch (error: any) {
-      log.error(' Error loading data:', error);
+    } catch (error: unknown) {
+      log.error(' Error loading data:', { error });
       showToast('Fehler beim Laden der Daten', 'error');
     } finally {
       setLoading(false);
@@ -151,9 +152,9 @@ const SemesterManagement: React.FC = () => {
 
       // Reload data
       await loadData();
-    } catch (error: any) {
-      log.error(' Error executing action:', error);
-      showToast(error.message || 'Fehler bei der Aktion', 'error');
+    } catch (error: unknown) {
+      log.error(' Error executing action:', { error });
+      showToast(getErrorMessage(error, 'Fehler bei der Aktion'), 'error');
     } finally {
       setActionLoading(false);
       setConfirmDialog({ open: false, action: '', semester: null });

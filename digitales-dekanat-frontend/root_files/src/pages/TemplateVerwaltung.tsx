@@ -45,8 +45,10 @@ import templateService, {
   UpdateTemplateData,
 } from '../services/templateService';
 import planungService from '../services/planungService';
+import { Semesterplanung } from '../types/planung.types';
 import { useToastStore } from '../components/common/Toast';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const log = createContextLogger('TemplateVerwaltung');
 
@@ -66,7 +68,7 @@ const TemplateVerwaltung: React.FC = () => {
   // State
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<PlanungsTemplate[]>([]);
-  const [planungen, setPlanungen] = useState<any[]>([]);
+  const [planungen, setPlanungen] = useState<Semesterplanung[]>([]);
 
   // Dialog States
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -108,9 +110,9 @@ const TemplateVerwaltung: React.FC = () => {
       if (planungenResponse.success && planungenResponse.data) {
         setPlanungen(planungenResponse.data);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Error loading data:', error);
-      showToast('Fehler beim Laden der Daten', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Laden der Daten'), 'error');
     } finally {
       setLoading(false);
     }
@@ -126,8 +128,8 @@ const TemplateVerwaltung: React.FC = () => {
         setCreateForm({ semester_typ: 'winter', name: '', beschreibung: '' });
         loadData();
       }
-    } catch (error: any) {
-      showToast(error.message || 'Fehler beim Erstellen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Erstellen'), 'error');
     }
   };
 
@@ -142,8 +144,8 @@ const TemplateVerwaltung: React.FC = () => {
         setSelectedTemplate(null);
         loadData();
       }
-    } catch (error: any) {
-      showToast(error.message || 'Fehler beim Aktualisieren', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Aktualisieren'), 'error');
     }
   };
 
@@ -154,8 +156,8 @@ const TemplateVerwaltung: React.FC = () => {
       await templateService.deleteTemplate(template.id);
       showToast('Template geloescht', 'success');
       loadData();
-    } catch (error: any) {
-      showToast(error.message || 'Fehler beim Loeschen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Loeschen'), 'error');
     }
   };
 
@@ -173,8 +175,8 @@ const TemplateVerwaltung: React.FC = () => {
         setSelectedPlanungId(null);
         loadData();
       }
-    } catch (error: any) {
-      showToast(error.message || 'Fehler beim Erstellen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Erstellen'), 'error');
     }
   };
 
@@ -198,8 +200,8 @@ const TemplateVerwaltung: React.FC = () => {
         showToast('Template aktualisiert', 'success');
         loadData();
       }
-    } catch (error: any) {
-      showToast(error.message || 'Fehler beim Aktualisieren', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Aktualisieren'), 'error');
     }
   };
 

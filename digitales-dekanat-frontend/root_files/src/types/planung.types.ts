@@ -1,12 +1,12 @@
-// types/planung_types.ts - KORRIGIERTE VERSION
-// ✅ SECURITY FIX: `any` Types durch konkrete Typen ersetzt (2026-01-24)
+// types/planung_types.ts
+// Konkrete Typen fuer Semesterplanung
 
 import { Semester } from './semester.types';
 import { User } from './auth.types';
 import { PlanungPhase } from './planungPhase.types';
 import { Modul } from './modul.types';
 
-// ✅ Interfaces für room_requirements und special_requests
+// Interfaces für room_requirements und special_requests
 export interface RoomRequirement {
   type: string;
   capacity: number;
@@ -29,23 +29,23 @@ export interface Semesterplanung {
   semester_id: number;
   benutzer_id: number;
   po_id: number;
-  planungsphase_id?: number;          // ✅ HINZUGEFÜGT
+  planungsphase_id?: number;
   status: 'entwurf' | 'eingereicht' | 'freigegeben' | 'abgelehnt';
   eingereicht_am?: string;
   freigegeben_am?: string;
   freigegeben_von?: number;
   ablehnungsgrund?: string;
   notizen?: string;
-  anmerkungen?: string;               // ✅ HINZUGEFÜGT
-  raumbedarf?: string;                // ✅ HINZUGEFÜGT
-  room_requirements?: RoomRequirement[] | string;  // ✅ KORRIGIERT: Kann Array oder String sein
-  special_requests?: SpecialRequests | string;     // ✅ KORRIGIERT: Kann Objekt oder String sein
+  anmerkungen?: string;
+  raumbedarf?: string;
+  room_requirements?: RoomRequirement[] | string;  // Kann Array oder String sein
+  special_requests?: SpecialRequests | string;     // Kann Objekt oder String sein
   gesamt_sws: number;
   created_at: string;
   updated_at: string;
-  semester?: Semester;                 // ✅ TYPESAFE: Konkreter Typ statt any
-  benutzer?: User;                     // ✅ TYPESAFE: Konkreter Typ statt any
-  planungsphase?: PlanungPhase;        // ✅ TYPESAFE: Konkreter Typ statt any
+  semester?: Semester;                 // Konkreter Typ statt any
+  benutzer?: User;                     // Konkreter Typ statt any
+  planungsphase?: PlanungPhase;        // Konkreter Typ statt any
   geplante_module?: GeplantesModul[];
   wunsch_freie_tage?: WunschFreierTag[];
 }
@@ -68,7 +68,7 @@ export interface GeplantesModul {
   anmerkungen?: string;
   raumbedarf?: string;
   mitarbeiter_ids?: number[];
-  modul?: Modul;                       // ✅ TYPESAFE: Konkreter Typ statt any
+  modul?: Modul;                       // Konkreter Typ statt any
   // Raum-Planung pro Lehrform
   raum_vorlesung?: string;
   raum_uebung?: string;
@@ -95,7 +95,7 @@ export interface WunschFreierTag {
   ganztags: boolean;
   vormittag: boolean;
   nachmittag: boolean;
-  zeitraum?: string;  // ✅ HINZUGEFÜGT: Optional für Anzeige (z.B. "Ganztags", "Vormittag")
+  zeitraum?: string;  // Optional für Anzeige (z.B. "Ganztags", "Vormittag")
 }
 
 export interface CreatePlanungData {
@@ -104,7 +104,7 @@ export interface CreatePlanungData {
   notizen?: string;
 }
 
-// ✅ KORRIGIERT: Alle Felder die das Backend erwartet
+// Alle Felder die das Backend erwartet
 export interface AddModulData {
   modul_id: number;
   po_id: number;

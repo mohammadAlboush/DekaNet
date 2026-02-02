@@ -48,6 +48,8 @@ import { useNavigate } from 'react-router-dom';
 import deputatService from '../services/deputatService';
 import planungPhaseService from '../services/planungPhaseService';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
+import { PlanungPhase } from '../types/planungPhase.types';
 
 const log = createContextLogger('DeputatVerwaltung');
 
@@ -96,7 +98,7 @@ const DeputatVerwaltung: React.FC = () => {
   // State
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
-  const [planungsphasen, setPlanungsphasen] = useState<any[]>([]);
+  const [planungsphasen, setPlanungsphasen] = useState<PlanungPhase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
 
@@ -122,7 +124,7 @@ const DeputatVerwaltung: React.FC = () => {
         const phasen = response.phasen || [];
         setPlanungsphasen(phasen);
         if (phasen.length > 0) {
-          const aktive = response.aktive_phase || phasen.find((p: any) => p.ist_aktiv);
+          const aktive = response.aktive_phase || phasen.find((p: PlanungPhase) => p.ist_aktiv);
           setSelectedPhaseId(aktive?.id || phasen[0].id);
         }
       } catch (error) {
@@ -174,8 +176,8 @@ const DeputatVerwaltung: React.FC = () => {
       await deputatService.genehmigen(abrechnung.id);
       await loadData();
       showToast('Abrechnung genehmigt', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Genehmigen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Genehmigen'), 'error');
     }
   };
 
@@ -188,8 +190,8 @@ const DeputatVerwaltung: React.FC = () => {
       setAblehnenGrund('');
       await loadData();
       showToast('Abrechnung abgelehnt', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Ablehnen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Ablehnen'), 'error');
     }
   };
 
@@ -203,8 +205,8 @@ const DeputatVerwaltung: React.FC = () => {
       setEinstellungenDialog(false);
       await loadData();
       showToast('Einstellungen gespeichert', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Speichern', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Speichern'), 'error');
     }
   };
 
@@ -235,8 +237,8 @@ const DeputatVerwaltung: React.FC = () => {
       setPdfLoading(abrechnung.id);
       await deputatService.downloadPdf(abrechnung.id);
       showToast('PDF wurde heruntergeladen', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim PDF-Export', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim PDF-Export'), 'error');
     } finally {
       setPdfLoading(null);
     }

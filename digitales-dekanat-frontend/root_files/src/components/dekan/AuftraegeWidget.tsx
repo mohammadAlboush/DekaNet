@@ -34,6 +34,7 @@ import { SemesterAuftrag, Auftrag } from '../../types/auftrag.types';
 import { useToastStore } from '../common/Toast';
 import useAuftragStore from '../../store/auftragStore';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('AuftraegeWidget');
 
@@ -61,7 +62,7 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
   const navigate = useNavigate();
   const showToast = useToastStore((state) => state.showToast);
 
-  // ✅ Use Auftrag Store for synchronization
+  // Use Auftrag Store for synchronization
   const {
     semesterAuftraege: storeAuftraege,
     isLoading: storeLoading,
@@ -95,7 +96,7 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
       const auftraege = await auftragService.getAlleAuftraege(true);
       setAlleAuftraege(auftraege);
 
-      // ✅ Lade Semester-Aufträge über Store (für Synchronisation)
+      // Lade Semester-Aufträge über Store (für Synchronisation)
       await loadAuftraege(semesterId);
 
       log.debug(' Loaded:', {
@@ -119,11 +120,11 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
       await auftragService.genehmigAuftrag(auftragId);
       showToast('Auftrag genehmigt', 'success');
 
-      // ✅ Trigger Store refresh for synchronization
+      // Trigger Store refresh for synchronization
       await triggerRefresh(semesterId);
-    } catch (error: any) {
-      log.error(' Error approving:', error);
-      showToast(error.message || 'Fehler beim Genehmigen', 'error');
+    } catch (error: unknown) {
+      log.error(' Error approving:', { error });
+      showToast(getErrorMessage(error, 'Fehler beim Genehmigen'), 'error');
     } finally {
       setLoading(false);
     }
@@ -151,11 +152,11 @@ const AuftraegeWidget: React.FC<AuftraegeWidgetProps> = ({
       setSelectedAuftrag(null);
       setAblehnungsgrund('');
 
-      // ✅ Trigger Store refresh for synchronization
+      // Trigger Store refresh for synchronization
       await triggerRefresh(semesterId);
-    } catch (error: any) {
-      log.error(' Error rejecting:', error);
-      showToast(error.message || 'Fehler beim Ablehnen', 'error');
+    } catch (error: unknown) {
+      log.error(' Error rejecting:', { error });
+      showToast(getErrorMessage(error, 'Fehler beim Ablehnen'), 'error');
     } finally {
       setLoading(false);
     }

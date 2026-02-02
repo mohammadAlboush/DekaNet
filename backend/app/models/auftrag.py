@@ -156,16 +156,13 @@ class SemesterAuftrag(db.Model):
 
     # Constraints
     __table_args__ = (
-        db.Index('ix_semester_auftrag_semester', 'semester_id'),
-        db.Index('ix_semester_auftrag_dozent', 'dozent_id'),
         db.Index('ix_semester_auftrag_status', 'status'),
         # Ein Dozent kann denselben Auftrag pro Semester nur einmal haben
-        db.Index(
-            'ix_semester_auftrag_unique',
+        db.UniqueConstraint(
             'semester_id',
             'auftrag_id',
             'dozent_id',
-            unique=True
+            name='uq_semester_auftrag_unique'
         ),
     )
 

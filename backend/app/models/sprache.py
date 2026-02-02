@@ -1,14 +1,14 @@
 """
 Sprache Model
 =============
-Sprachen fÃ¼r Module (Deutsch, Englisch, etc.)
+Sprachen für Module (Deutsch, Englisch, etc.)
 """
 
 from .base import db
 
 
 class Sprache(db.Model):
-    """Sprachen (3 EintrÃ¤ge: Deutsch, Englisch, etc.)"""
+    """Sprachen (3 Einträge: Deutsch, Englisch, etc.)"""
     __tablename__ = 'sprache'
     
     id = db.Column(db.Integer, primary_key=True)

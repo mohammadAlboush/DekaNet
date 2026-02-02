@@ -22,6 +22,7 @@ import modulVerwaltungService from '../../services/modulVerwaltungService';
 import dozentService, { Dozent } from '../../services/dozentService';
 import poService, { Pruefungsordnung } from '../../services/poService';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('AddDozentDialog');
 
@@ -70,8 +71,8 @@ const AddDozentDialog: React.FC<AddDozentDialogProps> = ({
       if (response.success) {
         setDozenten(response.data || []);
       }
-    } catch (error: any) {
-      log.error('Error loading dozenten:', error);
+    } catch (error: unknown) {
+      log.error('Error loading dozenten:', { error });
     } finally {
       setLoadingDozenten(false);
     }
@@ -88,8 +89,8 @@ const AddDozentDialog: React.FC<AddDozentDialogProps> = ({
           setPoId(response.data[0].id);
         }
       }
-    } catch (error: any) {
-      log.error('Error loading Prüfungsordnungen:', error);
+    } catch (error: unknown) {
+      log.error('Error loading Prüfungsordnungen:', { error });
     } finally {
       setLoadingPOs(false);
     }
@@ -134,8 +135,8 @@ const AddDozentDialog: React.FC<AddDozentDialogProps> = ({
       } else {
         setError(response.message || 'Fehler beim Hinzufügen des Dozenten');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Ein Fehler ist aufgetreten'));
     } finally {
       setLoading(false);
     }

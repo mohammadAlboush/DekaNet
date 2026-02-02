@@ -88,7 +88,7 @@ def register_blueprints(app: Flask):
     except ImportError as e:
         logger.error(f'   [ERROR] Failed to import planungsphase API: {e}')
 
-    # ✨ NEW: AUFTRÄGE API (Feature 2)
+    # AUFTRÄGE API
     try:
         from app.api.auftraege import auftrag_api
         app.register_blueprint(auftrag_api)
@@ -96,7 +96,7 @@ def register_blueprints(app: Flask):
     except ImportError as e:
         logger.error(f'   [ERROR] Failed to import auftraege API: {e}')
 
-    # ✨ NEW: MODUL-VERWALTUNG API (Feature 3)
+    # MODUL-VERWALTUNG API
     try:
         from app.api.modul_verwaltung import modul_verwaltung_api
         app.register_blueprint(modul_verwaltung_api)
@@ -104,7 +104,7 @@ def register_blueprints(app: Flask):
     except ImportError as e:
         logger.error(f'   [ERROR] Failed to import modul_verwaltung API: {e}')
 
-    # ✨ NEW: DEPUTAT API (Feature 4)
+    # DEPUTAT API
     try:
         from app.api.deputat import deputat_api
         app.register_blueprint(deputat_api)
@@ -112,7 +112,7 @@ def register_blueprints(app: Flask):
     except ImportError as e:
         logger.error(f'   [ERROR] Failed to import deputat API: {e}')
 
-    # ✨ NEW: TEMPLATES API (Feature 5)
+    # TEMPLATES API
     try:
         from app.api.templates import template_api
         app.register_blueprint(template_api)
@@ -120,7 +120,7 @@ def register_blueprints(app: Flask):
     except ImportError as e:
         logger.error(f'   [ERROR] Failed to import templates API: {e}')
 
-    # ✨ NEW: ADMIN API (Database Reset)
+    # ADMIN API (Database Reset)
     try:
         from app.api.admin import admin_api
         app.register_blueprint(admin_api)

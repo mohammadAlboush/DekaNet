@@ -147,6 +147,20 @@ class ModulService(BaseService):
         if not modul:
             return {}
 
+        # Studiengang-Zuordnungen mit Kategorie
+        studiengang_data = []
+        for sg in modul.studiengang_zuordnungen:
+            sg_dict = {
+                'studiengang_id': sg.studiengang_id,
+                'semester': sg.semester,
+                'pflicht': sg.pflicht,
+                'wahlpflicht': sg.wahlpflicht,
+                'modul_kategorie': getattr(sg, 'modul_kategorie', None),
+            }
+            if sg.studiengang:
+                sg_dict['studiengang_name'] = sg.studiengang.bezeichnung if hasattr(sg.studiengang, 'bezeichnung') else str(sg.studiengang)
+            studiengang_data.append(sg_dict)
+
         return {
             'modul': modul.to_dict(),
             'lehrformen': [lf.to_dict() for lf in modul.lehrformen],
@@ -154,7 +168,7 @@ class ModulService(BaseService):
                 'verantwortliche': [d.to_dict() for d in modul.get_verantwortliche()],
                 'lehrpersonen': [d.to_dict() for d in modul.get_lehrpersonen()]
             },
-            'studiengaenge': [sg.to_dict() for sg in modul.get_studiengaenge()],
+            'studiengaenge': studiengang_data,
             'lernergebnisse': modul.lernergebnisse.to_dict() if modul.lernergebnisse else None,
             'pruefung': modul.pruefung.to_dict() if modul.pruefung else None,
             'voraussetzungen': modul.voraussetzungen.to_dict() if modul.voraussetzungen else None,

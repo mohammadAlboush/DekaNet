@@ -29,7 +29,7 @@ export interface LoginCredentials {
 
 /**
  * Login Response
- * ✅ SECURITY: Tokens werden als httpOnly Cookies gesetzt
+ * SECURITY: Tokens werden als httpOnly Cookies gesetzt
  * Response enthält nur User und CSRF-Token
  */
 export interface LoginResponse {
@@ -45,7 +45,7 @@ export interface LoginResponse {
 
 /**
  * Auth State
- * ✅ SECURITY: Keine Token-Speicherung im State
+ * SECURITY: Keine Token-Speicherung im State
  * Tokens werden als httpOnly Cookies verwaltet
  */
 export interface AuthState {

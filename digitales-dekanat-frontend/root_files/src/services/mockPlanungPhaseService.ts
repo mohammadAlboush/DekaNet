@@ -8,6 +8,68 @@ import {
   PhaseStatistik
 } from '../types/planungPhase.types';
 
+// Mock-specific interfaces
+interface StartPhaseData {
+  semester_id: number;
+  name: string;
+  startdatum: string;
+  enddatum?: string;
+}
+
+interface ClosePhaseData {
+  grund?: string;
+}
+
+interface ClosePhaseResult {
+  phase: PlanungPhase | undefined;
+  archivierte_planungen: number;
+  geloeschte_entwuerfe: number;
+}
+
+interface AllPhasesResult {
+  phasen: PlanungPhase[];
+  total: number;
+  aktive_phase: PlanungPhase | null;
+}
+
+interface ArchivFilter {
+  semester_id?: number;
+  status?: string;
+  page?: number;
+  per_page?: number;
+}
+
+interface ArchivedPlanungenResult {
+  planungen: ArchiviertePlanung[];
+  total: number;
+  pages: number;
+}
+
+interface ReminderResult {
+  gesendet: number;
+  fehler: number;
+}
+
+interface RestoreResult {
+  success: boolean;
+  planung_id: number;
+}
+
+interface PhaseDashboard {
+  phase: PlanungPhase | null;
+  einreichungen_heute: number;
+  offene_reviews: number;
+  durchschnittliche_bearbeitungszeit: number;
+  deadline_warnung: boolean;
+  professoren_ohne_einreichung: number[];
+}
+
+interface NotificationSettings {
+  deadline_reminder_days: number;
+  auto_close_after_deadline: boolean;
+  send_submission_confirmation: boolean;
+}
+
 class MockPlanungPhaseService {
   private activePhase: PlanungPhase | null = null;
   private phases: PlanungPhase[] = [];
@@ -19,7 +81,7 @@ class MockPlanungPhaseService {
   }
 
   // Mock start phase
-  async startPhase(data: any): Promise<PlanungPhase> {
+  async startPhase(data: StartPhaseData): Promise<PlanungPhase> {
     const newPhase: PlanungPhase = {
       id: this.nextId++,
       semester_id: data.semester_id,
@@ -41,7 +103,7 @@ class MockPlanungPhaseService {
   }
 
   // Mock close phase
-  async closePhase(phaseId: number, _data: any): Promise<any> {
+  async closePhase(phaseId: number, _data: ClosePhaseData): Promise<ClosePhaseResult> {
     const phase = this.phases.find(p => p.id === phaseId);
     if (phase) {
       phase.ist_aktiv = false;
@@ -72,7 +134,7 @@ class MockPlanungPhaseService {
   }
 
   // Mock get all phases
-  async getAllPhases(_semesterId?: number): Promise<any> {
+  async getAllPhases(_semesterId?: number): Promise<AllPhasesResult> {
     return {
       phasen: this.phases,
       total: this.phases.length,
@@ -105,7 +167,7 @@ class MockPlanungPhaseService {
   }
 
   // Mock archived planungen
-  async getArchivedPlanungen(_filter?: any): Promise<any> {
+  async getArchivedPlanungen(_filter?: ArchivFilter): Promise<ArchivedPlanungenResult> {
     return {
       planungen: [],
       total: 0,
@@ -114,7 +176,7 @@ class MockPlanungPhaseService {
   }
 
   // Stub for other methods
-  async updatePhase(phaseId: number, data: any): Promise<PlanungPhase> {
+  async updatePhase(phaseId: number, data: Partial<PlanungPhase>): Promise<PlanungPhase> {
     const phase = this.phases.find(p => p.id === phaseId);
     if (phase) {
       Object.assign(phase, data);
@@ -137,7 +199,7 @@ class MockPlanungPhaseService {
     };
   }
 
-  async sendReminders(_phaseId: number, _professorIds?: number[]): Promise<any> {
+  async sendReminders(_phaseId: number, _professorIds?: number[]): Promise<ReminderResult> {
     return { gesendet: 0, fehler: 0 };
   }
 
@@ -145,11 +207,11 @@ class MockPlanungPhaseService {
     throw new Error('Not implemented');
   }
 
-  async restoreArchivedPlanung(_archivId: number): Promise<any> {
+  async restoreArchivedPlanung(_archivId: number): Promise<RestoreResult> {
     return { success: false, planung_id: 0 };
   }
 
-  async exportArchiv(_filter?: any): Promise<Blob> {
+  async exportArchiv(_filter?: ArchivFilter): Promise<Blob> {
     return new Blob(['Mock Excel Data']);
   }
 
@@ -157,7 +219,7 @@ class MockPlanungPhaseService {
     return new Blob(['Mock PDF Report']);
   }
 
-  async getPhaseDashboard(): Promise<any> {
+  async getPhaseDashboard(): Promise<PhaseDashboard> {
     return {
       phase: this.activePhase,
       einreichungen_heute: 0,
@@ -168,7 +230,7 @@ class MockPlanungPhaseService {
     };
   }
 
-  async getNotificationSettings(): Promise<any> {
+  async getNotificationSettings(): Promise<NotificationSettings> {
     return {
       deadline_reminder_days: 3,
       auto_close_after_deadline: false,
@@ -176,7 +238,7 @@ class MockPlanungPhaseService {
     };
   }
 
-  async updateNotificationSettings(settings: any): Promise<void> {
+  async updateNotificationSettings(settings: NotificationSettings): Promise<void> {
     console.log('[MockPhaseService] Notification settings updated:', settings);
   }
 }

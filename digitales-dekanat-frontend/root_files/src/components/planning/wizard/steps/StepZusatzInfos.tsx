@@ -37,9 +37,40 @@ import {
 } from '@mui/icons-material';
 import { DEFAULT_CAPACITIES } from '../../../../constants/planning.constants';
 
+interface ModulLehrform {
+  kuerzel: string;
+  bezeichnung?: string;
+  sws?: number;
+}
+
+interface WizardStepData {
+  anmerkungen?: string;
+  raumbedarf?: string;
+  roomRequirements?: RoomRequirement[];
+  specialRequests?: SpecialRequests;
+  raum_vorlesung?: string;
+  raum_uebung?: string;
+  raum_praktikum?: string;
+  raum_seminar?: string;
+  modul?: {
+    lehrformen?: ModulLehrform[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+interface SpecialRequests {
+  needsComputerRoom: boolean;
+  needsLab: boolean;
+  needsBeamer: boolean;
+  needsWhiteboard: boolean;
+  flexibleScheduling: boolean;
+  blockCourse: boolean;
+}
+
 interface StepProps {
-  data: any;
-  onUpdate: (data: any) => void;
+  data: WizardStepData;
+  onUpdate: (data: Partial<WizardStepData>) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -61,17 +92,17 @@ const StepZusatzInfos: React.FC<StepProps> = ({
   const [anmerkungen, setAnmerkungen] = useState(data.anmerkungen || '');
   const [raumbedarf, setRaumbedarf] = useState(data.raumbedarf || '');
 
-  // ✨ NEW: Feature 4 - Raumplanung pro Lehrform
+  // Feature 4 - Raumplanung pro Lehrform
   const [raumVorlesung, setRaumVorlesung] = useState(data.raum_vorlesung || '');
   const [raumUebung, setRaumUebung] = useState(data.raum_uebung || '');
   const [raumPraktikum, setRaumPraktikum] = useState(data.raum_praktikum || '');
   const [raumSeminar, setRaumSeminar] = useState(data.raum_seminar || '');
 
   // Check which Lehrformen the selected module has
-  const hatVorlesung = data.modul?.lehrformen?.some((lf: any) => lf.kuerzel === 'V') || false;
-  const hatUebung = data.modul?.lehrformen?.some((lf: any) => lf.kuerzel === 'Ü') || false;
-  const hatPraktikum = data.modul?.lehrformen?.some((lf: any) => lf.kuerzel === 'P') || false;
-  const hatSeminar = data.modul?.lehrformen?.some((lf: any) => lf.kuerzel === 'S') || false;
+  const hatVorlesung = data.modul?.lehrformen?.some((lf: ModulLehrform) => lf.kuerzel === 'V') || false;
+  const hatUebung = data.modul?.lehrformen?.some((lf: ModulLehrform) => lf.kuerzel === 'Ü') || false;
+  const hatPraktikum = data.modul?.lehrformen?.some((lf: ModulLehrform) => lf.kuerzel === 'P') || false;
+  const hatSeminar = data.modul?.lehrformen?.some((lf: ModulLehrform) => lf.kuerzel === 'S') || false;
   const [roomRequirements, setRoomRequirements] = useState<RoomRequirement[]>(
     data.roomRequirements || []
   );
@@ -117,7 +148,7 @@ const StepZusatzInfos: React.FC<StepProps> = ({
       raumbedarf,
       roomRequirements,
       specialRequests,
-      // ✨ NEW: Feature 4 - Raumfelder
+      // Feature 4 - Raumfelder
       raum_vorlesung: raumVorlesung,
       raum_uebung: raumUebung,
       raum_praktikum: raumPraktikum,
@@ -201,7 +232,7 @@ const StepZusatzInfos: React.FC<StepProps> = ({
   };
 
   const handleContinue = () => {
-    // ✨ NEW: Feature 4 - Validate Vorlesung room if required
+    // Feature 4 - Validate Vorlesung room if required
     if (hatVorlesung && !raumVorlesung) {
       // Validation will be shown by the error prop on the TextField
       return;
@@ -415,7 +446,7 @@ const StepZusatzInfos: React.FC<StepProps> = ({
         </Grid>
       </Grid>
 
-      {/* ✨ NEW: Feature 4 - Raumplanung pro Lehrform */}
+      {/* Feature 4 - Raumplanung pro Lehrform */}
       {data.modul && (hatVorlesung || hatUebung || hatPraktikum || hatSeminar) && (
         <Paper sx={{ p: 3, mt: 3 }}>
           <Typography variant="subtitle1" fontWeight={500} gutterBottom>

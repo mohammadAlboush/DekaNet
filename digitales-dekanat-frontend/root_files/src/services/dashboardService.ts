@@ -2,7 +2,6 @@
  * Dashboard Service
  *
  * Handles fetching dashboard statistics including phase-based statistics
- * ✅ SECURITY FIX: `any` Types durch konkrete Typen ersetzt (2026-01-24)
  */
 
 import api, { ApiResponse } from './api';
@@ -13,7 +12,6 @@ import { PlanungPhase } from '../types/planungPhase.types';
 // Types
 // ============================================================================
 
-// ✅ TYPESAFE: Konkrete Typen für Dashboard-Daten
 export interface DashboardStatistik {
   semester?: {
     aktiv: Semester | null;
@@ -277,8 +275,8 @@ export interface NichtZugeordneteModuleStatistik {
 }
 
 export interface NichtZugeordneteModuleResponse {
-  semester: Semester;                    // ✅ TYPESAFE: Konkreter Typ statt any
-  planungsphase: PlanungPhase | null;    // ✅ TYPESAFE: Konkreter Typ statt any
+  semester: Semester;
+  planungsphase: PlanungPhase | null;
   planungsphase_aktiv: boolean;
   relevante_turnus: string[] | null;
   nicht_zugeordnete_module: NichtZugeordnetesModul[];
@@ -330,7 +328,7 @@ export interface DozentPlanungsfortschritt {
 }
 
 export interface DozentenPlanungsfortschrittResponse {
-  semester: Semester;                    // ✅ TYPESAFE: Konkreter Typ statt any
+  semester: Semester;
   planungsphase_aktiv: boolean;
   dozenten: DozentPlanungsfortschritt[];
   statistik: {
@@ -360,6 +358,66 @@ export const getDozentenPlanungsfortschritt = async (
   return response.data;
 };
 
+// ============================================================================
+// Modulhandbücher
+// ============================================================================
+
+export interface ModulhandbuchModul {
+  id: number;
+  kuerzel: string;
+  bezeichnung_de: string;
+  bezeichnung_en: string | null;
+  leistungspunkte: number | null;
+  turnus: string | null;
+  sws_gesamt: number;
+  semester: number | null;
+  kategorie: string | null;
+  pflicht?: boolean;
+  wahlpflicht?: boolean;
+  verantwortlicher: string | null;
+  lehrpersonen?: string[];
+}
+
+export interface ModulhandbuchStudiengang {
+  id: number;
+  kuerzel: string;
+  bezeichnung: string;
+  abschluss: string | null;
+  fachbereich: string | null;
+  regelstudienzeit: number | null;
+  ects_gesamt: number | null;
+  module: ModulhandbuchModul[];
+  statistik: {
+    anzahl_module: number;
+    kategorien: Record<string, number>;
+    ects_summe: number;
+    turnus_verteilung: Record<string, number>;
+    semester_verteilung: Record<string, number>;
+  };
+}
+
+export interface ModulhandbucherResponse {
+  studiengaenge: ModulhandbuchStudiengang[];
+  nicht_zugeordnet: {
+    module: ModulhandbuchModul[];
+    anzahl: number;
+  };
+  gesamt_statistik: {
+    alle_module: number;
+    zugeordnet: number;
+    nicht_zugeordnet: number;
+    studiengaenge: number;
+  };
+}
+
+/**
+ * Holt Modulhandbücher-Daten (alle Module gruppiert nach Studiengang)
+ */
+export const getModulhandbuecher = async (): Promise<ApiResponse<ModulhandbucherResponse>> => {
+  const response = await api.get('/dashboard/modulhandbuecher');
+  return response.data;
+};
+
 export default {
   getStatistik,
   getPhasenStatistik,
@@ -370,4 +428,5 @@ export default {
   markiereAlleGelesen,
   getNichtZugeordneteModule,
   getDozentenPlanungsfortschritt,
+  getModulhandbuecher,
 };

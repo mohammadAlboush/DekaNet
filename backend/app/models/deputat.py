@@ -18,7 +18,7 @@ Workflow:
 - Manuelle Ergänzungen möglich
 """
 
-from datetime import datetime, date
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from app.extensions import db
 
@@ -148,7 +148,7 @@ class Deputatsabrechnung(db.Model):
             'benutzer_id',
             name='uq_deputat_phase_benutzer'
         ),
-        db.Index('ix_deputat_status', 'status'),
+        # Composite Index für häufige Query: Alle Abrechnungen eines Benutzers nach Status
         db.Index('ix_deputat_benutzer_status', 'benutzer_id', 'status'),
     )
 

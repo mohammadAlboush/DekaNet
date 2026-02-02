@@ -131,6 +131,9 @@ database_dumps/
 *.sql.gz
 backup_*.sql
 
+# ALLOW database_dump.sql for deployment
+!backend/database_dump.sql
+
 # Migration and setup scripts with credentials
 import_database_to_server.py
 migrate_sqlite_to_postgres.py
@@ -158,3 +161,20 @@ backend/verify_*.py
 
 # Test outputs
 backend/*.pdf
+
+# ============================================================================
+# EXCLUDED FROM GITHUB PUSH (Project-specific)
+# ============================================================================
+
+# Markdown documentation (local only)
+CLAUDE.md
+DIGIDEKAN_Audit_Prompt.md
+*.md
+!README.md
+!backend/README.md
+
+# Backend development folders
+backend/migrations/
+backend/scripts/
+backend/tests/
+backend/Modulhandbuecher/

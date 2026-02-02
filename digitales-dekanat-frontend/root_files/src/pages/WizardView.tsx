@@ -38,7 +38,7 @@ import StepSemesterAuswahl from '../components/planning/wizard/steps/StepSemeste
 import StepModuleAuswahl from '../components/planning/wizard/steps/StepModuleAuswahl';
 import StepModuleHinzufuegen from '../components/planning/wizard/steps/Stepmodulehinzufuegen';
 import StepMitarbeiterZuordnen from '../components/planning/wizard/steps/StepMitarbeiterZuordnen';
-// ❌ REMOVED: StepMultiplikatoren (nicht mehr benötigt - Multiplikatoren werden in Schritt 3 gesetzt)
+// Multiplikatoren werden in Schritt 3 (Module hinzufügen) gesetzt
 import StepSemesterauftraege from '../components/planning/wizard/steps/StepSemesterauftraege';
 import StepZusatzInfos from '../components/planning/wizard/steps/StepZusatzInfos';
 import StepWunschFreieTage from '../components/planning/wizard/steps/StepWunschFreieTage';
@@ -51,6 +51,18 @@ import usePlanungStore from '../store/planungStore';
 import usePlanungPhaseStore from '../store/planungPhaseStore';
 import { useToastStore } from '../components/common/Toast';
 import useAuthStore from '../store/authStore';
+import { getErrorMessage } from '../utils/errorUtils';
+import { GeplantesModul } from '../types/planung.types';
+
+interface WizardData {
+  planungId?: number;
+  semesterId?: number;
+  semester?: unknown;
+  geplantModule?: GeplantesModul[];
+  wunschFreieTage?: unknown[];
+  anmerkungen?: string;
+  [key: string]: unknown;
+}
 
 const STEPS = [
   {
@@ -73,7 +85,7 @@ const STEPS = [
     icon: '👥',
     description: 'Optional: Ordnen Sie Mitarbeiter zu'
   },
-  // ❌ REMOVED: 'Multiplikatoren setzen' - Wird jetzt in Schritt 3 gemacht
+  // Multiplikatoren werden in Schritt 3 (Module hinzufügen) gesetzt
   {
     label: 'Semesteraufträge',
     icon: '💼',
@@ -228,10 +240,10 @@ const WizardView: React.FC = () => {
 
         setPlanungId(planung.id);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' ❌ Error loading planung:', error);
-      showToast('Fehler beim Laden der Planung', 'error');
-      setError(error.message);
+      showToast(getErrorMessage(error, 'Fehler beim Laden der Planung'), 'error');
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -277,43 +289,42 @@ const WizardView: React.FC = () => {
     }
   };
 
-  // Load template when semester changes
+  // Load template when semester/planungId is available (immediately after phase load)
   useEffect(() => {
     if (semester && planungId && !templateApplied) {
       loadAvailableTemplate();
     }
   }, [semester, planungId]);
 
-  // Automatischer Template-Dialog nach Schritt 1 (neue Planung)
+  // Show template dialog immediately when template is available and planung is ready
   useEffect(() => {
-    const currentModuleCount = geplantModule?.length || 0;
-    // Zeige Dialog automatisch wenn:
-    // 1. Wir auf Schritt 1 (Modulauswahl) sind
-    // 2. Template verfuegbar ist
-    // 3. Noch nicht angewendet wurde
-    // 4. Prompt noch nicht gezeigt wurde
-    // 5. Noch keine Module vorhanden sind
+    const moduleCount = geplantModule?.length || 0;
+    // Show template dialog immediately when:
+    // 1. Template is available
+    // 2. Template hasn't been applied yet
+    // 3. Dialog hasn't been shown yet
+    // 4. No modules exist yet
+    // 5. We have a valid planungId
     if (
-      currentStep === 1 &&
       availableTemplate &&
       !templateApplied &&
       !templatePromptShown &&
-      currentModuleCount === 0 &&
+      moduleCount === 0 &&
       planungId
     ) {
-      // Kurze Verzoegerung damit UI geladen ist
-      const timer = setTimeout(() => {
-        setShowTemplateDialog(true);
-        setTemplatePromptShown(true);
-      }, 500);
-      return () => clearTimeout(timer);
+      log.debug('Showing template dialog immediately after phase load');
+      setShowTemplateDialog(true);
+      setTemplatePromptShown(true);
     }
-  }, [currentStep, availableTemplate, templateApplied, templatePromptShown, geplantModule, planungId]);
+  }, [availableTemplate, templateApplied, templatePromptShown, geplantModule, planungId]);
+
+  // Template-Dialog wird jetzt sofort gezeigt (siehe useEffect oben)
+  // Der alte Step-1-basierte Dialog wurde entfernt
 
   /**
    * Helper: Mitarbeiter-Zuordnung aus geplante_module extrahieren
    */
-  const buildMitarbeiterMap = (modules: any[]): Map<number, number[]> => {
+  const buildMitarbeiterMap = (modules: GeplantesModul[]): Map<number, number[]> => {
     const map = new Map<number, number[]>();
     modules.forEach(gm => {
       if (gm.mitarbeiter_ids && gm.mitarbeiter_ids.length > 0) {
@@ -395,9 +406,9 @@ const WizardView: React.FC = () => {
           );
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error applying template:', error);
-      showToast(error.message || 'Fehler beim Anwenden des Templates', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Anwenden des Templates'), 'error');
     } finally {
       setApplyingTemplate(false);
     }
@@ -495,16 +506,16 @@ const WizardView: React.FC = () => {
         showToast(response.message || 'Fehler beim Einreichen', 'error');
         setError(response.message || 'Fehler beim Einreichen');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' ❌ Error submitting planung:', error);
-      showToast(error.message || 'Fehler beim Einreichen der Planung', 'error');
-      setError(error.message);
+      showToast(getErrorMessage(error, 'Fehler beim Einreichen der Planung'), 'error');
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStepUpdate = (data: any) => {
+  const handleStepUpdate = (data: Partial<WizardData>) => {
     log.debug(' 💾 Step update:', Object.keys(data));
     setWizardData(data);
     // Auto-Save läuft automatisch im Store
@@ -571,7 +582,7 @@ const WizardView: React.FC = () => {
           />
         );
 
-      // ❌ REMOVED: case 4 (StepMultiplikatoren) - Nicht mehr benötigt
+      // Multiplikatoren werden in case 2 (StepModuleHinzufuegen) gesetzt
 
       case 4:
         return (

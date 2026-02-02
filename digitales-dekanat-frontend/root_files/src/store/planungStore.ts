@@ -333,7 +333,7 @@ const usePlanungStore = create<PlanungState>()(
           }
 
           const dataToSave = {
-            userId: user.id, // ✅ Speichere User ID als Validierung
+            userId: user.id, // Speichere User ID als Validierung
             semesterId: state.semesterId,
             semester: state.semester,
             selectedModules: state.selectedModules,
@@ -379,7 +379,7 @@ const usePlanungStore = create<PlanungState>()(
 
           const data = JSON.parse(saved);
 
-          // ✅ WICHTIG: Validiere, dass die Daten zum aktuellen User gehören
+          // Validiere, dass die Daten zum aktuellen User gehören
           if (data.userId && data.userId !== user.id) {
             log.warn(` ⚠ Data belongs to different user (${data.userId}), clearing...`);
             localStorage.removeItem(storageKey);
@@ -404,7 +404,7 @@ const usePlanungStore = create<PlanungState>()(
             isDirty: false,
           });
 
-          log.debug(' ✅ Data restored from LocalStorage');
+          log.debug('Data restored from LocalStorage');
           return true;
         } catch (error) {
           log.error(' ❌ Error loading from LocalStorage:', error);
@@ -449,7 +449,23 @@ const usePlanungStore = create<PlanungState>()(
 
       getTotalSWS: () => {
         const { geplantModule } = get();
-        return geplantModule.reduce((sum, m) => sum + (m.sws_gesamt || 0), 0);
+        return geplantModule.reduce((sum, m) => {
+          // Berechne SWS aus Einzelwerten falls sws_gesamt nicht gesetzt
+          const swsGesamt = m.sws_gesamt || (
+            (m.sws_vorlesung || 0) +
+            (m.sws_uebung || 0) +
+            (m.sws_praktikum || 0) +
+            (m.sws_seminar || 0)
+          );
+          // Falls auch keine SWS-Felder, berechne aus Anzahl * Standard-SWS (2 SWS pro Einheit)
+          const fallbackSWS = swsGesamt || (
+            ((m.anzahl_vorlesungen || 0) * 2) +
+            ((m.anzahl_uebungen || 0) * 2) +
+            ((m.anzahl_praktika || 0) * 2) +
+            ((m.anzahl_seminare || 0) * 2)
+          );
+          return sum + fallbackSWS;
+        }, 0);
       },
 
       isStepValid: (step) => {

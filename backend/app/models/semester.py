@@ -1,9 +1,9 @@
 """
 Semester Model
 ==============
-Neu fÃ¼r Semesterplanung-System.
+Für Semesterplanung-System.
 
-Verwaltet Semester-ZeitrÃ¤ume (WS2025, SS2026, etc.)
+Verwaltet Semester-Zeiträume (WS2025, SS2026, etc.)
 """
 
 from datetime import datetime, date
@@ -15,17 +15,17 @@ class Semester(db.Model):
     Semester-Verwaltung
     
     Ein Semester definiert einen Planungszeitraum.
-    Nur ein Semester kann gleichzeitig aktiv sein (fÃ¼r Planung).
-    
+    Nur ein Semester kann gleichzeitig aktiv sein (für Planung).
+
     Attributes:
-        bezeichnung: VollstÃ¤ndiger Name (z.B. "Wintersemester 2025/2026")
-        kuerzel: Kurzes KÃ¼rzel (z.B. "WS2025")
+        bezeichnung: Vollständiger Name (z.B. "Wintersemester 2025/2026")
+        kuerzel: Kurzes Kürzel (z.B. "WS2025")
         start_datum: Semesterbeginn
         ende_datum: Semesterende
         vorlesungsbeginn: Erster Tag der Vorlesungen
         vorlesungsende: Letzter Tag der Vorlesungen
         ist_aktiv: Ist dieses Semester aktuell aktiv?
-        ist_planungsphase: Ist das Planungsfenster geÃ¶ffnet?
+        ist_planungsphase: Ist das Planungsfenster geöffnet?
     """
     __tablename__ = 'semester'
     
@@ -35,7 +35,7 @@ class Semester(db.Model):
     bezeichnung = db.Column(db.String(50), nullable=False)  # "Wintersemester 2025/2026"
     kuerzel = db.Column(db.String(10), nullable=False, unique=True, index=True)  # "WS2025"
     
-    # ZeitrÃ¤ume
+    # Zeiträume
     start_datum = db.Column(db.Date, nullable=False)
     ende_datum = db.Column(db.Date, nullable=False)
     vorlesungsbeginn = db.Column(db.Date)
@@ -68,7 +68,7 @@ class Semester(db.Model):
     
     @property
     def ist_valid(self):
-        """PrÃ¼ft ob Semester-Daten valide sind"""
+        """Prüft ob Semester-Daten valide sind"""
         if self.start_datum >= self.ende_datum:
             return False
         if self.vorlesungsbeginn and self.vorlesungsende:
@@ -85,7 +85,7 @@ class Semester(db.Model):
         Aktiviert dieses Semester (deaktiviert alle anderen)
         
         Args:
-            planungsphase: Soll Planungsphase auch geÃ¶ffnet werden?
+            planungsphase: Soll Planungsphase auch geöffnet werden?
         """
         # Deaktiviere alle anderen Semester
         Semester.query.update({'ist_aktiv': False, 'ist_planungsphase': False})
@@ -102,14 +102,14 @@ class Semester(db.Model):
         db.session.commit()
     
     def planungsphase_oeffnen(self):
-        """Ã–ffnet das Planungsfenster"""
+        """Öffnet das Planungsfenster"""
         if not self.ist_aktiv:
-            raise ValueError("Semester muss aktiv sein um Planungsphase zu Ã¶ffnen")
+            raise ValueError("Semester muss aktiv sein um Planungsphase zu öffnen")
         self.ist_planungsphase = True
         db.session.commit()
     
     def planungsphase_schliessen(self):
-        """SchlieÃŸt das Planungsfenster"""
+        """Schließt das Planungsfenster"""
         self.ist_planungsphase = False
         db.session.commit()
     
@@ -130,7 +130,7 @@ class Semester(db.Model):
     @property
     def jahr(self):
         """
-        Extrahiert das Jahr aus dem KÃ¼rzel
+        Extrahiert das Jahr aus dem Kürzel
         Returns: int oder None
         """
         import re
@@ -163,7 +163,7 @@ class Semester(db.Model):
     
     @property
     def ist_laufend(self):
-        """LÃ¤uft das Semester gerade?"""
+        """Läuft das Semester gerade?"""
         heute = date.today()
         return self.start_datum <= heute <= self.ende_datum
     
@@ -173,11 +173,11 @@ class Semester(db.Model):
     
     def anzahl_planungen(self, status=None):
         """
-        ZÃ¤hlt Semesterplanungen
-        
+        Zählt Semesterplanungen
+
         Args:
-            status: Optional - Nur Planungen mit diesem Status zÃ¤hlen
-            
+            status: Optional - Nur Planungen mit diesem Status zählen
+
         Returns:
             int: Anzahl Planungen
         """
@@ -195,7 +195,7 @@ class Semester(db.Model):
         return self.anzahl_planungen('freigegeben')
     
     def anzahl_entwurf(self):
-        """Anzahl EntwÃ¼rfe"""
+        """Anzahl Entwürfe"""
         return self.anzahl_planungen('entwurf')
     
     @property
@@ -212,7 +212,7 @@ class Semester(db.Model):
     # =========================================================================
     
     def to_dict(self):
-        """Konvertiert zu Dictionary (fÃ¼r API)"""
+        """Konvertiert zu Dictionary (für API)"""
         return {
             'id': self.id,
             'bezeichnung': self.bezeichnung,
@@ -242,8 +242,8 @@ class Semester(db.Model):
     @classmethod
     def get_aktives_semester(cls):
         """
-        Gibt das aktuell aktive Semester zurÃ¼ck
-        
+        Gibt das aktuell aktive Semester zurück
+
         Returns:
             Semester oder None
         """
@@ -252,8 +252,8 @@ class Semester(db.Model):
     @classmethod
     def get_aktuelles_planungssemester(cls):
         """
-        Gibt das Semester zurÃ¼ck, fÃ¼r das gerade geplant werden kann
-        
+        Gibt das Semester zurück, für das gerade geplant werden kann
+
         Returns:
             Semester oder None
         """
@@ -262,11 +262,11 @@ class Semester(db.Model):
     @classmethod
     def get_by_kuerzel(cls, kuerzel):
         """
-        Findet Semester anhand KÃ¼rzel
-        
+        Findet Semester anhand Kürzel
+
         Args:
-            kuerzel: Semester-KÃ¼rzel (z.B. "WS2025")
-            
+            kuerzel: Semester-Kürzel (z.B. "WS2025")
+
         Returns:
             Semester oder None
         """
@@ -279,7 +279,7 @@ class Semester(db.Model):
     
     @classmethod
     def get_zukuenftige(cls):
-        """Holt alle zukÃ¼nftigen Semester"""
+        """Holt alle zukünftigen Semester"""
         return cls.query.filter(cls.start_datum > date.today()).order_by(cls.start_datum.asc()).all()
     
     @classmethod
@@ -295,18 +295,18 @@ class Semester(db.Model):
     def create_semester(cls, bezeichnung, kuerzel, start_datum, ende_datum, **kwargs):
         """
         Erstellt ein neues Semester
-        
+
         Args:
-            bezeichnung: VollstÃ¤ndiger Name
-            kuerzel: Kurzes KÃ¼rzel
+            bezeichnung: Vollständiger Name
+            kuerzel: Kurzes Kürzel
             start_datum: Semesterbeginn (date oder ISO-String)
             ende_datum: Semesterende (date oder ISO-String)
             **kwargs: Weitere optionale Felder
-            
+
         Returns:
             Semester: Neu erstelltes Semester
         """
-        # Konvertiere Strings zu Dates falls nÃ¶tig
+        # Konvertiere Strings zu Dates falls nötig
         if isinstance(start_datum, str):
             start_datum = datetime.fromisoformat(start_datum).date()
         if isinstance(ende_datum, str):
@@ -331,11 +331,11 @@ class Semester(db.Model):
     @classmethod
     def get_semester_for_date(cls, datum):
         """
-        Findet Semester fÃ¼r ein bestimmtes Datum
-        
+        Findet Semester für ein bestimmtes Datum
+
         Args:
             datum: Date-Objekt oder ISO-String
-            
+
         Returns:
             Semester oder None
         """

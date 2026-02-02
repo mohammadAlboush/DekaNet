@@ -14,7 +14,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_caching import Cache
-from flask_wtf.csrf import CSRFProtect  # ✅ CSRF Protection
+from flask_wtf.csrf import CSRFProtect
 
 
 # =========================================================================
@@ -249,7 +249,7 @@ def init_extensions(app):
     
     @jwt.revoked_token_loader
     def revoked_token_callback(jwt_header, jwt_payload):
-        """Token wurde widerrufen - ✅ SECURITY: Keine internen Details"""
+        """Token wurde widerrufen"""
         app.logger.warning(f"[JWT] [REVOKED] Token revoked for user: {jwt_payload.get('sub')}")
         return {
             'success': False,
@@ -258,20 +258,15 @@ def init_extensions(app):
         }, 401
 
     # =====================================================================
-    # TOKEN BLOCKLIST - ✅ SECURITY: Token-Invalidierung bei Logout
+    # TOKEN BLOCKLIST - Token-Invalidierung bei Logout
     # =====================================================================
     # In-Memory Blocklist (für Production: Redis verwenden)
-    # Tokens werden bei Logout zur Blocklist hinzugefügt
 
     from app.utils.token_blocklist import token_blocklist
 
     @jwt.token_in_blocklist_loader
     def check_if_token_in_blocklist(jwt_header, jwt_payload):
-        """
-        Prüft ob Token in Blocklist ist.
-
-        ✅ SECURITY: Invalidierte Tokens werden abgelehnt.
-        """
+        """Prüft ob Token in Blocklist ist"""
         jti = jwt_payload.get('jti')
         return token_blocklist.is_blocked(jti)
 

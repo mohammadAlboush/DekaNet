@@ -24,8 +24,8 @@ from app.extensions import (
     login_manager,
     jwt,
     cors,
-    csrf,  # ✅ CSRF Protection
-    limiter,  # ✅ Rate Limiting
+    csrf,
+    limiter,
     init_extensions
 )
 
@@ -151,7 +151,7 @@ def create_app(config_name=None):
     
     @app.errorhandler(401)
     def unauthorized(error):
-        """401 Unauthorized - ✅ SECURITY: Keine internen Details"""
+        """401 Unauthorized"""
         app.logger.warning(f"401 Unauthorized: {error}")
         return jsonify({
             'success': False,
@@ -161,7 +161,7 @@ def create_app(config_name=None):
 
     @app.errorhandler(403)
     def forbidden(error):
-        """403 Forbidden - ✅ SECURITY: Keine internen Details"""
+        """403 Forbidden"""
         app.logger.warning(f"403 Forbidden: {error}")
         return jsonify({
             'success': False,
@@ -171,7 +171,7 @@ def create_app(config_name=None):
 
     @app.errorhandler(404)
     def not_found(error):
-        """404 Not Found - ✅ SECURITY: Keine internen Details"""
+        """404 Not Found"""
         return jsonify({
             'success': False,
             'message': 'Ressource nicht gefunden',
@@ -180,10 +180,8 @@ def create_app(config_name=None):
 
     @app.errorhandler(500)
     def internal_error(error):
-        """500 Internal Server Error - ✅ SECURITY: Keine internen Details"""
-        # Logge den echten Fehler intern
+        """500 Internal Server Error"""
         app.logger.exception(f'Internal Server Error: {error}')
-        # Gib nur generische Meldung an Client
         return jsonify({
             'success': False,
             'message': 'Ein interner Fehler ist aufgetreten',
@@ -192,11 +190,7 @@ def create_app(config_name=None):
 
     @app.errorhandler(Exception)
     def handle_exception(error):
-        """
-        Globaler Exception Handler - ✅ SECURITY: Fängt alle unbehandelten Exceptions ab
-
-        Verhindert Information Leakage bei unerwarteten Fehlern.
-        """
+        """Globaler Exception Handler - Fängt alle unbehandelten Exceptions ab"""
         # Logge den echten Fehler intern
         app.logger.exception(f'Unhandled Exception: {error}')
         # Gib nur generische Meldung an Client

@@ -33,8 +33,8 @@ from app.extensions import db, limiter
 from app.models.user import Benutzer
 from app.auth.utils import validate_password_with_config
 from flask import current_app
-from app.validators.auth_schemas import LoginSchema, ChangePasswordSchema  # ✅ Input Validation
-from app.validators.user_schemas import BenutzerUpdateSchema  # ✅ Input Validation
+from app.validators.auth_schemas import LoginSchema, ChangePasswordSchema
+from app.validators.user_schemas import BenutzerUpdateSchema
 
 
 # Blueprint erstellen
@@ -46,7 +46,7 @@ api_auth_bp = Blueprint('api_auth', __name__, url_prefix='/api/auth')
 # =========================================================================
 
 @api_auth_bp.route('/login', methods=['POST'])
-@limiter.limit("5 per minute")  # ✅ Protection against brute-force attacks
+@limiter.limit("5 per minute")  # Protection against brute-force attacks
 @limiter.limit("20 per hour")
 def login():
     """
@@ -67,7 +67,7 @@ def login():
                 'errors': ['Request body muss JSON sein']
             }), 400
 
-        # ✅ INPUT VALIDATION mit Marshmallow
+        # Input validation mit Marshmallow
         schema = LoginSchema()
         try:
             validated_data = schema.load(data)
@@ -129,7 +129,7 @@ def login():
             reason='success'
         )
 
-        # ✅ SECURITY FIX: Tokens als httpOnly Cookies setzen (XSS-sicher)
+        # Tokens als httpOnly Cookies setzen (XSS-sicher)
         response = make_response(jsonify({
             'success': True,
             'message': 'Login erfolgreich',
@@ -147,7 +147,7 @@ def login():
         return response
         
     except Exception as e:
-        # ✅ SECURITY: Keine internen Details an Client
+        # Keine internen Details an Client
         current_app.logger.exception(f"[Auth] Login error")
         return jsonify({
             'success': False,
@@ -172,12 +172,12 @@ def register():
 
 @api_auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
-@limiter.limit("10 per minute")  # ✅ Rate Limiting für Token Refresh
+@limiter.limit("10 per minute")  # Rate Limiting für Token Refresh
 def refresh():
     """
     Token erneuern mit Refresh Token - Rate Limited
 
-    ✅ SECURITY FIX: Neues Access Token als httpOnly Cookie
+    Neues Access Token als httpOnly Cookie
     """
     try:
         user_id = get_jwt_identity()
@@ -211,12 +211,11 @@ def logout():
     """
     Logout - Invalidiert Token und löscht Cookies
 
-    ✅ SECURITY FIX:
     1. Token wird zur Blocklist hinzugefügt (serverseitig invalidiert)
     2. Cookies werden gelöscht (httpOnly)
     """
     try:
-        # ✅ SECURITY: Token zur Blocklist hinzufügen
+        # Token zur Blocklist hinzufügen
         jwt_payload = get_jwt()
         jti = jwt_payload.get('jti')
         exp = jwt_payload.get('exp')
@@ -235,7 +234,7 @@ def logout():
 
         return response
     except Exception as e:
-        # ✅ SECURITY: Keine internen Details
+        # Keine internen Details
         current_app.logger.exception("[Auth] Logout error")
         return jsonify({
             'success': False,
@@ -261,7 +260,7 @@ def verify():
         }), 200
         
     except Exception as e:
-        # ✅ SECURITY: Keine internen Details
+        # Keine internen Details
         current_app.logger.warning(f"[Auth] Token verification failed: {e}")
         return jsonify({
             'success': False,
@@ -294,7 +293,7 @@ def me():
         }), 200
         
     except Exception as e:
-        # ✅ SECURITY: Keine internen Details
+        # Keine internen Details
         current_app.logger.exception("[Auth] Get user error")
         return jsonify({
             'success': False,
@@ -339,7 +338,7 @@ def profile():
         }), 200
         
     except Exception as e:
-        # ✅ SECURITY: Keine internen Details
+        # Keine internen Details
         current_app.logger.exception("[Auth] Get profile error")
         return jsonify({
             'success': False,
@@ -350,7 +349,7 @@ def profile():
 
 @api_auth_bp.route('/profile', methods=['PUT'])
 @jwt_required()
-@limiter.limit("20 per minute")  # ✅ Rate Limiting für Profil-Updates
+@limiter.limit("20 per minute")  # Rate Limiting für Profil-Updates
 def update_profile():
     """
     User Profil aktualisieren
@@ -382,7 +381,7 @@ def update_profile():
                 'message': 'JSON-Daten fehlen'
             }), 400
 
-        # ✅ INPUT VALIDATION mit Marshmallow
+        # Input validation mit Marshmallow
         schema = BenutzerUpdateSchema()
         try:
             validated_data = schema.load(data)
@@ -426,7 +425,7 @@ def update_profile():
         }), 200
         
     except ValueError as e:
-        # ✅ SECURITY: Validierungsfehler können gezeigt werden (keine internen Details)
+        # Validierungsfehler können gezeigt werden (keine internen Details)
         current_app.logger.warning(f"[Auth] Profile validation error: {e}")
         return jsonify({
             'success': False,
@@ -434,7 +433,7 @@ def update_profile():
             'errors': ['Die eingegebenen Daten sind ungültig']
         }), 400
     except Exception as e:
-        # ✅ SECURITY: Keine internen Details
+        # Keine internen Details
         current_app.logger.exception("[Auth] Update profile error")
         db.session.rollback()
         return jsonify({
@@ -450,7 +449,7 @@ def update_profile():
 
 @api_auth_bp.route('/change-password', methods=['POST'])
 @jwt_required()
-@limiter.limit("5 per minute")  # ✅ Rate Limiting für Passwort-Änderungen
+@limiter.limit("5 per minute")  # Rate Limiting für Passwort-Änderungen
 def change_password():
     """
     Passwort ändern
@@ -469,7 +468,7 @@ def change_password():
                 'message': 'JSON-Daten fehlen'
             }), 400
 
-        # ✅ INPUT VALIDATION mit Marshmallow
+        # Input validation mit Marshmallow
         schema = ChangePasswordSchema()
         try:
             validated_data = schema.load(data)
@@ -515,7 +514,7 @@ def change_password():
         }), 200
         
     except Exception as e:
-        # ✅ SECURITY: Keine internen Details
+        # Keine internen Details
         current_app.logger.exception("[Auth] Change password error")
         db.session.rollback()
         return jsonify({

@@ -1,7 +1,7 @@
 """
 Notification Model
 ==================
-Benachrichtigungen fÃ¼r Benutzer
+Benachrichtigungen für Benutzer
 """
 
 from datetime import datetime
@@ -9,7 +9,7 @@ from .base import db
 
 
 class Benachrichtigung(db.Model):
-    """Benachrichtigungen fÃ¼r Benutzer"""
+    """Benachrichtigungen für Benutzer"""
     __tablename__ = 'benachrichtigung'
     
     id = db.Column(db.Integer, primary_key=True)

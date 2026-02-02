@@ -1,7 +1,7 @@
 """
 SWS Calculator
 ==============
-Berechnet Semesterwochenstunden (SWS) fÃ¼r Module und Planungen.
+Berechnet Semesterwochenstunden (SWS) für Module und Planungen.
 
 Der Calculator nutzt die bestehende modul_lehrform Tabelle um:
 - SWS pro Lehrform zu holen (aus DB)
@@ -24,7 +24,7 @@ class SWSCalculator:
     - Multiplikatoren (Anzahl Gruppen)
     """
     
-    # Mapping: Lehrform-KÃ¼rzel â†’ GeplantesModul-Feld
+    # Mapping: Lehrform-Kürzel → GeplantesModul-Feld
     LEHRFORM_MAPPING = {
         'V': 'anzahl_vorlesungen',    # Vorlesung
         'Ü': 'anzahl_uebungen',        # Übung
@@ -43,14 +43,14 @@ class SWSCalculator:
     ) -> Dict[str, float]:
         """
         Holt Basis-SWS eines Moduls aus der DB
-        
+
         Args:
             modul_id: Modul ID
-            po_id: PrÃ¼fungsordnung ID
-            
+            po_id: Prüfungsordnung ID
+
         Returns:
             Dict: {lehrform_kuerzel: sws}
-            
+
         Example:
             >>> calculator.get_modul_basis_sws(1, 1)
             {'V': 2.0, 'Ü': 2.0, 'P': 2.0}
@@ -78,14 +78,14 @@ class SWSCalculator:
     ) -> float:
         """
         Berechnet Gesamt-SWS eines Moduls (ohne Multiplikatoren)
-        
+
         Args:
             modul_id: Modul ID
-            po_id: PrÃ¼fungsordnung ID
-            
+            po_id: Prüfungsordnung ID
+
         Returns:
             float: Gesamt-SWS
-            
+
         Example:
             >>> calculator.get_modul_gesamt_sws(1, 1)
             6.0  # 2V + 2Ü + 2P
@@ -102,11 +102,11 @@ class SWSCalculator:
         geplantes_modul: GeplantesModul
     ) -> Dict[str, float]:
         """
-        Berechnet SWS fÃ¼r ein geplantes Modul mit Multiplikatoren
-        
+        Berechnet SWS für ein geplantes Modul mit Multiplikatoren
+
         Args:
             geplantes_modul: GeplantesModul Objekt
-            
+
         Returns:
             Dict mit berechneten SWS:
                 - sws_vorlesung: float
@@ -153,14 +153,14 @@ class SWSCalculator:
         geplantes_modul: GeplantesModul
     ) -> GeplantesModul:
         """
-        Berechnet und speichert SWS fÃ¼r ein geplantes Modul
-        
+        Berechnet und speichert SWS für ein geplantes Modul
+
         Args:
             geplantes_modul: GeplantesModul Objekt
-            
+
         Returns:
             GeplantesModul mit aktualisierten SWS-Werten
-            
+
         Example:
             >>> geplantes = GeplantesModul.query.get(1)
             >>> calculator.update_geplantes_modul_sws(geplantes)
@@ -284,43 +284,43 @@ class SWSCalculator:
         anzahl_seminare: int = 0
     ) -> tuple[bool, str]:
         """
-        Validiert ob Multiplikatoren fÃ¼r ein Modul sinnvoll sind
-        
+        Validiert ob Multiplikatoren für ein Modul sinnvoll sind
+
         Args:
             modul_id: Modul ID
-            po_id: PrÃ¼fungsordnung ID
+            po_id: Prüfungsordnung ID
             anzahl_vorlesungen: Multiplikator Vorlesungen
             anzahl_uebungen: Multiplikator Übungen
             anzahl_praktika: Multiplikator Praktika
             anzahl_seminare: Multiplikator Seminare
-            
+
         Returns:
             tuple: (is_valid, message)
-            
+
         Example:
             >>> calculator.validate_multiplikatoren(1, 1, anzahl_vorlesungen=2)
             (True, "")
         """
         # Hole Basis-SWS
         basis_sws = self.get_modul_basis_sws(modul_id, po_id)
-        
-        # PrÃ¼fe ob Multiplikatoren passen
+
+        # Prüfe ob Multiplikatoren passen
         if anzahl_vorlesungen > 0 and 'V' not in basis_sws:
             return False, "Modul hat keine Vorlesung"
-        
+
         if anzahl_uebungen > 0 and 'Ü' not in basis_sws:
             return False, "Modul hat keine Übung"
-        
+
         if anzahl_praktika > 0 and 'P' not in basis_sws:
             return False, "Modul hat kein Praktikum"
-        
+
         if anzahl_seminare > 0 and 'S' not in basis_sws:
             return False, "Modul hat kein Seminar"
-        
-        # PrÃ¼fe ob mindestens ein Multiplikator > 0
+
+        # Prüfe ob mindestens ein Multiplikator > 0
         if sum([anzahl_vorlesungen, anzahl_uebungen, anzahl_praktika, anzahl_seminare]) == 0:
             return False, "Mindestens ein Multiplikator muss > 0 sein"
-        
+
         return True, ""
     
     def get_lehrformen_text(
@@ -331,17 +331,17 @@ class SWSCalculator:
         anzahl_seminare: int = 0
     ) -> str:
         """
-        Generiert Text-ReprÃ¤sentation der Lehrformen
-        
+        Generiert Text-Repräsentation der Lehrformen
+
         Args:
             anzahl_vorlesungen: Multiplikator Vorlesungen
             anzahl_uebungen: Multiplikator Übungen
             anzahl_praktika: Multiplikator Praktika
             anzahl_seminare: Multiplikator Seminare
-            
+
         Returns:
             str: Formatierte Lehrformen (z.B. "2V + 1Ü + 1P")
-            
+
         Example:
             >>> calculator.get_lehrformen_text(2, 1, 1, 0)
             "2V + 1Ü + 1P"
@@ -365,12 +365,12 @@ class SWSCalculator:
         po_id: int
     ) -> List[Dict[str, Any]]:
         """
-        Gibt verfÃ¼gbare Lehrformen fÃ¼r ein Modul zurÃ¼ck
-        
+        Gibt verfügbare Lehrformen für ein Modul zurück
+
         Args:
             modul_id: Modul ID
-            po_id: PrÃ¼fungsordnung ID
-            
+            po_id: Prüfungsordnung ID
+
         Returns:
             Liste von Dicts mit Lehrform-Infos:
                 - kuerzel: str

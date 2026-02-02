@@ -16,7 +16,7 @@ import { handleApiError } from '../services/api';
 
 const log = createContextLogger('PlanungPhaseStore');
 
-// ✅ TYPESAFE: Konkrete Typen für Phase-Updates
+// Konkrete Typen für Phase-Updates
 export interface PhaseUpdateData {
   name?: string;
   startdatum?: string;
@@ -46,7 +46,7 @@ interface PlanungPhaseStore {
   fetchActivePhase: () => Promise<void>;
   startNewPhase: (data: CreatePlanungPhaseDto) => Promise<void>;
   closeCurrentPhase: (archiveEntwuerfe: boolean, grund?: string) => Promise<void>;
-  updatePhase: (phaseId: number, updates: PhaseUpdateData) => Promise<void>;  // ✅ TYPESAFE
+  updatePhase: (phaseId: number, updates: PhaseUpdateData) => Promise<void>;
 
   // Actions - Submission Management
   checkSubmissionStatus: (professorId?: number) => Promise<void>;
@@ -54,9 +54,9 @@ interface PlanungPhaseStore {
   fetchPhaseSubmissions: (phaseId: number) => Promise<void>;
 
   // Actions - Archiv
-  fetchArchivedPlanungen: (filter?: ArchivFilter) => Promise<void>;  // ✅ TYPESAFE
+  fetchArchivedPlanungen: (filter?: ArchivFilter) => Promise<void>;
   restoreFromArchive: (archivId: number) => Promise<number>;
-  exportArchive: (filter?: ArchivFilter) => Promise<void>;  // ✅ TYPESAFE
+  exportArchive: (filter?: ArchivFilter) => Promise<void>;
 
   // Actions - Historie & Statistiken
   fetchPhaseHistory: (professorId?: number) => Promise<void>;

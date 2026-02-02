@@ -30,7 +30,8 @@ class ModulAuditLog(db.Model):
     po_id = db.Column(
         db.Integer,
         db.ForeignKey('pruefungsordnung.id', ondelete='CASCADE'),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     # Wer hat geändert?

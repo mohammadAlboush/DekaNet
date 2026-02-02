@@ -154,11 +154,11 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
       const dozentenResponse = await api.get('/dozenten?aktiv=true');
       log.debug(' 📥 Dozenten response:', dozentenResponse);
 
-      // ✅ Load all planungen - NUR für aktive Planungsphase!
+      // Load all planungen - NUR für aktive Planungsphase!
       log.debug(' 🔍 Fetching planungen for semester (nur aktive Phase):', semesterId);
       const planungenResponse = await planungService.getAllPlanungenDekan({
         semester_id: semesterId,
-        nur_aktive_phase: true  // ✅ Kritisch: Nur aktive Phase!
+        nur_aktive_phase: true  // Kritisch: Nur aktive Phase!
       });
       log.debug(' 📥 Planungen response (nur aktive Phase):', planungenResponse);
 
@@ -215,7 +215,14 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
   };
 
   const mergeDozentPlanungData = (
-    allDozenten: any[],
+    allDozenten: Array<{
+      id: number;
+      name_komplett: string;
+      name_kurz?: string;
+      nachname?: string;
+      email?: string;
+      aktiv: boolean;
+    }>,
     planungen: Semesterplanung[]
   ): DozentData[] => {
     log.debug(' Starting merge...');
@@ -658,7 +665,7 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry: any) => `${entry.name}: ${entry.value}`}
+                    label={({ name, value }: { name: string; value: number }) => `${name}: ${value}`}
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"

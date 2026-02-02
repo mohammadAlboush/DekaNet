@@ -8,16 +8,16 @@ import { createContextLogger } from '../utils/logger';
 const log = createContextLogger('AuthStore');
 
 /**
- * Authentication Store - SECURE COOKIE-BASED AUTH
+ * Authentication Store - Secure Cookie-Based Auth
  * ================================================
  * Global state management für Authentication mit Zustand
  *
- * VERSION: 2.0 - Sichere httpOnly Cookie-basierte Authentifizierung
+ * Sichere httpOnly Cookie-basierte Authentifizierung
  *
- * SECURITY FEATURES:
- * ✅ Tokens werden als httpOnly Cookies gespeichert (XSS-sicher)
- * ✅ Nur User-Daten werden in Store/localStorage gespeichert
- * ✅ CSRF-Protection durch Double Submit Cookie Pattern
+ * Security Features:
+ * - Tokens werden als httpOnly Cookies gespeichert (XSS-sicher)
+ * - Nur User-Daten werden in Store/localStorage gespeichert
+ * - CSRF-Protection durch Double Submit Cookie Pattern
  */
 
 interface AuthState {
@@ -47,7 +47,7 @@ const useAuthStore = create<AuthState>()(
         error: null,
 
         // Login Action
-        // ✅ SECURITY: Tokens werden als httpOnly Cookies gespeichert
+        // Tokens werden als httpOnly Cookies gespeichert
         login: async (credentials: LoginCredentials) => {
           log.debug('Starting login...');
           set({ isLoading: true, error: null });
@@ -64,7 +64,7 @@ const useAuthStore = create<AuthState>()(
                 error: null,
               });
 
-              // ✅ SECURITY: Tokens sind in httpOnly Cookies
+              // Tokens sind in httpOnly Cookies
               // Nur User ist in localStorage gespeichert
               log.debug('User stored in localStorage, tokens in httpOnly cookies');
 
@@ -91,7 +91,7 @@ const useAuthStore = create<AuthState>()(
         },
 
         // Logout Action
-        // ✅ SECURITY: Cookies werden vom Backend gelöscht
+        // Cookies werden vom Backend gelöscht
         logout: async () => {
           log.debug('Logging out...');
           set({ isLoading: true });
@@ -103,7 +103,7 @@ const useAuthStore = create<AuthState>()(
             log.warn('Logout error (continuing anyway)', error);
           } finally {
             // Lösche user-spezifische LocalStorage Daten
-            // ✅ SECURITY: Keine Token-Löschung nötig (httpOnly Cookies)
+            // Keine Token-Löschung nötig (httpOnly Cookies)
             try {
               const keysToRemove: string[] = [];
               for (let i = 0; i < localStorage.length; i++) {
@@ -133,8 +133,8 @@ const useAuthStore = create<AuthState>()(
           }
         },
 
-        // Check Authentication Status - SECURE COOKIE-BASED
-        // ✅ SECURITY: Tokens sind in httpOnly Cookies
+        // Check Authentication Status - Secure Cookie-Based
+        // Tokens sind in httpOnly Cookies
         checkAuth: async () => {
           log.debug('Checking authentication...');
 
@@ -162,7 +162,7 @@ const useAuthStore = create<AuthState>()(
           });
 
           // Verifiziere Token im Hintergrund (non-blocking)
-          // ✅ SECURITY: Cookie wird automatisch mitgesendet
+          // Cookie wird automatisch mitgesendet
           try {
             log.debug('Verifying token in background...');
             const isValid = await authService.verifyToken();
@@ -180,7 +180,7 @@ const useAuthStore = create<AuthState>()(
               } else {
                 log.error('Token refresh failed - logging out');
                 // Refresh fehlgeschlagen - logout
-                // ✅ SECURITY: Nur User-Daten löschen, keine Tokens
+                // Nur User-Daten löschen, keine Tokens
                 localStorage.removeItem('user');
                 setCsrfToken(null);
 

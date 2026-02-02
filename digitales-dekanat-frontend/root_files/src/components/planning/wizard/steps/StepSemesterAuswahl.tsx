@@ -18,16 +18,12 @@ import planungService from '../../../../services/planungService';
 import useAuthStore from '../../../../store/authStore';
 import { useToastStore } from '../../../common/Toast';
 import { createContextLogger } from '../../../../utils/logger';
+import { getErrorMessage } from '../../../../utils/errorUtils';
+import { StepSemesterAuswahlProps } from '../../../../types/StepProps.types';
+import { PlanungPhase } from '../../../../types/planungPhase.types';
+import { Semester } from '../../../../types/semester.types';
 
 const log = createContextLogger('StepSemesterAuswahl');
-
-interface StepProps {
-  data: any;
-  onUpdate: (data: any) => void;
-  onNext: () => void;
-  planungId?: number;
-  setPlanungId: (id: number) => void;
-}
 
 /**
  * StepSemesterAuswahl - VEREINFACHTE VERSION
@@ -39,7 +35,7 @@ interface StepProps {
  *
  * Template-Laden wurde in WizardView.tsx konsolidiert (Schnellstart-Dialog).
  */
-const StepSemesterAuswahl: React.FC<StepProps> = ({
+const StepSemesterAuswahl: React.FC<StepSemesterAuswahlProps> = ({
   data,
   onUpdate,
   onNext,
@@ -50,8 +46,8 @@ const StepSemesterAuswahl: React.FC<StepProps> = ({
   const user = useAuthStore((state) => state.user);
 
   const [loading, setLoading] = useState(true);
-  const [activePhase, setActivePhase] = useState<any>(null);
-  const [semester, setSemester] = useState<any>(null);
+  const [activePhase, setActivePhase] = useState<PlanungPhase | null>(null);
+  const [semester, setSemester] = useState<Semester | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -125,9 +121,15 @@ const StepSemesterAuswahl: React.FC<StepProps> = ({
         showToast('Bestehende Planung im Entwurf-Status geladen', 'info');
       }
 
-    } catch (err: any) {
+      // Auto-weiter zum nächsten Schritt (Semester wird automatisch vom Dekan gesetzt)
+      if (!isLocked) {
+        log.debug('Auto-advancing to next step (semester auto-selected from phase)');
+        setTimeout(() => onNext(), 500);
+      }
+
+    } catch (err: unknown) {
       log.error(' Error loading phase:', err);
-      setError(err.message || 'Fehler beim Laden der Planungsphase');
+      setError(getErrorMessage(err, 'Fehler beim Laden der Planungsphase'));
     } finally {
       setLoading(false);
     }

@@ -13,11 +13,11 @@ Routes:
 from flask import Blueprint, request, jsonify, session, redirect, url_for, render_template, flash
 from flask_login import login_user, logout_user, current_user, login_required
 from marshmallow import ValidationError
-from app.extensions import db, limiter  # ✅ Rate Limiter Import
+from app.extensions import db, limiter
 from app.models import Benutzer
 from app.auth.utils import verify_password, validate_password_with_config, hash_password
 from app.auth.decorators import active_user_required
-from app.validators.auth_schemas import LoginSchema, ChangePasswordSchema  # ✅ Input Validation
+from app.validators.auth_schemas import LoginSchema, ChangePasswordSchema
 
 
 # Blueprint erstellen
@@ -29,8 +29,8 @@ auth_bp = Blueprint('auth', __name__)
 # =========================================================================
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")  # ✅ Max 5 Login-Versuche pro Minute
-@limiter.limit("20 per hour")   # ✅ Max 20 Login-Versuche pro Stunde
+@limiter.limit("5 per minute")
+@limiter.limit("20 per hour")
 def login():
     """
     Login-Seite (Web)
@@ -111,7 +111,7 @@ def logout():
 # =========================================================================
 
 @auth_bp.route('/api/login', methods=['POST'])
-@limiter.limit("5 per minute")  # ✅ Rate Limiting
+@limiter.limit("5 per minute")
 @limiter.limit("20 per hour")
 def api_login():
     """
@@ -149,7 +149,7 @@ def api_login():
             'message': 'JSON-Daten fehlen'
         }), 400
 
-    # ✅ INPUT VALIDATION mit Marshmallow
+    # Input Validation
     schema = LoginSchema()
     try:
         validated_data = schema.load(data)
@@ -274,7 +274,7 @@ def api_change_password():
             'message': 'JSON-Daten fehlen'
         }), 400
 
-    # ✅ INPUT VALIDATION mit Marshmallow
+    # Input Validation
     schema = ChangePasswordSchema()
     try:
         validated_data = schema.load(data)

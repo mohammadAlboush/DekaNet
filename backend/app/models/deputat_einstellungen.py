@@ -68,7 +68,7 @@ class DeputatsEinstellungen(db.Model):
     # =========================================================================
 
     # Aktivstatus (nur ein Eintrag kann aktiv sein)
-    ist_aktiv = db.Column(db.Boolean, default=True, nullable=False)
+    ist_aktiv = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     # Beschreibung für Versionierung
     beschreibung = db.Column(db.String(500), nullable=True)

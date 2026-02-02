@@ -21,6 +21,7 @@ import {
   School,
 } from '@mui/icons-material';
 import useAuthStore from '../store/authStore';
+import { getErrorMessage } from '../utils/errorUtils';
 
 /**
  * Login Page Component
@@ -69,8 +70,8 @@ const Login: React.FC = () => {
     try {
       await login({ username: username.trim(), password });
       // Navigation erfolgt automatisch durch useEffect
-    } catch (err: any) {
-      setFormError(err.message || 'Login fehlgeschlagen');
+    } catch (err: unknown) {
+      setFormError(getErrorMessage(err, 'Login fehlgeschlagen'));
     }
   };
 

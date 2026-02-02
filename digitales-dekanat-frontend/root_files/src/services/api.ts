@@ -8,11 +8,11 @@ import { logger } from '../utils/logger';
  * VERSION: 3.0 - Sichere httpOnly Cookie-basierte Authentifizierung
  *
  * SECURITY FEATURES:
- * 1. ✅ Tokens werden als httpOnly Cookies gespeichert (XSS-sicher)
- * 2. ✅ CSRF-Protection durch Double Submit Cookie Pattern
- * 3. ✅ Keine sensiblen Daten in localStorage
- * 4. ✅ Automatisches Cookie-Handling durch Browser
- * 5. ✅ Refresh-Token Rotation
+ * 1. Tokens werden als httpOnly Cookies gespeichert (XSS-sicher)
+ * 2. CSRF-Protection durch Double Submit Cookie Pattern
+ * 3. Keine sensiblen Daten in localStorage
+ * 4. Automatisches Cookie-Handling durch Browser
+ * 5. Refresh-Token Rotation
  *
  * WICHTIG:
  * - withCredentials: true sendet Cookies automatisch mit
@@ -54,7 +54,7 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // ✅ KRITISCH: Sendet Cookies automatisch mit
+  // KRITISCH: Sendet Cookies automatisch mit
   withCredentials: true,
 });
 
@@ -90,7 +90,7 @@ const processQueue = (error: Error | null = null, success: boolean = false): voi
 
 /**
  * Refresh Access Token via Cookie
- * ✅ SECURITY: Refresh-Token wird als httpOnly Cookie gesendet
+ * SECURITY: Refresh-Token wird als httpOnly Cookie gesendet
  */
 const refreshAccessToken = async (): Promise<boolean> => {
   // If already refreshing, return the existing promise
@@ -105,7 +105,7 @@ const refreshAccessToken = async (): Promise<boolean> => {
 
   refreshPromise = (async () => {
     try {
-      // ✅ SECURITY: Cookie wird automatisch mitgesendet (withCredentials)
+      // SECURITY: Cookie wird automatisch mitgesendet (withCredentials)
       const response = await axios.post(
         `${API_BASE_URL}/auth/refresh`,
         {},
@@ -158,7 +158,7 @@ api.interceptors.request.use(
 
     logger.debug('API', `Request: ${method} ${url}`);
 
-    // ✅ SECURITY: CSRF-Token nur bei state-ändernden Requests
+    // SECURITY: CSRF-Token nur bei state-ändernden Requests
     const stateChangingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
     if (method && stateChangingMethods.includes(method)) {
@@ -222,7 +222,7 @@ api.interceptors.response.use(
       try {
         logger.debug('API', 'Attempting to refresh token for retry...');
 
-        // ✅ SECURITY: Refresh via Cookie (automatisch)
+        // SECURITY: Refresh via Cookie (automatisch)
         const success = await refreshAccessToken();
 
         if (!success) {
@@ -283,7 +283,7 @@ export interface ApiResponse<T = any> {
   };
 }
 
-// ✅ TYPESAFE: `unknown` statt `any` mit Type Narrowing
+// Error Handler mit Type Narrowing
 export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const responseData = error.response?.data as { message?: string; errors?: string[] } | undefined;
@@ -319,7 +319,7 @@ export const handleApiError = (error: unknown): string => {
 
 /**
  * Debug-Funktion für Auth-Status
- * ✅ SECURITY: Zeigt nur sichere Informationen an (keine Tokens)
+ * SECURITY: Zeigt nur sichere Informationen an (keine Tokens)
  */
 export const debugAuthState = (): void => {
   const user = localStorage.getItem('user');

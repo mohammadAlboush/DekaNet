@@ -1,6 +1,6 @@
 // services/auftragService.ts - Aufträge API Service
 
-import api from './api'; // ✅ FIXED: Use configured API client with JWT interceptor
+import api from './api'; // Use configured API client with JWT interceptor
 import {
   Auftrag,
   SemesterAuftrag,
@@ -20,7 +20,7 @@ import {
  */
 
 class AuftragService {
-  private baseUrl = '/auftraege'; // ✅ Relative URL for configured API client
+  private baseUrl = '/auftraege'; // Relative URL for configured API client
 
   // =========================================================================
   // MASTER-LISTE (Dekan-Verwaltung)

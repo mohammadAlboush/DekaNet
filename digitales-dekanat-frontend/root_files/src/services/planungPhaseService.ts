@@ -21,7 +21,6 @@ const USE_MOCK = false;
 
 const log = createContextLogger('PlanungPhaseService');
 
-// ✅ TYPESAFE: Konkrete Typen für Notification Settings
 export interface NotificationSettings {
   erinnerung_aktiviert?: boolean;
   erinnerung_tage_vorher?: number;

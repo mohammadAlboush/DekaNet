@@ -39,6 +39,7 @@ import planungService from '../services/planungService';
 import modulService from '../services/modulService';
 import { useToastStore } from '../components/common/Toast';
 import { createContextLogger } from '../utils/logger';
+import { GeplantesModul, WunschFreierTag } from '../types/planung.types';
 
 const log = createContextLogger('SemesterplanungDetail');
 import useAuthStore from '../store/authStore';
@@ -64,7 +65,6 @@ const SemesterplanungDetail: React.FC = () => {
 
   const isEdit = window.location.pathname.includes('/edit');
 
-  // ✅ FIX: Handle rolle as both object and string
   const getUserRole = () => {
     if (!user?.rolle) return null;
     return typeof user.rolle === 'string' ? user.rolle : user.rolle.name;
@@ -128,7 +128,7 @@ const SemesterplanungDetail: React.FC = () => {
         parseInt(id!),
         {
           modul_id: selectedModule.id,
-          po_id: planung.po_id,  // ✅ FIX: po_id aus der Planung hinzufügen
+          po_id: planung.po_id,
           ...modulConfig,
         }
       );
@@ -285,7 +285,7 @@ const SemesterplanungDetail: React.FC = () => {
               Gesamt ECTS
             </Typography>
             <Typography variant="h6">
-              {planung.geplante_module?.reduce((sum: number, gm: any) =>
+              {planung.geplante_module?.reduce((sum: number, gm: GeplantesModul) =>
                 sum + (gm.modul?.leistungspunkte || 0), 0) || 0}
             </Typography>
           </Paper>
@@ -330,7 +330,7 @@ const SemesterplanungDetail: React.FC = () => {
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Wunsch-freie Tage
                 </Typography>
-                {planung.wunsch_freie_tage.map((tag: any, index: number) => (
+                {planung.wunsch_freie_tage.map((tag: WunschFreierTag, index: number) => (
                   <Chip
                     key={index}
                     label={tag.wochentag}
@@ -378,7 +378,7 @@ const SemesterplanungDetail: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {planung.geplante_module?.map((gm: any) => (
+              {planung.geplante_module?.map((gm: GeplantesModul) => (
                 <TableRow key={gm.id}>
                   <TableCell>
                     <Typography variant="body2" fontWeight={600}>

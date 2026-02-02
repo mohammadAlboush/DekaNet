@@ -1,7 +1,7 @@
 """
 Flask Application Factory
 =========================
-App Factory Pattern fÃ¼r Flask Application.
+App Factory Pattern für Flask Application.
 
 Usage:
     from app import create_app
@@ -163,7 +163,7 @@ def register_error_handlers(app):
     @app.errorhandler(403)
     def forbidden_error(error):
         """403 Forbidden"""
-        return {'error': 'Forbidden', 'message': 'Sie haben keine Berechtigung fÃ¼r diese Aktion'}, 403
+        return {'error': 'Forbidden', 'message': 'Sie haben keine Berechtigung für diese Aktion'}, 403
     
     @app.errorhandler(401)
     def unauthorized_error(error):
@@ -182,7 +182,7 @@ def register_template_filters(app):
     
     @app.template_filter('datetime_format')
     def datetime_format(value, format='%d.%m.%Y %H:%M'):
-        """Formatiert datetime fÃ¼r Templates"""
+        """Formatiert datetime für Templates"""
         if value is None:
             return ''
         if isinstance(value, str):
@@ -191,7 +191,7 @@ def register_template_filters(app):
     
     @app.template_filter('date_format')
     def date_format(value, format='%d.%m.%Y'):
-        """Formatiert date fÃ¼r Templates"""
+        """Formatiert date für Templates"""
         if value is None:
             return ''
         if isinstance(value, str):
@@ -201,7 +201,7 @@ def register_template_filters(app):
     
     @app.template_filter('status_badge')
     def status_badge(status):
-        """Gibt Bootstrap Badge Klasse fÃ¼r Status zurÃ¼ck"""
+        """Gibt Bootstrap Badge Klasse für Status zurück"""
         badges = {
             'entwurf': 'secondary',
             'eingereicht': 'info',
@@ -215,7 +215,7 @@ def register_template_filters(app):
 
 def register_context_processors(app):
     """
-    Registriert Context Processors fÃ¼r Templates
+    Registriert Context Processors für Templates
     
     Args:
         app: Flask Application
@@ -223,7 +223,7 @@ def register_context_processors(app):
     
     @app.context_processor
     def inject_app_info():
-        """Macht App-Infos in allen Templates verfÃ¼gbar"""
+        """Macht App-Infos in allen Templates verfügbar"""
         return {
             'app_name': app.config['APP_NAME'],
             'app_version': app.config['APP_VERSION'],
@@ -231,6 +231,6 @@ def register_context_processors(app):
     
     @app.context_processor
     def inject_current_year():
-        """Macht aktuelles Jahr in Templates verfÃ¼gbar"""
+        """Macht aktuelles Jahr in Templates verfügbar"""
         from datetime import datetime
         return {'current_year': datetime.now().year}

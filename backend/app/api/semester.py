@@ -162,16 +162,16 @@ def get_planungssemester():
     Holt das Semester mit offener Planungsphase.
 
     Returns:
-        200: Planungssemester
-        404: Keine offene Planungsphase
+        200: Planungssemester oder null wenn keine Planungsphase aktiv
     """
     try:
         semester = semester_service.get_planungssemester()
 
+        # Graceful Response: Kein Fehler wenn keine Planungsphase, sondern null
         if not semester:
-            return ApiResponse.error(
-                message='Keine offene Planungsphase gefunden',
-                status_code=404
+            return ApiResponse.success(
+                data=None,
+                message='Keine offene Planungsphase'
             )
 
         return ApiResponse.success(

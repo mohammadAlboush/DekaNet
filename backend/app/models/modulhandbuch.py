@@ -1,7 +1,7 @@
 """
 Modulhandbuch Model
 ===================
-Importierte PDF-ModulhandbÃ¼cher
+Importierte PDF-Modulhandbücher
 """
 
 from datetime import datetime
@@ -9,13 +9,13 @@ from .base import db
 
 
 class Modulhandbuch(db.Model):
-    """ModulhandbÃ¼cher (7 PDFs importiert)"""
+    """Modulhandbücher - Importierte PDF-Dokumente"""
     __tablename__ = 'modulhandbuch'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     dateiname = db.Column(db.String(255), nullable=False, unique=True)
-    studiengang_id = db.Column(db.Integer, db.ForeignKey('studiengang.id', ondelete='SET NULL'))
-    po_id = db.Column(db.Integer, db.ForeignKey('pruefungsordnung.id', ondelete='CASCADE'), nullable=False)
+    studiengang_id = db.Column(db.Integer, db.ForeignKey('studiengang.id', ondelete='SET NULL'), index=True)
+    po_id = db.Column(db.Integer, db.ForeignKey('pruefungsordnung.id', ondelete='CASCADE'), nullable=False, index=True)
     version = db.Column(db.String(20))
     anzahl_seiten = db.Column(db.Integer)
     anzahl_module = db.Column(db.Integer)

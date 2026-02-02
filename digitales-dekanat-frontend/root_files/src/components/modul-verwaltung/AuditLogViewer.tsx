@@ -36,6 +36,7 @@ import {
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import modulVerwaltungService, { AuditLogEntry } from '../../services/modulVerwaltungService';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const AuditLogViewer: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -69,8 +70,8 @@ const AuditLogViewer: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Laden des Audit Logs');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Ein Fehler ist aufgetreten'));
     } finally {
       setLoading(false);
     }

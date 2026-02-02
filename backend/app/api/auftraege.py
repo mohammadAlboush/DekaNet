@@ -25,6 +25,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, current_user
 from app.services.auftrag_service import auftrag_service
 from app.extensions import db
+from app.api.base import ApiResponse
 
 # Blueprint Definition
 auftrag_api = Blueprint('auftraege', __name__, url_prefix='/api/auftraege')
@@ -56,12 +57,11 @@ def get_alle_auftraege():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden der Aufträge',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden der Auftraege',
+            exception=e,
+            log_context='AuftragAPI.get_alle'
+        )
 
 
 @auftrag_api.route('/', methods=['POST'])
@@ -102,12 +102,11 @@ def create_auftrag():
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Erstellen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Erstellen',
+            exception=e,
+            log_context='AuftragAPI.create'
+        )
 
 
 @auftrag_api.route('/<int:auftrag_id>', methods=['PUT'])
@@ -138,12 +137,11 @@ def update_auftrag(auftrag_id: int):
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Aktualisieren',
+            exception=e,
+            log_context='AuftragAPI.update'
+        )
 
 
 @auftrag_api.route('/<int:auftrag_id>', methods=['DELETE'])
@@ -176,12 +174,11 @@ def delete_auftrag(auftrag_id: int):
             'message': str(e)
         }), 409
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Löschen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Loeschen',
+            exception=e,
+            log_context='AuftragAPI.delete'
+        )
 
 
 # =========================================================================
@@ -213,12 +210,11 @@ def get_auftraege_fuer_semester(semester_id: int):
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden',
+            exception=e,
+            log_context='AuftragAPI'
+        )
 
 
 @auftrag_api.route('/semester/<int:semester_id>/beantragen', methods=['POST'])
@@ -262,12 +258,11 @@ def beantrage_auftrag(semester_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Beantragen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Beantragen',
+            exception=e,
+            log_context='AuftragAPI.beantragen'
+        )
 
 
 @auftrag_api.route('/semester-auftrag/<int:semester_auftrag_id>/genehmigen', methods=['PUT'])
@@ -298,12 +293,11 @@ def genehmige_auftrag(semester_auftrag_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Genehmigen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Genehmigen',
+            exception=e,
+            log_context='AuftragAPI.genehmigen'
+        )
 
 
 @auftrag_api.route('/semester-auftrag/<int:semester_auftrag_id>/ablehnen', methods=['PUT'])
@@ -338,12 +332,11 @@ def lehne_auftrag_ab(semester_auftrag_id: int):
             'message': str(e)
         }), 400
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Ablehnen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Ablehnen',
+            exception=e,
+            log_context='AuftragAPI.ablehnen'
+        )
 
 
 @auftrag_api.route('/semester-auftrag/<int:semester_auftrag_id>', methods=['PUT'])
@@ -385,12 +378,11 @@ def update_semester_auftrag(semester_auftrag_id: int):
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Aktualisieren',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Aktualisieren',
+            exception=e,
+            log_context='AuftragAPI.update'
+        )
 
 
 @auftrag_api.route('/semester-auftrag/<int:semester_auftrag_id>', methods=['DELETE'])
@@ -429,12 +421,11 @@ def delete_semester_auftrag(semester_auftrag_id: int):
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Löschen',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Loeschen',
+            exception=e,
+            log_context='AuftragAPI.delete'
+        )
 
 
 # =========================================================================
@@ -466,12 +457,11 @@ def get_meine_auftraege():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden',
+            exception=e,
+            log_context='AuftragAPI'
+        )
 
 
 @auftrag_api.route('/beantragt', methods=['GET'])
@@ -496,12 +486,11 @@ def get_beantragte_auftraege():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden',
+            exception=e,
+            log_context='AuftragAPI'
+        )
 
 
 @auftrag_api.route('/statistik', methods=['GET'])
@@ -519,9 +508,8 @@ def get_statistik():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'message': 'Fehler beim Laden der Statistiken',
-            'error': str(e)
-        }), 500
+        return ApiResponse.internal_error(
+            message='Fehler beim Laden der Statistiken',
+            exception=e,
+            log_context='AuftragAPI.statistik'
+        )

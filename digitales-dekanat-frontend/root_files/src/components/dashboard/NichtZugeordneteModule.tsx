@@ -55,6 +55,7 @@ import semesterService from '../../services/semesterService';
 import dozentService from '../../services/dozentService';
 import { Semester } from '../../types/semester.types';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('NichtZugeordneteModule');
 
@@ -182,9 +183,9 @@ const NichtZugeordneteModule: React.FC<Props> = ({ semesterId: propSemesterId, p
       } else {
         setError(response.message || 'Fehler beim Laden der Daten');
       }
-    } catch (err: any) {
-      log.error(' Error:', err);
-      setError(err.message || 'Ein Fehler ist aufgetreten');
+    } catch (err: unknown) {
+      log.error(' Error:', { err });
+      setError(getErrorMessage(err, 'Ein Fehler ist aufgetreten'));
     } finally {
       setLoading(false);
     }
@@ -247,9 +248,9 @@ const NichtZugeordneteModule: React.FC<Props> = ({ semesterId: propSemesterId, p
 
       // Daten neu laden
       await loadData();
-    } catch (err: any) {
-      log.error(' Error:', err);
-      alert('Fehler bei der Zuweisung: ' + (err.message || 'Unbekannter Fehler'));
+    } catch (err: unknown) {
+      log.error(' Error:', { err });
+      alert('Fehler bei der Zuweisung: ' + getErrorMessage(err, 'Unbekannter Fehler'));
     } finally {
       setZuweisungLoading(false);
     }

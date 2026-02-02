@@ -14,27 +14,110 @@ import {
 } from '@mui/icons-material';
 import modulService from '../services/modulService';
 import useAuthStore from '../store/authStore';
-import { Modul, ModulDetails } from '../types/modul.types';
+import { Modul, ModulDetails, ModulDozent, ModulLehrform, ModulLiteratur } from '../types/modul.types';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const log = createContextLogger('Module');
 import BulkTransferDialog from '../components/modul-verwaltung/BulkTransferDialog';
 import AuditLogViewer from '../components/modul-verwaltung/AuditLogViewer';
+import ComprehensiveEditDialog from '../components/modul-verwaltung/ComprehensiveEditDialog';
 
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
+  loaded?: boolean; // Performance: Nur rendern wenn geladen
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+// Performance-Optimierung: Memoized TabPanel - rendert NUR wenn Tab aktiv oder bereits geladen
+const TabPanel = React.memo(function TabPanel(props: TabPanelProps) {
+  const { children, value, index, loaded = true, ...other } = props;
+
+  // Performance: Nicht rendern wenn noch nicht geladen und nicht aktiv
+  if (!loaded && value !== index) return null;
+
   return (
     <div role="tabpanel" hidden={value !== index} {...other}>
       {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
     </div>
   );
+});
+
+// Memoized Table Row Component - verhindert unnötige Re-Renders
+interface ModulRowProps {
+  modul: Modul;
+  canEdit: boolean;
+  onViewDetails: (id: number) => void;
+  onEdit: (modul: Modul) => void;
+  onDelete: (modul: Modul) => void;
 }
+
+const MemoizedModulRow = React.memo(function ModulRow({
+  modul, canEdit, onViewDetails, onEdit, onDelete
+}: ModulRowProps) {
+  return (
+    <TableRow
+      hover
+      sx={{ cursor: 'pointer' }}
+      onClick={() => onViewDetails(modul.id)}
+    >
+      <TableCell>
+        <Chip label={modul.kuerzel} color="primary" variant="outlined" size="small" />
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" fontWeight={500}>
+          {modul.bezeichnung_de}
+        </Typography>
+        {modul.bezeichnung_en && (
+          <Typography variant="caption" color="text.secondary">
+            {modul.bezeichnung_en}
+          </Typography>
+        )}
+      </TableCell>
+      <TableCell align="center">
+        <Chip label={modul.leistungspunkte} size="small" color="success" variant="outlined" />
+      </TableCell>
+      <TableCell align="center">
+        <Typography variant="body2">{modul.sws_gesamt}</Typography>
+      </TableCell>
+      <TableCell>
+        <Chip label={modul.turnus} size="small" variant="outlined" />
+      </TableCell>
+      <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+        <Tooltip title="Details anzeigen">
+          <IconButton size="small" onClick={() => onViewDetails(modul.id)}>
+            <Visibility />
+          </IconButton>
+        </Tooltip>
+        {canEdit && (
+          <>
+            <Tooltip title="Bearbeiten">
+              <IconButton size="small" color="primary" onClick={() => onEdit(modul)}>
+                <Edit />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Löschen">
+              <IconButton size="small" color="error" onClick={() => onDelete(modul)}>
+                <Delete />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison: re-render if any displayed modul data or canEdit changes
+  return prevProps.modul.id === nextProps.modul.id &&
+         prevProps.modul.kuerzel === nextProps.modul.kuerzel &&
+         prevProps.modul.bezeichnung_de === nextProps.modul.bezeichnung_de &&
+         prevProps.modul.bezeichnung_en === nextProps.modul.bezeichnung_en &&
+         prevProps.modul.leistungspunkte === nextProps.modul.leistungspunkte &&
+         prevProps.modul.sws_gesamt === nextProps.modul.sws_gesamt &&
+         prevProps.modul.turnus === nextProps.modul.turnus &&
+         prevProps.canEdit === nextProps.canEdit;
+});
 
 const ModulePage: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore();
@@ -45,7 +128,7 @@ const ModulePage: React.FC = () => {
     return user.rolle?.name === 'dekan';
   }, [user]);
 
-  // ✅ FIX: Check if user is Modulverantwortlicher for a specific module
+  // Check if user is Modulverantwortlicher for a specific module
   const isModulverantwortlicher = React.useCallback((modul: Modul | ModulDetails | null): boolean => {
     if (!user || !modul) {
       log.debug('isModulverantwortlicher: false - no user or modul');
@@ -58,14 +141,13 @@ const ModulePage: React.FC = () => {
 
     // Check if dozenten array exists and contains the user as 'verantwortlicher'
     if (modul.dozenten && Array.isArray(modul.dozenten)) {
-      // ✅ ERWEITERTE DEBUG-INFO: Zeige Rollen aller Dozenten
       const dozentenWithRoles = modul.dozenten.map(d => ({
         dozent_id: d.dozent_id,
         rolle: d.rolle,
         name: d.name_komplett || d.name_kurz || `${d.vorname || ''} ${d.nachname || ''}`.trim()
       }));
 
-      // ✅ FIX: Unterstütze beide Schreibweisen: "verantwortlicher" UND "Modulverantwortlicher"
+      // Unterstütze beide Schreibweisen: "verantwortlicher" UND "Modulverantwortlicher"
       const isVerantwortlicher = modul.dozenten.some(d => {
         if (d.dozent_id !== user.dozent_id) return false;
 
@@ -88,7 +170,7 @@ const ModulePage: React.FC = () => {
     return false;
   }, [user]);
 
-  // ✅ Check if user can edit a module (Dekan OR Modulverantwortlicher)
+  // Check if user can edit a module (Dekan OR Modulverantwortlicher)
   const canEditModul = React.useCallback((modul: Modul | ModulDetails | null): boolean => {
     return isDekan || isModulverantwortlicher(modul);
   }, [isDekan, isModulverantwortlicher]);
@@ -104,11 +186,14 @@ const ModulePage: React.FC = () => {
   
   // Dialog States
   const [detailsDialog, setDetailsDialog] = useState(false);
-  const [editDialog, setEditDialog] = useState(false);
   const [createDialog, setCreateDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteForce, setDeleteForce] = useState(false);
   const [detailsTab, setDetailsTab] = useState(0);
+
+  // Performance-Optimierung: Lazy Tab Loading - nur geladene Tabs rendern
+  // Using Record instead of Set for better React state handling
+  const [loadedTabs, setLoadedTabs] = useState<Record<number, boolean>>({ 0: true });
   
   // Edit Mode State - which section is being edited
   const [editMode, setEditMode] = useState<string | null>(null);
@@ -144,13 +229,16 @@ const ModulePage: React.FC = () => {
   // Bulk Transfer Dialog (Dekan only)
   const [bulkTransferDialog, setBulkTransferDialog] = useState(false);
 
-  // ✅ OPTIMIERT: useEffect nur einmal ausführen, statt bei jedem user-Objekt-Update
+  // Comprehensive Edit Dialog State
+  const [comprehensiveEditDialog, setComprehensiveEditDialog] = useState(false);
+
+  // useEffect nur einmal ausführen, statt bei jedem user-Objekt-Update
   useEffect(() => {
     const initializePage = async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
       setInitializing(false);
       if (isAuthenticated && user) {
-        // ✅ Beide API-Calls parallel starten
+        // Beide API-Calls parallel starten
         await Promise.all([
           loadModule(),
           loadOptions()
@@ -159,28 +247,27 @@ const ModulePage: React.FC = () => {
     };
     initializePage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]); // ✅ Nur isAuthenticated als Dependency
+  }, [isAuthenticated]); // Nur isAuthenticated als Dependency
 
-  // ✅ OPTIMIERT: useCallback verhindert unnötige Re-Renders
   const loadModule = useCallback(async () => {
     if (!isAuthenticated) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await modulService.getAllModules({ per_page: 100 });
+      const response = await modulService.getAllModules({ per_page: 200 });
       if (response.success) {
         setModule(response.data || []);
       } else {
         setError(response.message || 'Fehler beim Laden der Module');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   }, [isAuthenticated]);
 
-  // ✅ OPTIMIERT: Parallele API-Calls statt sequentiell + useCallback
+  // Parallele API-Calls statt sequentiell
   const loadOptions = useCallback(async () => {
     try {
       const [lehrformen, dozenten] = await Promise.all([
@@ -195,7 +282,7 @@ const ModulePage: React.FC = () => {
     }
   }, []);
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchTerm) {
       loadModule();
       return;
@@ -209,14 +296,15 @@ const ModulePage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler bei der Suche');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, loadModule]);
 
-  const handleViewDetails = async (modulId: number) => {
+  // Performance-Optimierung: useCallback für stabilere Referenzen
+  const handleViewDetails = useCallback(async (modulId: number) => {
     setLoading(true);
     setError(null);
     try {
@@ -226,39 +314,44 @@ const ModulePage: React.FC = () => {
         setDetailsDialog(true);
         setDetailsTab(0);
         setEditMode(null);
+        setLoadedTabs({ 0: true }); // Reset loaded tabs for new module
       } else {
         setError(response.message || 'Fehler beim Laden der Details');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = useCallback(() => {
     setCreateFormData({
       kuerzel: '', po_id: 1, bezeichnung_de: '', bezeichnung_en: '',
       untertitel: '', leistungspunkte: 5, turnus: 'WiSe',
       gruppengroesse: '', teilnehmerzahl: '', anmeldemodalitaeten: ''
     });
     setCreateDialog(true);
-  };
+  }, []);
 
-  const handleOpenEdit = (modul: Modul) => {
-    setEditFormData({
-      bezeichnung_de: modul.bezeichnung_de,
-      bezeichnung_en: modul.bezeichnung_en || '',
-      untertitel: modul.untertitel || '',
-      leistungspunkte: modul.leistungspunkte || 5,
-      turnus: modul.turnus || 'WiSe',
-      gruppengroesse: modul.gruppengroesse || '',
-      teilnehmerzahl: modul.teilnehmerzahl || '',
-      anmeldemodalitaeten: modul.anmeldemodalitaeten || ''
-    });
-    setSelectedModul(modul as any);
-    setEditDialog(true);
-  };
+
+  // Umfassende Bearbeitungsansicht öffnen
+  const handleOpenComprehensiveEdit = useCallback(async (modul: Modul) => {
+    setLoading(true);
+    try {
+      const response = await modulService.getModulDetails(modul.id);
+      if (response.success && response.data) {
+        setSelectedModul(response.data);
+        setComprehensiveEditDialog(true);
+      } else {
+        setError('Fehler beim Laden der Modul-Details');
+      }
+    } catch (e: unknown) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const handleCreate = async () => {
     if (!createFormData.kuerzel || !createFormData.bezeichnung_de) {
@@ -276,38 +369,18 @@ const ModulePage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Erstellen');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdate = async () => {
-    if (!selectedModul) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await modulService.updateModule(selectedModul.id, editFormData);
-      if (response.success) {
-        setSuccess('Modul erfolgreich aktualisiert');
-        setEditDialog(false);
-        loadModule();
-      } else {
-        setError(response.message || 'Fehler beim Aktualisieren');
-      }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenDelete = (modul: Modul) => {
-    setSelectedModul(modul as any);
+  const handleOpenDelete = useCallback((modul: Modul) => {
+    setSelectedModul(modul as ModulDetails);
     setDeleteForce(false);
     setDeleteDialog(true);
-  };
+  }, []);
 
   const handleDelete = async () => {
     if (!selectedModul) return;
@@ -322,8 +395,8 @@ const ModulePage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Löschen');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -358,8 +431,8 @@ const ModulePage: React.FC = () => {
       } else {
         setError(response.message || 'Fehler beim Speichern');
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -379,8 +452,8 @@ const ModulePage: React.FC = () => {
         setNewLehrform({ lehrform_id: '', sws: 2 });
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -395,8 +468,8 @@ const ModulePage: React.FC = () => {
         setSuccess('Lehrform entfernt');
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -409,15 +482,15 @@ const ModulePage: React.FC = () => {
     try {
       const response = await modulService.addDozent(selectedModul.id, {
         dozent_id: parseInt(newDozent.dozent_id),
-        rolle: newDozent.rolle as any
+        rolle: newDozent.rolle as 'verantwortlicher' | 'lehrperson'
       });
       if (response.success) {
         setSuccess('Dozent hinzugefügt');
         setNewDozent({ dozent_id: '', rolle: 'lehrperson' });
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -432,15 +505,15 @@ const ModulePage: React.FC = () => {
         setSuccess('Dozent entfernt');
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
   // Dozent Rolle bearbeiten
-  const handleStartEditDozentRolle = (dozent: any) => {
+  const handleStartEditDozentRolle = (dozent: ModulDozent) => {
     setEditingDozentId(dozent.id);
     setEditDozentRolle(dozent.rolle);
   };
@@ -455,8 +528,8 @@ const ModulePage: React.FC = () => {
         setEditingDozentId(null);
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message || 'Fehler beim Aktualisieren der Rolle');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Fehler beim Aktualisieren der Rolle'));
     } finally {
       setLoading(false);
     }
@@ -468,7 +541,7 @@ const ModulePage: React.FC = () => {
   };
 
   // Dozent ersetzen
-  const handleOpenReplaceDozent = (dozent: any) => {
+  const handleOpenReplaceDozent = (dozent: ModulDozent) => {
     setReplaceDozentData({
       id: dozent.id,
       name: dozent.name_komplett || dozent.name_kurz || `${dozent.vorname || ''} ${dozent.nachname || ''}`.trim(),
@@ -493,8 +566,8 @@ const ModulePage: React.FC = () => {
         setReplaceDozentData(null);
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message || 'Fehler beim Ersetzen des Dozenten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Fehler beim Ersetzen des Dozenten'));
     } finally {
       setLoading(false);
     }
@@ -517,8 +590,8 @@ const ModulePage: React.FC = () => {
         });
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -533,8 +606,8 @@ const ModulePage: React.FC = () => {
         setSuccess('Literatur entfernt');
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -563,8 +636,8 @@ const ModulePage: React.FC = () => {
         setEditMode(null);
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -592,8 +665,8 @@ const ModulePage: React.FC = () => {
         setEditMode(null);
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -621,8 +694,8 @@ const ModulePage: React.FC = () => {
         setEditMode(null);
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -651,8 +724,8 @@ const ModulePage: React.FC = () => {
         setEditMode(null);
         await handleViewDetails(selectedModul.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -758,56 +831,14 @@ const ModulePage: React.FC = () => {
               </TableRow>
             ) : (
               module.map((modul) => (
-                <TableRow 
+                <MemoizedModulRow
                   key={modul.id}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => handleViewDetails(modul.id)}
-                >
-                  <TableCell>
-                    <Chip label={modul.kuerzel} color="primary" variant="outlined" size="small" />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={500}>
-                      {modul.bezeichnung_de}
-                    </Typography>
-                    {modul.bezeichnung_en && (
-                      <Typography variant="caption" color="text.secondary">
-                        {modul.bezeichnung_en}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Chip label={modul.leistungspunkte} size="small" color="success" variant="outlined" />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Typography variant="body2">{modul.sws_gesamt}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={modul.turnus} size="small" variant="outlined" />
-                  </TableCell>
-                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                    <Tooltip title="Details anzeigen">
-                      <IconButton size="small" onClick={() => handleViewDetails(modul.id)}>
-                        <Visibility />
-                      </IconButton>
-                    </Tooltip>
-                    {canEditModul(modul) && (
-                      <>
-                        <Tooltip title="Bearbeiten">
-                          <IconButton size="small" onClick={() => handleOpenEdit(modul)}>
-                            <Edit />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Löschen">
-                          <IconButton size="small" color="error" onClick={() => handleOpenDelete(modul)}>
-                            <Delete />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
+                  modul={modul}
+                  canEdit={canEditModul(modul)}
+                  onViewDetails={handleViewDetails}
+                  onEdit={handleOpenComprehensiveEdit}
+                  onDelete={handleOpenDelete}
+                />
               ))
             )}
           </TableBody>
@@ -851,7 +882,13 @@ const ModulePage: React.FC = () => {
             </DialogTitle>
             
             <DialogContent dividers>
-              <Tabs value={detailsTab} onChange={(_e, v) => setDetailsTab(v)} sx={{ mb: 2 }}>
+              <Tabs value={detailsTab} onChange={(_e, v) => {
+                  setDetailsTab(v);
+                  // Lazy loading: Tab als geladen markieren
+                  if (!loadedTabs[v]) {
+                    setLoadedTabs(prev => ({ ...prev, [v]: true }));
+                  }
+                }} sx={{ mb: 2 }}>
                 <Tab label="Übersicht" />
                 <Tab label="Lehrformen" />
                 <Tab label="Dozenten" />
@@ -863,7 +900,7 @@ const ModulePage: React.FC = () => {
               </Tabs>
 
               {/* TAB 0: ÜBERSICHT (BASIS-DATEN) */}
-              <TabPanel value={detailsTab} index={0}>
+              <TabPanel value={detailsTab} index={0} loaded={!!loadedTabs[0]}>
                 {editMode !== 'basis' ? (
                   <Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -985,11 +1022,11 @@ const ModulePage: React.FC = () => {
               </TabPanel>
 
               {/* TAB 1: LEHRFORMEN */}
-              <TabPanel value={detailsTab} index={1}>
+              <TabPanel value={detailsTab} index={1} loaded={!!loadedTabs[1]}>
                 <Typography variant="h6" gutterBottom>Lehrformen</Typography>
                 <List>
                   {selectedModul.lehrformen && selectedModul.lehrformen.length > 0 ? (
-                    selectedModul.lehrformen.map((lf: any) => (
+                    selectedModul.lehrformen.map((lf: ModulLehrform) => (
                       <ListItem key={lf.id}>
                         <ListItemText
                           primary={`${lf.bezeichnung} (${lf.kuerzel})`}
@@ -1058,11 +1095,11 @@ const ModulePage: React.FC = () => {
               </TabPanel>
 
               {/* TAB 2: DOZENTEN */}
-              <TabPanel value={detailsTab} index={2}>
+              <TabPanel value={detailsTab} index={2} loaded={!!loadedTabs[2]}>
                 <Typography variant="h6" gutterBottom>Dozenten</Typography>
                 <List>
                   {selectedModul.dozenten && selectedModul.dozenten.length > 0 ? (
-                    selectedModul.dozenten.map((d: any) => (
+                    selectedModul.dozenten.map((d: ModulDozent) => (
                       <ListItem key={d.id} sx={{ bgcolor: editingDozentId === d.id ? 'action.selected' : 'inherit', borderRadius: 1 }}>
                         <ListItemText
                           primary={d.name_komplett || d.name_kurz || `${d.vorname || ''} ${d.nachname || ''}`.trim()}
@@ -1185,11 +1222,11 @@ const ModulePage: React.FC = () => {
               </TabPanel>
 
               {/* TAB 3: LITERATUR */}
-              <TabPanel value={detailsTab} index={3}>
+              <TabPanel value={detailsTab} index={3} loaded={!!loadedTabs[3]}>
                 <Typography variant="h6" gutterBottom>Literatur</Typography>
                 <List>
                   {selectedModul.literatur && selectedModul.literatur.length > 0 ? (
-                    selectedModul.literatur.map((lit: any, idx: number) => (
+                    selectedModul.literatur.map((lit: ModulLiteratur, idx: number) => (
                       <React.Fragment key={lit.id || idx}>
                         {idx > 0 && <Divider sx={{ my: 1 }} />}
                         <ListItem alignItems="flex-start">
@@ -1327,7 +1364,7 @@ const ModulePage: React.FC = () => {
               </TabPanel>
 
              {/* TAB 4: PRÜFUNG */}
-              <TabPanel value={detailsTab} index={4}>
+              <TabPanel value={detailsTab} index={4} loaded={!!loadedTabs[4]}>
                 {editMode !== 'pruefung' ? (
                   <Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -1405,7 +1442,7 @@ const ModulePage: React.FC = () => {
               </TabPanel>
 
               {/* TAB 5: LERNERGEBNISSE */}
-              <TabPanel value={detailsTab} index={5}>
+              <TabPanel value={detailsTab} index={5} loaded={!!loadedTabs[5]}>
                 {editMode !== 'lernergebnisse' ? (
                   <Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -1492,7 +1529,7 @@ const ModulePage: React.FC = () => {
               </TabPanel>
 
               {/* TAB 6: VORAUSSETZUNGEN */}
-              <TabPanel value={detailsTab} index={6}>
+              <TabPanel value={detailsTab} index={6} loaded={!!loadedTabs[6]}>
                 {editMode !== 'voraussetzungen' ? (
                   <Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -1579,7 +1616,7 @@ const ModulePage: React.FC = () => {
               </TabPanel>
 
               {/* TAB 7: ARBEITSAUFWAND */}
-              <TabPanel value={detailsTab} index={7}>
+              <TabPanel value={detailsTab} index={7} loaded={!!loadedTabs[7]}>
                 {editMode !== 'arbeitsaufwand' ? (
                   <Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -1671,69 +1708,6 @@ const ModulePage: React.FC = () => {
         )}
       </Dialog>
 
-      {/* ========== EDIT DIALOG (Basis-Edit Shortcut) ========== */}
-      <Dialog open={editDialog} onClose={() => setEditDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Edit color="primary" />
-            <Typography variant="h6">Modul bearbeiten</Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField label="Bezeichnung (Deutsch)" fullWidth required
-                value={editFormData.bezeichnung_de}
-                onChange={(e) => setEditFormData({ ...editFormData, bezeichnung_de: e.target.value })} />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Bezeichnung (Englisch)" fullWidth
-                value={editFormData.bezeichnung_en}
-                onChange={(e) => setEditFormData({ ...editFormData, bezeichnung_en: e.target.value })} />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Untertitel" fullWidth
-                value={editFormData.untertitel}
-                onChange={(e) => setEditFormData({ ...editFormData, untertitel: e.target.value })} />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField label="Leistungspunkte" type="number" fullWidth
-                value={editFormData.leistungspunkte}
-                onChange={(e) => setEditFormData({ ...editFormData, leistungspunkte: parseInt(e.target.value) })} />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField label="Turnus" select fullWidth
-                value={editFormData.turnus}
-                onChange={(e) => setEditFormData({ ...editFormData, turnus: e.target.value })}>
-                <MenuItem value="WiSe">Wintersemester</MenuItem>
-                <MenuItem value="SoSe">Sommersemester</MenuItem>
-                <MenuItem value="WiSe/SoSe">Jedes Semester</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField label="Gruppengröße" fullWidth
-                value={editFormData.gruppengroesse}
-                onChange={(e) => setEditFormData({ ...editFormData, gruppengroesse: e.target.value })} />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField label="Teilnehmerzahl" fullWidth
-                value={editFormData.teilnehmerzahl}
-                onChange={(e) => setEditFormData({ ...editFormData, teilnehmerzahl: e.target.value })} />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Anmeldemodalitäten" fullWidth multiline rows={3}
-                value={editFormData.anmeldemodalitaeten}
-                onChange={(e) => setEditFormData({ ...editFormData, anmeldemodalitaeten: e.target.value })} />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialog(false)}>Abbrechen</Button>
-          <Button variant="contained" onClick={handleUpdate} disabled={loading}>
-            Speichern
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* ========== CREATE DIALOG ========== */}
       <Dialog open={createDialog} onClose={() => setCreateDialog(false)} maxWidth="md" fullWidth>
@@ -1896,13 +1870,84 @@ const ModulePage: React.FC = () => {
           id: m.id,
           kuerzel: m.kuerzel,
           bezeichnung_de: m.bezeichnung_de,
-          dozenten: m.dozenten?.map((d: any) => ({
+          dozenten: m.dozenten?.map((d: ModulDozent) => ({
             zuordnung_id: d.id,
             id: d.dozent_id,
             name: d.name_komplett || d.name_kurz || `${d.vorname || ''} ${d.nachname || ''}`.trim(),
             rolle: d.rolle
           })) || []
         }))}
+      />
+
+      {/* ========== COMPREHENSIVE EDIT DIALOG ========== */}
+      <ComprehensiveEditDialog
+        open={comprehensiveEditDialog}
+        modul={selectedModul}
+        onClose={() => {
+          setComprehensiveEditDialog(false);
+        }}
+        onSaveSuccess={async () => {
+          // Refresh module list and details after successful save
+          await loadModule();
+          if (selectedModul?.id) {
+            await handleViewDetails(selectedModul.id);
+          }
+          setSuccess('Änderungen wurden gespeichert');
+        }}
+        onSaveBasics={async (data) => {
+          if (!selectedModul?.id) throw new Error('Kein Modul ausgewählt');
+          const response = await modulService.updateModule(selectedModul.id, data);
+          if (!response.success) throw new Error(response.message);
+          return response;
+        }}
+        onSavePruefung={async (data) => {
+          if (!selectedModul?.id) throw new Error('Kein Modul ausgewählt');
+          const response = await modulService.updatePruefung(selectedModul.id, data);
+          if (!response.success) throw new Error(response.message);
+          return response;
+        }}
+        onSaveLernergebnisse={async (data) => {
+          if (!selectedModul?.id) throw new Error('Kein Modul ausgewählt');
+          const response = await modulService.updateLernergebnisse(selectedModul.id, data);
+          if (!response.success) throw new Error(response.message);
+          return response;
+        }}
+        onSaveVoraussetzungen={async (data) => {
+          if (!selectedModul?.id) throw new Error('Kein Modul ausgewählt');
+          const response = await modulService.updateVoraussetzungen(selectedModul.id, data);
+          if (!response.success) throw new Error(response.message);
+          return response;
+        }}
+        onSaveArbeitsaufwand={async (data) => {
+          if (!selectedModul?.id) throw new Error('Kein Modul ausgewählt');
+          const response = await modulService.updateArbeitsaufwand(selectedModul.id, data);
+          if (!response.success) throw new Error(response.message);
+          return response;
+        }}
+        onAddLiteratur={async (data) => {
+          if (!selectedModul?.id) throw new Error('Kein Modul ausgewählt');
+          const response = await modulService.addLiteratur(selectedModul.id, data);
+          if (!response.success) throw new Error(response.message);
+          // Refresh the module details
+          const refreshed = await modulService.getModulDetails(selectedModul.id);
+          if (refreshed.success && refreshed.data) {
+            setSelectedModul(refreshed.data);
+          }
+          return response;
+        }}
+        onDeleteLiteratur={async (id) => {
+          if (!selectedModul?.id) throw new Error('Kein Modul ausgewählt');
+          const response = await modulService.deleteLiteratur(selectedModul.id, id);
+          if (!response.success) throw new Error(response.message);
+          // Refresh the module details
+          const refreshed = await modulService.getModulDetails(selectedModul.id);
+          if (refreshed.success && refreshed.data) {
+            setSelectedModul(refreshed.data);
+          }
+          return response;
+        }}
+        lehrformOptions={lehrformenOptions}
+        dozentOptions={dozentenOptions}
       />
     </Container>
   );

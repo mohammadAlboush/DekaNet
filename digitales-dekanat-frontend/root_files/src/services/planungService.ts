@@ -37,8 +37,7 @@ class PlanungService {
   async getAllPlanungen(params?: {
     semester_id?: number;
     status?: string;
-    nur_aktive_phase?: boolean;      // ✅ HINZUGEFÜGT
-  }): Promise<ApiResponse<Semesterplanung[]>> {
+    nur_aktive_phase?: boolean;        }): Promise<ApiResponse<Semesterplanung[]>> {
     try {
       log.debug(' Fetching planungen with params:', params);
 
@@ -301,9 +300,7 @@ class PlanungService {
     data: {
       anmerkungen?: string;
       raumbedarf?: string;
-      room_requirements?: RoomRequirement[];  // ✅ TYPESAFE
-      special_requests?: SpecialRequests;     // ✅ TYPESAFE
-      wunsch_freie_tage?: Array<{
+      room_requirements?: RoomRequirement[];        special_requests?: SpecialRequests;           wunsch_freie_tage?: Array<{
         wochentag: string;
         zeitraum: string;
         prioritaet: string;
@@ -406,8 +403,7 @@ class PlanungService {
   async getAllPlanungenDekan(params?: {
     semester_id?: number;
     status?: string;
-    nur_aktive_phase?: boolean;      // ✅ HINZUGEFÜGT
-  }): Promise<ApiResponse<Semesterplanung[]>> {
+    nur_aktive_phase?: boolean;        }): Promise<ApiResponse<Semesterplanung[]>> {
     try {
       log.debug(' [DEKAN] Fetching all planungen:', params);
 

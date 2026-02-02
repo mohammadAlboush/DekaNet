@@ -36,6 +36,7 @@ import api from '../../services/api';
 import { useToastStore } from '../common/Toast';
 import useAuthStore from '../../store/authStore';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 import { DEFAULT_CAPACITIES, MULTIPLIKATOR_LIMITS } from '../../constants/planning.constants';
 
 const log = createContextLogger('TemplateModulDialog');
@@ -288,9 +289,9 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
 
       onSave();
       onClose();
-    } catch (error: any) {
-      log.error('Error saving module:', error);
-      showToast(error.message || 'Fehler beim Speichern', 'error');
+    } catch (error: unknown) {
+      log.error('Error saving module:', { error });
+      showToast(getErrorMessage(error, 'Fehler beim Speichern'), 'error');
     } finally {
       setSaving(false);
     }
@@ -397,7 +398,7 @@ const TemplateModulDialog: React.FC<TemplateModulDialogProps> = ({
                     />
                   )}
                   renderOption={(props, option) => {
-                    const { key, ...otherProps } = props as any;
+                    const { key, ...otherProps } = props as React.HTMLAttributes<HTMLLIElement> & { key: React.Key };
                     return (
                       <li key={option.id} {...otherProps}>
                         <Box>

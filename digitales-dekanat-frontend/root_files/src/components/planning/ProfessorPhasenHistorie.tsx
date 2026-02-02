@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import api from '../../services/api';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('ProfessorPhasenHistorie');
 
@@ -94,9 +95,9 @@ const ProfessorPhasenHistorie: React.FC<ProfessorPhasenHistorieProps> = ({ open,
       } else {
         setError('Fehler beim Laden der Historie');
       }
-    } catch (err: any) {
-      log.error(' Fehler:', err);
-      setError(err.response?.data?.message || 'Fehler beim Laden der Historie');
+    } catch (err: unknown) {
+      log.error(' Fehler:', { err });
+      setError(getErrorMessage(err, 'Fehler beim Laden der Historie'));
     } finally {
       setLoading(false);
     }

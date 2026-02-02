@@ -29,6 +29,7 @@ import modulVerwaltungService, { BulkTransferResult } from '../../services/modul
 import dozentService, { Dozent } from '../../services/dozentService';
 import poService, { Pruefungsordnung } from '../../services/poService';
 import { createContextLogger } from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const log = createContextLogger('BulkTransferDialog');
 
@@ -99,8 +100,8 @@ const BulkTransferDialog: React.FC<BulkTransferDialogProps> = ({
       if (response.success) {
         setDozenten(response.data || []);
       }
-    } catch (error: any) {
-      log.error('Error loading dozenten:', error);
+    } catch (error: unknown) {
+      log.error('Error loading dozenten:', { error });
     } finally {
       setLoadingDozenten(false);
     }
@@ -117,8 +118,8 @@ const BulkTransferDialog: React.FC<BulkTransferDialogProps> = ({
           setPoId(response.data[0].id);
         }
       }
-    } catch (error: any) {
-      log.error('Error loading Prüfungsordnungen:', error);
+    } catch (error: unknown) {
+      log.error('Error loading Prüfungsordnungen:', { error });
     } finally {
       setLoadingPOs(false);
     }
@@ -188,8 +189,8 @@ const BulkTransferDialog: React.FC<BulkTransferDialogProps> = ({
       } else {
         setError(response.message || 'Fehler beim Übertragen der Module');
       }
-    } catch (error: any) {
-      setError(error.message || 'Ein Fehler ist aufgetreten');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Ein Fehler ist aufgetreten'));
     } finally {
       setLoading(false);
     }

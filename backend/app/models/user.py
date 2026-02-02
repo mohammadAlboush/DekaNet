@@ -1,11 +1,11 @@
 """
 User & Authentication Models
 =============================
-Neue Models fÃ¼r Benutzer-Verwaltung und Login-System.
+Neue Models für Benutzer-Verwaltung und Login-System.
 
 Models:
 - Rolle: Benutzer-Rollen (dekan, professor, lehrbeauftragter)
-- Benutzer: User-Accounts mit Login-FunktionalitÃ¤t
+- Benutzer: User-Accounts mit Login-Funktionalität
 """
 
 from datetime import datetime
@@ -46,23 +46,23 @@ class Rolle(db.Model):
     
     @classmethod
     def is_valid_role(cls, name):
-        """PrÃ¼ft ob Rollenname valide ist"""
+        """Prüft ob Rollenname valide ist"""
         return name in ['dekan', 'professor', 'lehrbeauftragter']
 
 
 class Benutzer(db.Model, UserMixin):
     """
-    Benutzer-Accounts fÃ¼r Login
-    
-    VerknÃ¼pfung zu bestehender dozent-Tabelle via dozent_id.
-    UserMixin von Flask-Login fÃ¼r Authentication.
-    
+    Benutzer-Accounts für Login
+
+    Verknüpfung zu bestehender dozent-Tabelle via dozent_id.
+    UserMixin von Flask-Login für Authentication.
+
     Attributes:
         email: Unique Email-Adresse
         username: Unique Benutzername
         password_hash: Gehashtes Passwort (niemals Klartext!)
         rolle_id: Foreign Key zu Rolle
-        dozent_id: Optional - Foreign Key zu Dozent (NULL fÃ¼r Dekan ohne Dozenten-Profil)
+        dozent_id: Optional - Foreign Key zu Dozent (NULL für Dekan ohne Dozenten-Profil)
         aktiv: Boolean - Ist Account aktiv?
     """
     __tablename__ = 'benutzer'
@@ -82,14 +82,14 @@ class Benutzer(db.Model, UserMixin):
         index=True
     )
     
-    # VerknÃ¼pfung zu bestehendem Dozent (optional)
+    # Verknüpfung zu bestehendem Dozent (optional)
     dozent_id = db.Column(
         db.Integer,
         db.ForeignKey('dozent.id', ondelete='SET NULL'),
         index=True
     )
-    
-    # PersÃ¶nliche Daten (redundant zu dozent, aber nÃ¼tzlich fÃ¼r Dekan ohne dozent_id)
+
+    # Persönliche Daten (redundant zu dozent, aber nützlich für Dekan ohne dozent_id)
     vorname = db.Column(db.String(100))
     nachname = db.Column(db.String(100))
     
@@ -168,11 +168,11 @@ class Benutzer(db.Model, UserMixin):
     
     def check_password(self, password):
         """
-        PrÃ¼ft ob Passwort korrekt ist
-        
+        Prüft ob Passwort korrekt ist
+
         Args:
-            password: Klartext-Passwort zum PrÃ¼fen
-            
+            password: Klartext-Passwort zum Prüfen
+
         Returns:
             bool: True wenn Passwort korrekt
         """
@@ -207,11 +207,11 @@ class Benutzer(db.Model, UserMixin):
     
     def hat_rolle(self, rolle_name):
         """
-        PrÃ¼ft ob Benutzer eine bestimmte Rolle hat
-        
+        Prüft ob Benutzer eine bestimmte Rolle hat
+
         Args:
             rolle_name: Name der Rolle ('dekan', 'professor', 'lehrbeauftragter')
-            
+
         Returns:
             bool: True wenn Rolle passt
         """
@@ -235,7 +235,7 @@ class Benutzer(db.Model, UserMixin):
 
     def get_rolle_name(self) -> str:
         """
-        ✅ SECURITY: Sichere Methode um Rollennamen zu erhalten.
+        Sichere Methode um Rollennamen zu erhalten.
 
         Returns:
             str: Rollenname oder 'unknown' wenn keine Rolle zugewiesen
@@ -251,11 +251,11 @@ class Benutzer(db.Model, UserMixin):
     @property
     def name_komplett(self):
         """
-        VollstÃ¤ndiger Name
+        Vollständiger Name
         Nutzt dozent.name_komplett falls vorhanden, sonst eigene Felder
-        
+
         Returns:
-            str: VollstÃ¤ndiger Name
+            str: Vollständiger Name
         """
         if self.dozent:
             return self.dozent.name_komplett
@@ -265,7 +265,7 @@ class Benutzer(db.Model, UserMixin):
     
     @property
     def display_name(self):
-        """Name fÃ¼r Anzeige in UI"""
+        """Name für Anzeige in UI"""
         return self.name_komplett
     
     # =========================================================================
@@ -289,23 +289,23 @@ class Benutzer(db.Model, UserMixin):
     
     def get_aktuelle_planung(self, semester_id):
         """
-        Holt die Semesterplanung fÃ¼r ein bestimmtes Semester
-        
+        Holt die Semesterplanung für ein bestimmtes Semester
+
         Args:
             semester_id: ID des Semesters
-            
+
         Returns:
             Semesterplanung oder None
         """
         return self.semesterplanungen.filter_by(semester_id=semester_id).first()
-    
+
     def hat_planung_fuer_semester(self, semester_id):
         """
-        PrÃ¼ft ob Benutzer eine Planung fÃ¼r Semester hat
-        
+        Prüft ob Benutzer eine Planung für Semester hat
+
         Args:
             semester_id: ID des Semesters
-            
+
         Returns:
             bool: True wenn Planung existiert
         """
@@ -313,11 +313,11 @@ class Benutzer(db.Model, UserMixin):
     
     def to_dict(self, include_sensitive=False):
         """
-        Konvertiert zu Dictionary (fÃ¼r API)
-        
+        Konvertiert zu Dictionary (für API)
+
         Args:
             include_sensitive: Soll password_hash inkludiert werden? (Normalerweise NEIN!)
-            
+
         Returns:
             dict: Benutzer-Daten
         """

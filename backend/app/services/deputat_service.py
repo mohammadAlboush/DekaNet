@@ -327,8 +327,8 @@ class DeputatService(BaseService):
         # Hole alle importierten Lehrtätigkeiten (quelle='planung')
         importierte = {
             lt.geplantes_modul_id: lt
-            for lt in abrechnung.lehrtaetigkeiten.filter_by(quelle='planung').all()
-            if lt.geplantes_modul_id
+            for lt in abrechnung.lehrtaetigkeiten
+            if lt.quelle == 'planung' and lt.geplantes_modul_id
         }
 
         # Hole alle geplanten Module MIT EAGER LOADING für modul
@@ -423,8 +423,8 @@ class DeputatService(BaseService):
         # Hole alle importierten Ermäßigungen
         importierte = {
             e.semester_auftrag_id: e
-            for e in abrechnung.ermaessigungen.filter_by(quelle='semesterauftrag').all()
-            if e.semester_auftrag_id
+            for e in abrechnung.ermaessigungen
+            if e.quelle == 'semesterauftrag' and e.semester_auftrag_id
         }
 
         # Hole genehmigte Semesteraufträge für diese Planungsphase MIT EAGER LOADING
@@ -533,8 +533,8 @@ class DeputatService(BaseService):
         # Hole bereits importierte Module
         bereits_importiert = {
             lt.geplantes_modul_id
-            for lt in abrechnung.lehrtaetigkeiten.filter_by(quelle='planung').all()
-            if lt.geplantes_modul_id
+            for lt in abrechnung.lehrtaetigkeiten
+            if lt.quelle == 'planung' and lt.geplantes_modul_id
         }
 
         importiert = 0
@@ -617,8 +617,8 @@ class DeputatService(BaseService):
         # Hole bereits importierte Aufträge
         bereits_importiert = {
             e.semester_auftrag_id
-            for e in abrechnung.ermaessigungen.filter_by(quelle='semesterauftrag').all()
-            if e.semester_auftrag_id
+            for e in abrechnung.ermaessigungen
+            if e.quelle == 'semesterauftrag' and e.semester_auftrag_id
         }
 
         # Hole genehmigte Semesteraufträge für diese Planungsphase MIT EAGER LOADING
@@ -1488,7 +1488,7 @@ class DeputatService(BaseService):
         # =====================================================================
         # 1. LEHRTÄTIGKEITEN
         # =====================================================================
-        if abrechnung.lehrtaetigkeiten.count() > 0:
+        if len(abrechnung.lehrtaetigkeiten) > 0:
             elements.append(Paragraph('1. Lehrtätigkeiten', section_style))
             data = [['Bezeichnung', 'Kategorie', 'Wochentag(e)', 'Quelle', 'SWS']]
             kategorien_map = {
@@ -1503,7 +1503,7 @@ class DeputatService(BaseService):
                 'manuell': 'Manuell'
             }
 
-            for lt in abrechnung.lehrtaetigkeiten.all():
+            for lt in abrechnung.lehrtaetigkeiten:
                 # Mehrere Wochentage unterstützen
                 wochentage_list = lt.get_wochentage_list() if hasattr(lt, 'get_wochentage_list') else []
                 if wochentage_list:
@@ -1528,10 +1528,10 @@ class DeputatService(BaseService):
         # =====================================================================
         # 2. LEHREXPORT
         # =====================================================================
-        if abrechnung.lehrexporte.count() > 0:
+        if len(abrechnung.lehrexporte) > 0:
             elements.append(Paragraph('2. Lehrexport', section_style))
             data = [['Fachbereich', 'Fach', 'SWS']]
-            for le in abrechnung.lehrexporte.all():
+            for le in abrechnung.lehrexporte:
                 data.append([le.fachbereich, le.fach, f'{le.sws:.1f}'])
             data.append(['', 'Summe:', f'{summen["sws_lehrexport"]:.1f}'])
             table = Table(data, colWidths=[6*cm, 8.5*cm, 1.5*cm])
@@ -1541,14 +1541,14 @@ class DeputatService(BaseService):
         # =====================================================================
         # 3. VERTRETUNGEN
         # =====================================================================
-        if abrechnung.vertretungen.count() > 0:
+        if len(abrechnung.vertretungen) > 0:
             elements.append(Paragraph('3. Vertretungen', section_style))
             data = [['Art', 'Vertretene Person', 'Fach/Professor', 'SWS']]
             art_map = {
                 'praxissemester': 'Praxissemester',
                 'forschungsfreisemester': 'Forschungsfreisemester'
             }
-            for v in abrechnung.vertretungen.all():
+            for v in abrechnung.vertretungen:
                 data.append([
                     art_map.get(v.art, v.art),
                     v.vertretene_person,
@@ -1563,7 +1563,7 @@ class DeputatService(BaseService):
         # =====================================================================
         # 4. ERMÄSSIGUNGEN
         # =====================================================================
-        if abrechnung.ermaessigungen.count() > 0:
+        if len(abrechnung.ermaessigungen) > 0:
             elements.append(Paragraph('4. Ermäßigungsstunden', section_style))
             data = [['Bezeichnung', 'Quelle', 'SWS']]
             quelle_map = {
@@ -1571,7 +1571,7 @@ class DeputatService(BaseService):
                 'semesterauftrag': 'Semesterauftrag',
                 'manuell': 'Manuell'
             }
-            for e in abrechnung.ermaessigungen.all():
+            for e in abrechnung.ermaessigungen:
                 data.append([
                     e.bezeichnung[:50] + ('...' if len(e.bezeichnung) > 50 else ''),
                     quelle_map.get(e.quelle, e.quelle),
@@ -1585,7 +1585,7 @@ class DeputatService(BaseService):
         # =====================================================================
         # 5. BETREUUNGEN
         # =====================================================================
-        if abrechnung.betreuungen.count() > 0:
+        if len(abrechnung.betreuungen) > 0:
             elements.append(Paragraph('5. Betreuungen', section_style))
             data = [['Student/in', 'Betreuungsart', 'Titel', 'Status', 'SWS']]
             betreuungsart_map = {
@@ -1601,7 +1601,7 @@ class DeputatService(BaseService):
                 'laufend': 'Laufend',
                 'abgeschlossen': 'Abgeschl.'
             }
-            for b in abrechnung.betreuungen.all():
+            for b in abrechnung.betreuungen:
                 titel = (b.titel_arbeit[:25] + '...') if b.titel_arbeit and len(b.titel_arbeit) > 25 else (b.titel_arbeit or '-')
                 data.append([
                     b.student_name_komplett,

@@ -50,8 +50,10 @@ import {
 import { BaseStepProps } from '../../../../types/StepProps.types';
 import auftragService from '../../../../services/auftragService';
 import { Auftrag, SemesterAuftrag } from '../../../../types/auftrag.types';
+import { GeplantesModul } from '../../../../types/planung.types';
 import useAuftragStore from '../../../../store/auftragStore';
 import { createContextLogger } from '../../../../utils/logger';
+import { getErrorMessage } from '../../../../utils/errorUtils';
 
 const log = createContextLogger('StepSemesterauftraege');
 
@@ -62,7 +64,7 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
   onNext,
   onBack,
 }) => {
-  // ✅ Use Auftrag Store for synchronization
+  // Use Auftrag Store for synchronization
   const { triggerRefresh } = useAuftragStore();
 
   const [loading, setLoading] = useState(true);
@@ -98,9 +100,9 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
       setMeineAuftraege(meineResponse);
 
       log.debug(' Loaded:', auftraegeResponse.length, 'aufträge,', meineResponse.length, 'meine');
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error loading data:', error);
-      setError(error.message || 'Fehler beim Laden der Aufträge');
+      setError(getErrorMessage(error, 'Fehler beim Laden der Aufträge'));
     } finally {
       setLoading(false);
     }
@@ -140,16 +142,16 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
       // Update local state
       setMeineAuftraege([...meineAuftraege, newAuftrag]);
 
-      // ✅ Trigger Store refresh for Dashboard synchronization
+      // Trigger Store refresh for Dashboard synchronization
       if (data.semesterId) {
         await triggerRefresh(data.semesterId);
       }
 
       handleCloseBeantragDialog();
       log.debug(' ✅ Auftrag beantragt:', newAuftrag);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error beantragen:', error);
-      setError(error.response?.data?.message || error.message || 'Fehler beim Beantragen');
+      setError(getErrorMessage(error, 'Fehler beim Beantragen'));
     } finally {
       setSubmitting(false);
     }
@@ -166,15 +168,15 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
       // Update local state
       setMeineAuftraege(meineAuftraege.filter(a => a.id !== semesterAuftragId));
 
-      // ✅ Trigger Store refresh for Dashboard synchronization
+      // Trigger Store refresh for Dashboard synchronization
       if (data.semesterId) {
         await triggerRefresh(data.semesterId);
       }
 
       log.debug(' ✅ Auftrag zurückgezogen:', semesterAuftragId);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error deleting:', error);
-      setError(error.response?.data?.message || error.message || 'Fehler beim Löschen');
+      setError(getErrorMessage(error, 'Fehler beim Löschen'));
     }
   };
 
@@ -207,7 +209,7 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
   };
 
   const berechneModuleSWS = (): number => {
-    return data.geplantModule?.reduce((sum: number, gm: any) => sum + (gm.sws || 0), 0) || 0;
+    return data.geplantModule?.reduce((sum: number, gm: GeplantesModul) => sum + (gm.sws_gesamt || 0), 0) || 0;
   };
 
   const berechneGesamtSWS = (): number => {

@@ -46,12 +46,13 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import planungService from '../services/planungService';
 import semesterService from '../services/semesterService';
-import dozentService from '../services/dozentService';
+import dozentService, { Dozent } from '../services/dozentService';
 import { useToastStore } from '../components/common/Toast';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const log = createContextLogger('DekanPlanungView');
-import { Semesterplanung } from '../types/planung.types';
+import { Semesterplanung, WunschFreierTag, RoomRequirement, SpecialRequests } from '../types/planung.types';
 import { Semester } from '../types/semester.types';
 import usePlanungPhaseStore from '../store/planungPhaseStore';
 import PlanungsphasenManager from '../components/planning/PlanungsphasenManager';
@@ -79,7 +80,7 @@ const DekanPlanungView: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [planungen, setPlanungen] = useState<Semesterplanung[]>([]);
   const [semester, setSemester] = useState<Semester | null>(null);
-  const [dozenten, setDozenten] = useState<any[]>([]);
+  const [dozenten, setDozenten] = useState<Dozent[]>([]);
 
   // Planning Phase Store
   const {
@@ -130,7 +131,7 @@ const DekanPlanungView: React.FC = () => {
         // Load planungen - ONLY for active planning phase
         const planungenRes = await planungService.getAllPlanungenDekan({
           semester_id: semesterRes.data.id,
-          nur_aktive_phase: true  // ✅ KRITISCH: Nur Planungen der aktiven Phase laden
+          nur_aktive_phase: true  // Nur Planungen der aktiven Phase laden
         });
 
         if (planungenRes.success && planungenRes.data) {
@@ -170,9 +171,9 @@ const DekanPlanungView: React.FC = () => {
       } else {
         showToast(response.message || 'Fehler beim Freigeben', 'error');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error approving:', error);
-      showToast(error.message || 'Fehler beim Freigeben', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Freigeben'), 'error');
     } finally {
       setLoading(false);
     }
@@ -208,9 +209,9 @@ const DekanPlanungView: React.FC = () => {
       } else {
         showToast(response.message || 'Fehler beim Ablehnen', 'error');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(' Error rejecting:', error);
-      showToast(error.message || 'Fehler beim Ablehnen', 'error');
+      showToast(getErrorMessage(error, 'Fehler beim Ablehnen'), 'error');
     } finally {
       setLoading(false);
     }
@@ -738,7 +739,7 @@ const DekanPlanungView: React.FC = () => {
                                         Wunsch-freie Tage ({planung.wunsch_freie_tage.length})
                                       </Typography>
                                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                                        {planung.wunsch_freie_tage.map((tag: any, idx: number) => (
+                                        {planung.wunsch_freie_tage.map((tag: WunschFreierTag, idx: number) => (
                                           <Chip
                                             key={idx}
                                             label={`${tag.wochentag} (${tag.zeitraum || 'ganztags'})`}
@@ -761,7 +762,7 @@ const DekanPlanungView: React.FC = () => {
                                       <Typography variant="caption" fontWeight={600} display="block" gutterBottom>
                                         Raumanforderungen ({planung.room_requirements.length})
                                       </Typography>
-                                      {planung.room_requirements.map((room: any, idx: number) => (
+                                      {planung.room_requirements.map((room: RoomRequirement, idx: number) => (
                                         <Box key={idx} sx={{ mt: 0.5 }}>
                                           <Typography variant="body2">
                                             <strong>{room.type}</strong> (Kapazität: {room.capacity})
@@ -777,19 +778,19 @@ const DekanPlanungView: React.FC = () => {
                                   </Grid>
                                 )}
 
-                                {planung.special_requests && typeof planung.special_requests === 'object' && !Array.isArray(planung.special_requests) && Object.keys(planung.special_requests).some(k => (planung.special_requests as any)[k]) && (
+                                {planung.special_requests && typeof planung.special_requests === 'object' && !Array.isArray(planung.special_requests) && Object.keys(planung.special_requests).some(k => (planung.special_requests as SpecialRequests)[k as keyof SpecialRequests]) && (
                                   <Grid item xs={12} md={6}>
                                     <Alert severity="info">
                                       <Typography variant="caption" fontWeight={600} display="block" gutterBottom>
                                         Spezielle Anforderungen
                                       </Typography>
                                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                                        {(planung.special_requests as any).needsComputerRoom && <Chip label="Computerraum" size="small" />}
-                                        {(planung.special_requests as any).needsLab && <Chip label="Labor" size="small" />}
-                                        {(planung.special_requests as any).needsBeamer && <Chip label="Beamer" size="small" />}
-                                        {(planung.special_requests as any).needsWhiteboard && <Chip label="Whiteboard" size="small" />}
-                                        {(planung.special_requests as any).flexibleScheduling && <Chip label="Flexible Planung" size="small" />}
-                                        {(planung.special_requests as any).blockCourse && <Chip label="Blockveranstaltung" size="small" />}
+                                        {(planung.special_requests as SpecialRequests).needsComputerRoom && <Chip label="Computerraum" size="small" />}
+                                        {(planung.special_requests as SpecialRequests).needsLab && <Chip label="Labor" size="small" />}
+                                        {(planung.special_requests as SpecialRequests).needsBeamer && <Chip label="Beamer" size="small" />}
+                                        {(planung.special_requests as SpecialRequests).needsWhiteboard && <Chip label="Whiteboard" size="small" />}
+                                        {(planung.special_requests as SpecialRequests).flexibleScheduling && <Chip label="Flexible Planung" size="small" />}
+                                        {(planung.special_requests as SpecialRequests).blockCourse && <Chip label="Blockveranstaltung" size="small" />}
                                       </Box>
                                     </Alert>
                                   </Grid>

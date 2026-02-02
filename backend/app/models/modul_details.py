@@ -1,21 +1,20 @@
 """
 Modul Detail-Tabellen
 =====================
-Fortsetzung von modul.py - Detail-Tabellen fÃ¼r Module
+Fortsetzung von modul.py - Detail-Tabellen für Module
 """
 
-from datetime import datetime
 from .base import db
 
 
 class ModulLiteratur(db.Model):
-    """Literatur-Empfehlungen fÃ¼r Module (990 EintrÃ¤ge)"""
+    """Literatur-Empfehlungen für Module (990 Einträge)"""
     __tablename__ = 'modul_literatur'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     modul_id = db.Column(db.Integer, db.ForeignKey('modul.id', ondelete='CASCADE'), nullable=False)
     po_id = db.Column(db.Integer, db.ForeignKey('pruefungsordnung.id', ondelete='CASCADE'), nullable=False)
-    
+
     titel = db.Column(db.Text, nullable=False)
     autoren = db.Column(db.String(500))
     verlag = db.Column(db.String(200))
@@ -24,17 +23,31 @@ class ModulLiteratur(db.Model):
     typ = db.Column(db.String(50))  # 'buch', 'artikel', 'online', etc.
     pflichtliteratur = db.Column(db.Boolean, default=False)
     sortierung = db.Column(db.Integer)
-    
+
     # Relationships
     modul = db.relationship('Modul', back_populates='literatur')
     pruefungsordnung = db.relationship('Pruefungsordnung')
-    
+
     def __repr__(self):
         return f'<ModulLiteratur {self.titel[:50]}...>'
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'modul_id': self.modul_id,
+            'titel': self.titel,
+            'autoren': self.autoren,
+            'verlag': self.verlag,
+            'jahr': self.jahr,
+            'isbn': self.isbn,
+            'typ': self.typ,
+            'pflichtliteratur': self.pflichtliteratur,
+            'sortierung': self.sortierung
+        }
+
 
 class ModulPruefung(db.Model):
-    """PrÃ¼fungs-Details (131 EintrÃ¤ge)"""
+    """Prüfungs-Details für Module"""
     __tablename__ = 'modul_pruefung'
     
     modul_id = db.Column(db.Integer, db.ForeignKey('modul.id', ondelete='CASCADE'), primary_key=True)
@@ -58,7 +71,7 @@ class ModulPruefung(db.Model):
 
 
 class ModulLernergebnisse(db.Model):
-    """Lernziele und Kompetenzen (159 EintrÃ¤ge)"""
+    """Lernziele und Kompetenzen für Module"""
     __tablename__ = 'modul_lernergebnisse'
     
     modul_id = db.Column(db.Integer, db.ForeignKey('modul.id', ondelete='CASCADE'), primary_key=True)
@@ -81,7 +94,7 @@ class ModulLernergebnisse(db.Model):
 
 
 class ModulVoraussetzungen(db.Model):
-    """Voraussetzungen (23 EintrÃ¤ge)"""
+    """Voraussetzungen für Module"""
     __tablename__ = 'modul_voraussetzungen'
     
     modul_id = db.Column(db.Integer, db.ForeignKey('modul.id', ondelete='CASCADE'), primary_key=True)
@@ -104,8 +117,8 @@ class ModulVoraussetzungen(db.Model):
 
 
 class ModulAbhaengigkeit(db.Model):
-    """Modul-AbhÃ¤ngigkeiten (0 EintrÃ¤ge aktuell)"""
-    __tablename__ = 'modul_abhÃ¤ngigkeit'
+    """Modul-Abhängigkeiten"""
+    __tablename__ = 'modul_abhängigkeit'
     
     id = db.Column(db.Integer, primary_key=True)
     modul_id = db.Column(db.Integer, db.ForeignKey('modul.id', ondelete='CASCADE'), nullable=False)
@@ -120,7 +133,7 @@ class ModulAbhaengigkeit(db.Model):
 
 
 class ModulArbeitsaufwand(db.Model):
-    """Arbeitsaufwand in Stunden (115 EintrÃ¤ge)"""
+    """Arbeitsaufwand in Stunden für Module"""
     __tablename__ = 'modul_arbeitsaufwand'
     
     modul_id = db.Column(db.Integer, db.ForeignKey('modul.id', ondelete='CASCADE'), primary_key=True)
@@ -145,7 +158,7 @@ class ModulArbeitsaufwand(db.Model):
 
 
 class ModulSprache(db.Model):
-    """Modul â†” Sprache (61 EintrÃ¤ge)"""
+    """Modul-Sprache Zuordnung"""
     __tablename__ = 'modul_sprache'
     
     modul_id = db.Column(db.Integer, db.ForeignKey('modul.id', ondelete='CASCADE'), primary_key=True)
@@ -159,7 +172,7 @@ class ModulSprache(db.Model):
 
 
 class ModulSeiten(db.Model):
-    """Seitenzahlen im PDF-Modulhandbuch (259 EintrÃ¤ge)"""
+    """Seitenzahlen im PDF-Modulhandbuch"""
     __tablename__ = 'modul_seiten'
     
     modul_id = db.Column(db.Integer, db.ForeignKey('modul.id', ondelete='CASCADE'), primary_key=True)

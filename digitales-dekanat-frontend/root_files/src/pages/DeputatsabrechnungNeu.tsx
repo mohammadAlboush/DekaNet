@@ -69,6 +69,10 @@ import {
 } from '../types/deputat.types';
 import { useToastStore } from '../components/common/Toast';
 import { createContextLogger } from '../utils/logger';
+import { getErrorMessage } from '../utils/errorUtils';
+import { PlanungPhase } from '../types/planungPhase.types';
+import { Modul } from '../types/modul.types';
+import { Auftrag } from '../types/auftrag.types';
 
 const log = createContextLogger('DeputatsabrechnungNeu');
 
@@ -105,12 +109,12 @@ const DeputatsabrechnungNeu: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [abrechnung, setAbrechnung] = useState<DeputatsabrechnungType | null>(null);
-  const [planungsphasen, setPlanungsphasen] = useState<any[]>([]);
+  const [planungsphasen, setPlanungsphasen] = useState<PlanungPhase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<number | null>(
     planungsphaseId ? parseInt(planungsphaseId) : null
   );
-  const [module, setModule] = useState<any[]>([]);
-  const [auftraege, setAuftraege] = useState<any[]>([]);
+  const [module, setModule] = useState<Modul[]>([]);
+  const [auftraege, setAuftraege] = useState<Auftrag[]>([]);
 
   // Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -119,8 +123,8 @@ const DeputatsabrechnungNeu: React.FC = () => {
   >(null);
 
   // Form States
-  const [selectedModul, setSelectedModul] = useState<any | null>(null);
-  const [selectedAuftrag, setSelectedAuftrag] = useState<any | null>(null);
+  const [selectedModul, setSelectedModul] = useState<Modul | null>(null);
+  const [selectedAuftrag, setSelectedAuftrag] = useState<Auftrag | null>(null);
   const [selectedWochentage, setSelectedWochentage] = useState<Wochentag[]>([]);
   const [lehrtaetigkeitForm, setLehrtaetigkeitForm] = useState<CreateLehrtaetigkeitData>({
     bezeichnung: '',
@@ -163,7 +167,7 @@ const DeputatsabrechnungNeu: React.FC = () => {
         setPlanungsphasen(phasen);
 
         if (!selectedPhaseId && phasen.length > 0) {
-          const aktive = response.aktive_phase || phasen.find((p: any) => p.ist_aktiv);
+          const aktive = response.aktive_phase || phasen.find((p: PlanungPhase) => p.ist_aktiv);
           if (aktive) {
             setSelectedPhaseId(aktive.id);
           }
@@ -242,8 +246,8 @@ const DeputatsabrechnungNeu: React.FC = () => {
       } else {
         showToast('Bereits synchronisiert', 'info');
       }
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler bei der Synchronisation', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler bei der Synchronisation'), 'error');
     } finally {
       setSyncing(false);
     }
@@ -258,8 +262,8 @@ const DeputatsabrechnungNeu: React.FC = () => {
       await deputatService.einreichen(abrechnung.id);
       await loadAndSyncAbrechnung();
       showToast('Abrechnung eingereicht', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler beim Einreichen', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim Einreichen'), 'error');
     }
   };
 
@@ -271,8 +275,8 @@ const DeputatsabrechnungNeu: React.FC = () => {
       await deputatService.zuruecksetzen(abrechnung.id);
       await loadAndSyncAbrechnung();
       showToast('Zurueckgesetzt', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler'), 'error');
     }
   };
 
@@ -282,8 +286,8 @@ const DeputatsabrechnungNeu: React.FC = () => {
       setPdfLoading(true);
       await deputatService.downloadPdf(abrechnung.id);
       showToast('PDF heruntergeladen', 'success');
-    } catch (error: any) {
-      showToast('Fehler beim PDF-Export', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler beim PDF-Export'), 'error');
     } finally {
       setPdfLoading(false);
     }
@@ -309,7 +313,7 @@ const DeputatsabrechnungNeu: React.FC = () => {
   };
 
   // Hilfsfunktion: Modul-Anzeigename
-  const getModulDisplayName = (modul: any): string => {
+  const getModulDisplayName = (modul: Modul | null): string => {
     if (!modul) return '';
     // Prüfe verschiedene mögliche Felder
     if (modul.display_name) return modul.display_name;
@@ -321,7 +325,7 @@ const DeputatsabrechnungNeu: React.FC = () => {
   };
 
   // Bei Modul-Auswahl
-  const handleModulSelect = (modul: any) => {
+  const handleModulSelect = (modul: Modul | null) => {
     setSelectedModul(modul);
     if (modul) {
       setLehrtaetigkeitForm({
@@ -339,7 +343,7 @@ const DeputatsabrechnungNeu: React.FC = () => {
   };
 
   // Bei Auftrag-Auswahl
-  const handleAuftragSelect = (auftrag: any) => {
+  const handleAuftragSelect = (auftrag: Auftrag | null) => {
     setSelectedAuftrag(auftrag);
     if (auftrag) {
       setErmaessigungForm({
@@ -401,8 +405,8 @@ const DeputatsabrechnungNeu: React.FC = () => {
       await loadAndSyncAbrechnung();
       closeDialog();
       showToast('Hinzugefuegt', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler'), 'error');
     }
   };
 
@@ -434,8 +438,8 @@ const DeputatsabrechnungNeu: React.FC = () => {
 
       await loadAndSyncAbrechnung();
       showToast('Geloescht', 'success');
-    } catch (error: any) {
-      showToast(error.response?.data?.message || 'Fehler', 'error');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error, 'Fehler'), 'error');
     }
   };
 

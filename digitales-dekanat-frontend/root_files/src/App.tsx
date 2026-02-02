@@ -38,6 +38,7 @@ const DekanPlanungView = React.lazy(() => import('./pages/DekanPlanungView'));
 
 // Pages - Module & Dozenten (lazy)
 const ModulePage = React.lazy(() => import('./pages/Module'));
+const ModulhandbucherPage = React.lazy(() => import('./pages/Modulhandbuecher'));
 const DozentenPage = React.lazy(() => import('./pages/Dozenten'));
 // Note: AuftraegeVerwaltung route redirects to /einstellungen
 const SemesterPage = React.lazy(() => import('./pages/SemesterPage'));
@@ -253,6 +254,16 @@ const App: React.FC = () => {
                   {/* Module - Alle können sehen */}
                   <Route path="module" element={<ModulePage />} />
                   <Route path="module/:id" element={<ModulePage />} />
+
+                  {/* Modulhandbücher - Dekan */}
+                  <Route
+                    path="modulhandbuecher"
+                    element={
+                      <ProtectedRoute requiredRoles={['dekan']}>
+                        <ModulhandbucherPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* Dozenten - Alle können sehen */}
                   <Route path="dozenten" element={<DozentenPage />} />
