@@ -8,13 +8,14 @@
 set -e  # Bei Fehler abbrechen
 
 echo "========================================"
-echo "DigiDekan Server Update"
+echo " DigiDekan Server Update"
 echo "========================================"
 
-# Konfiguration (anpassen falls nötig)
-PROJECT_DIR="/var/www/DekaNet"  # Anpassen!
+# Konfiguration
+PROJECT_DIR="$HOME/DekaNet"
 DB_NAME="dekanet_db"
 DB_USER="dekanet"
+DB_HOST="localhost"
 BACKUP_DIR="$PROJECT_DIR/backups"
 
 # Timestamp für Backup
@@ -24,7 +25,7 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 echo ""
 echo "[1/5] Erstelle Datenbank-Backup..."
 mkdir -p "$BACKUP_DIR"
-pg_dump -U $DB_USER -d $DB_NAME -F c -f "$BACKUP_DIR/backup_$TIMESTAMP.dump" 2>/dev/null || {
+pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME -F c -f "$BACKUP_DIR/backup_$TIMESTAMP.dump" 2>/dev/null || {
     echo "Warnung: Backup fehlgeschlagen (evtl. leere DB)"
 }
 echo "Backup erstellt: $BACKUP_DIR/backup_$TIMESTAMP.dump"
@@ -50,11 +51,11 @@ echo "Dependencies installiert"
 # 4. Datenbank aktualisieren
 echo ""
 echo "[4/5] Aktualisiere Datenbank..."
-echo "ACHTUNG: Dies überschreibt alle Daten in $DB_NAME!"
+echo "ACHTUNG: Dies ueberschreibt alle Daten in $DB_NAME!"
 read -p "Fortfahren? (j/n): " confirm
 if [ "$confirm" = "j" ]; then
     # Alle Tabellen droppen und neu erstellen
-    psql -U $DB_USER -d $DB_NAME -c "
+    psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "
         DROP SCHEMA public CASCADE;
         CREATE SCHEMA public;
         GRANT ALL ON SCHEMA public TO $DB_USER;
@@ -62,16 +63,16 @@ if [ "$confirm" = "j" ]; then
     "
 
     # Dump importieren
-    psql -U $DB_USER -d $DB_NAME < database_dump.sql
+    psql -h $DB_HOST -U $DB_USER -d $DB_NAME < database_dump.sql
     echo "Datenbank erfolgreich aktualisiert"
 else
-    echo "Datenbank-Update übersprungen"
+    echo "Datenbank-Update uebersprungen"
 fi
 
 # 5. Services neu starten
 echo ""
 echo "[5/5] Starte Services neu..."
-if systemctl is-active --quiet digidekan-backend; then
+if systemctl is-active --quiet digidekan-backend 2>/dev/null; then
     sudo systemctl restart digidekan-backend
     echo "Backend-Service neugestartet"
 else
@@ -86,4 +87,4 @@ echo "Update abgeschlossen!"
 echo "========================================"
 echo ""
 echo "Bei Problemen: Backup wiederherstellen mit:"
-echo "  pg_restore -U $DB_USER -d $DB_NAME -c $BACKUP_DIR/backup_$TIMESTAMP.dump"
+echo "  pg_restore -h $DB_HOST -U $DB_USER -d $DB_NAME -c $BACKUP_DIR/backup_$TIMESTAMP.dump"
