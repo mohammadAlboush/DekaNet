@@ -146,35 +146,35 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
   const loadStatistics = async () => {
     setLoading(true);
     try {
-      log.debug(' ========== LOADING STATISTICS START ==========');
-      log.debug(' Semester ID:', semesterId);
+      log.debug('========== LOADING STATISTICS START ==========');
+      log.debug('Semester ID:', semesterId);
 
       // Load ALL active Dozenten
-      log.debug(' 🔍 Fetching all active dozenten...');
+      log.debug('Fetching all active dozenten...');
       const dozentenResponse = await api.get('/dozenten?aktiv=true');
-      log.debug(' 📥 Dozenten response:', dozentenResponse);
+      log.debug('Dozenten response:', dozentenResponse);
 
       // Load all planungen - NUR für aktive Planungsphase!
-      log.debug(' 🔍 Fetching planungen for semester (nur aktive Phase):', semesterId);
+      log.debug('Fetching planungen for semester (nur aktive Phase):', semesterId);
       const planungenResponse = await planungService.getAllPlanungenDekan({
         semester_id: semesterId,
         nur_aktive_phase: true  // Kritisch: Nur aktive Phase!
       });
-      log.debug(' 📥 Planungen response (nur aktive Phase):', planungenResponse);
+      log.debug('Planungen response (nur aktive Phase):', planungenResponse);
 
       if (dozentenResponse.data.success && planungenResponse.success) {
         const allDozenten = dozentenResponse.data.data || [];
         const planungen = planungenResponse.data || [];
 
-        log.debug(' ✅ Data loaded successfully:');
+        log.debug('Data loaded successfully:');
         log.debug('  - Dozenten:', allDozenten.length);
         log.debug('  - Planungen:', planungen.length);
-        log.debug(' 📋 First 3 Dozenten:', allDozenten.slice(0, 3));
-        log.debug(' 📋 First 3 Planungen:', planungen.slice(0, 3));
+        log.debug('First 3 Dozenten:', allDozenten.slice(0, 3));
+        log.debug('First 3 Planungen:', planungen.slice(0, 3));
 
         // Debug: Show structure
         if (planungen.length > 0) {
-          log.debug(' 🔍 First planung structure:', {
+          log.debug('First planung structure:', {
             id: planungen[0].id,
             benutzer: planungen[0].benutzer,
             status: planungen[0].status,
@@ -186,29 +186,29 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
         }
 
         // Merge data
-        log.debug(' 🔄 Merging dozenten and planungen data...');
+        log.debug('Merging dozenten and planungen data...');
         const mergedData = mergeDozentPlanungData(allDozenten, planungen);
-        log.debug(' ✅ Merged data:', mergedData.length, 'entries');
-        log.debug(' 📋 First 3 merged entries:', mergedData.slice(0, 3));
+        log.debug('Merged data:', mergedData.length, 'entries');
+        log.debug('First 3 merged entries:', mergedData.slice(0, 3));
 
         setDozenten(mergedData);
 
         // Calculate comprehensive summary
-        log.debug(' 📊 Calculating comprehensive summary...');
+        log.debug('Calculating comprehensive summary...');
         const summaryData = calculateComprehensiveSummary(mergedData);
-        log.debug(' ✅ Summary calculated:', summaryData);
+        log.debug('Summary calculated:', summaryData);
 
         setSummary(summaryData);
       } else {
-        log.error(' ❌ Response not successful:', {
+        log.error('Response not successful:', {
           dozentenSuccess: dozentenResponse.data.success,
           planungenSuccess: planungenResponse.success
         });
       }
 
-      log.debug(' ========== LOADING STATISTICS END ==========');
+      log.debug('========== LOADING STATISTICS END ==========');
     } catch (error) {
-      log.error(' ❌❌❌ Error loading statistics:', error);
+      log.error('Error loading statistics:', error);
     } finally {
       setLoading(false);
     }
@@ -225,7 +225,7 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
     }>,
     planungen: Semesterplanung[]
   ): DozentData[] => {
-    log.debug(' Starting merge...');
+    log.debug('Starting merge...');
     log.debug('  - Dozenten count:', allDozenten.length);
     log.debug('  - Planungen count:', planungen.length);
 
@@ -246,7 +246,7 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
       }
     });
 
-    log.debug(' Map sizes:', {
+    log.debug('Map sizes:', {
       byEmail: planungMap.size,
       byUsername: planungMapByUsername.size
     });
@@ -260,7 +260,7 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
         const emailUsername = dozent.email.split('@')[0].toLowerCase();
         planung = planungMapByUsername.get(emailUsername);
         if (planung) {
-          log.debug(`[Dozent ${index + 1}] ✅ MATCHED by email username: ${emailUsername}`);
+          log.debug(`[Dozent ${index + 1}] MATCHED by email username: ${emailUsername}`);
         }
       }
 
@@ -270,7 +270,7 @@ const DekanStatistics: React.FC<DekanStatisticsProps> = ({ semesterId, semesterB
       }
 
       log.debug(`[Dozent ${index + 1}] ${dozent.name_komplett} (${dozent.email}):`,
-        planung ? `✅ HAS PLANUNG (${planung.anzahl_module} modules, ${planung.gesamt_sws} SWS)` : '❌ NO PLANUNG'
+        planung ? `HAS PLANUNG (${planung.anzahl_module} modules, ${planung.gesamt_sws} SWS)` : 'NO PLANUNG'
       );
 
       if (planung) {

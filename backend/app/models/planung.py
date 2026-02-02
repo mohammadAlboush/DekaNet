@@ -109,7 +109,7 @@ class Semesterplanung(db.Model):
     )
     
     # Geplante Module (Hauptdetails)
-    # ✅ PERFORMANCE FIX: lazy='selectin' statt 'dynamic' für besseres Batch-Loading
+    # PERFORMANCE FIX: lazy='selectin' statt 'dynamic' für besseres Batch-Loading
     geplante_module = db.relationship(
         'GeplantesModul',
         back_populates='semesterplanung',
@@ -118,7 +118,7 @@ class Semesterplanung(db.Model):
     )
 
     # Wunsch-freie Tage
-    # ✅ PERFORMANCE FIX: lazy='selectin' statt 'dynamic' für besseres Batch-Loading
+    # PERFORMANCE FIX: lazy='selectin' statt 'dynamic' für besseres Batch-Loading
     wunsch_freie_tage = db.relationship(
         'WunschFreierTag',
         back_populates='semesterplanung',
@@ -126,7 +126,7 @@ class Semesterplanung(db.Model):
         lazy='selectin'
     )
     
-    # ✅ UNIQUE Constraint: Ein User kann EINE Planung pro Planungsphase haben
+    # UNIQUE Constraint: Ein User kann EINE Planung pro Planungsphase haben
     # Dies erlaubt mehrere Planungen pro Semester, aber nur eine pro Phase
     # Composite Index für häufige Queries (status + semester filtering)
     __table_args__ = (
@@ -315,7 +315,7 @@ class Semesterplanung(db.Model):
             GeplantesModul: Das neu erstellte geplante Modul
         """
         # Prüfe ob Modul bereits existiert
-        # ✅ PERFORMANCE FIX: List comprehension statt filter_by für selectin-Beziehung
+        # PERFORMANCE FIX: List comprehension statt filter_by für selectin-Beziehung
         existing = next((gm for gm in self.geplante_module if gm.modul_id == modul_id), None)
         if existing:
             raise ValueError(f"Modul {modul_id} ist bereits in der Planung")
@@ -341,7 +341,7 @@ class Semesterplanung(db.Model):
         Args:
             modul_id: ID des Moduls
         """
-        # ✅ PERFORMANCE FIX: List comprehension statt filter_by für selectin-Beziehung
+        # PERFORMANCE FIX: List comprehension statt filter_by für selectin-Beziehung
         geplantes_modul = next((gm for gm in self.geplante_module if gm.modul_id == modul_id), None)
         if geplantes_modul:
             db.session.delete(geplantes_modul)
@@ -355,7 +355,7 @@ class Semesterplanung(db.Model):
     @property
     def anzahl_module(self):
         """Anzahl geplanter Module"""
-        # ✅ PERFORMANCE FIX: len() statt count() für selectin-Beziehung
+        # PERFORMANCE FIX: len() statt count() für selectin-Beziehung
         return len(self.geplante_module)
     
     # =========================================================================
@@ -501,13 +501,13 @@ class GeplantesModul(db.Model):
     anmerkungen = db.Column(db.Text)
     raumbedarf = db.Column(db.Text)
 
-    # ✨ NEW: Feature 4 - RAUMPLANUNG PRO LEHRFORM
+    # Feature 4 - RAUMPLANUNG PRO LEHRFORM
     raum_vorlesung = db.Column(db.String(100), nullable=True)
     raum_uebung = db.Column(db.String(100), nullable=True)
     raum_praktikum = db.Column(db.String(100), nullable=True)
     raum_seminar = db.Column(db.String(100), nullable=True)
 
-    # ✨ NEW: Feature 4 - KAPAZITÄTS-ANFORDERUNGEN PRO LEHRFORM
+    # Feature 4 - KAPAZITÄTS-ANFORDERUNGEN PRO LEHRFORM
     kapazitaet_vorlesung = db.Column(db.Integer, nullable=True)
     kapazitaet_uebung = db.Column(db.Integer, nullable=True)
     kapazitaet_praktikum = db.Column(db.Integer, nullable=True)
@@ -517,7 +517,7 @@ class GeplantesModul(db.Model):
     
     # Relationships
     semesterplanung = db.relationship('Semesterplanung', back_populates='geplante_module')
-    # ✅ PERFORMANCE FIX: lazy='joined' für eager loading des Moduls bei to_dict()
+    # PERFORMANCE FIX: lazy='joined' für eager loading des Moduls bei to_dict()
     modul = db.relationship('Modul', lazy='joined')
     pruefungsordnung = db.relationship('Pruefungsordnung', lazy='joined')
     
@@ -650,13 +650,13 @@ class GeplantesModul(db.Model):
             'anmerkungen': self.anmerkungen,
             'raumbedarf': self.raumbedarf,
 
-            # ✨ NEW: Feature 4 - Raumplanung pro Lehrform
+            # Feature 4 - Raumplanung pro Lehrform
             'raum_vorlesung': self.raum_vorlesung,
             'raum_uebung': self.raum_uebung,
             'raum_praktikum': self.raum_praktikum,
             'raum_seminar': self.raum_seminar,
 
-            # ✨ NEW: Feature 4 - Kapazitäts-Anforderungen pro Lehrform
+            # Feature 4 - Kapazitäts-Anforderungen pro Lehrform
             'kapazitaet_vorlesung': self.kapazitaet_vorlesung,
             'kapazitaet_uebung': self.kapazitaet_uebung,
             'kapazitaet_praktikum': self.kapazitaet_praktikum,

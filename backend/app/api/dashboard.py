@@ -228,16 +228,16 @@ def _get_dekan_dashboard_data():
             'liste': []
         }
 
-    # ✅ PERFORMANCE: Statistiken aus Cache holen
+    # PERFORMANCE: Statistiken aus Cache holen
     data['statistiken'] = _get_cached_statistiken()
 
-    # ✅ PERFORMANCE: Semester-Liste aus Cache
+    # PERFORMANCE: Semester-Liste aus Cache
     data['alle_semester'] = _get_cached_semester_liste()
 
     return data
 
 
-@cache.memoize(timeout=60)  # ✅ 60s Cache für Statistiken
+@cache.memoize(timeout=60)  # 60s Cache für Statistiken
 def _get_cached_statistiken():
     """Cached: Gesamt-Statistiken für Dashboard"""
     return {
@@ -247,7 +247,7 @@ def _get_cached_statistiken():
     }
 
 
-@cache.memoize(timeout=300)  # ✅ 5min Cache für Semester-Liste
+@cache.memoize(timeout=300)  # 5min Cache für Semester-Liste
 def _get_cached_semester_liste():
     """Cached: Alle Semester"""
     alle_semester = semester_service.get_all()
@@ -260,7 +260,7 @@ def _get_cached_semester_liste():
 
 @dashboard_api.route('/statistik', methods=['GET'])
 @login_required
-@cache.cached(timeout=60, query_string=True)  # ✅ PERFORMANCE: 60s Cache für Statistiken
+@cache.cached(timeout=60, query_string=True)  # PERFORMANCE: 60s Cache für Statistiken
 def get_statistik():
     """
     GET /api/dashboard/statistik
@@ -298,7 +298,7 @@ def get_statistik():
 
 @dashboard_api.route('/statistik/phasen', methods=['GET'])
 @login_required
-@cache.cached(timeout=60, query_string=True)  # ✅ PERFORMANCE: 60s Cache
+@cache.cached(timeout=60, query_string=True)  # PERFORMANCE: 60s Cache
 def get_phasen_statistik():
     """
     GET /api/dashboard/statistik/phasen
@@ -350,9 +350,9 @@ def get_phasen_statistik():
         }
 
         for phase in phasen:
-            # ✅ KORRIGIERT: Zähle nur Planungen die DIESER Phase zugeordnet sind
+            # KORRIGIERT: Zähle nur Planungen die DIESER Phase zugeordnet sind
             planungen_query = Semesterplanung.query.filter_by(
-                planungsphase_id=phase.id  # ✅ Nutze phase.id statt semester_id
+                planungsphase_id=phase.id  # Nutze phase.id statt semester_id
             )
 
             # Planungen nach Status zählen
@@ -367,12 +367,12 @@ def get_phasen_statistik():
             total_sws = 0
             avg_sws = 0
             if gesamt_planungen > 0:
-                # ✅ KORRIGIERT: Nutze planungsphase_id für SWS-Berechnung
+                # KORRIGIERT: Nutze planungsphase_id für SWS-Berechnung
                 sws_result = db.session.query(
                     func.sum(Semesterplanung.gesamt_sws).label('total'),
                     func.avg(Semesterplanung.gesamt_sws).label('average')
                 ).filter(
-                    Semesterplanung.planungsphase_id == phase.id  # ✅ KORRIGIERT
+                    Semesterplanung.planungsphase_id == phase.id  # KORRIGIERT
                 ).first()
 
                 total_sws = float(sws_result.total or 0)
@@ -704,7 +704,7 @@ def get_nicht_zugeordnete_module():
         nicht_zugeordnete = []
         statistik_nach_turnus = {}
 
-        # ✅ PERFORMANCE FIX: Prefetch alle Planungen mit Benutzer-Daten VOR dem Loop
+        # PERFORMANCE FIX: Prefetch alle Planungen mit Benutzer-Daten VOR dem Loop
         modul_planungen_map = {}  # modul_id -> [planungen_data]
         if aktive_phase:
             from app.models.planung import Semesterplanung
@@ -773,7 +773,7 @@ def get_nicht_zugeordnete_module():
                     'email': lp.email
                 } for lp in lehrpersonen]
 
-                # ✅ PERFORMANCE FIX: Nutze prefetched Planungen statt Query im Loop
+                # PERFORMANCE FIX: Nutze prefetched Planungen statt Query im Loop
                 planungen_data = modul_planungen_map.get(modul.id, [])
 
                 nicht_zugeordnete.append({
@@ -916,7 +916,7 @@ def get_dozenten_planungsfortschritt():
         dozenten = dozenten_query.all()
         current_app.logger.debug(f"Found {len(dozenten)} dozenten with rolle '{verantwortlicher_rolle}'")
 
-        # ✅ PERFORMANCE FIX: Prefetch alle Modul-Dozent-Zuordnungen VOR dem Loop
+        # PERFORMANCE FIX: Prefetch alle Modul-Dozent-Zuordnungen VOR dem Loop
         dozent_ids = [d.id for d in dozenten]
 
         # Query: Alle Module aller Dozenten mit relevantem Turnus (1 Query statt N)
@@ -948,7 +948,7 @@ def get_dozenten_planungsfortschritt():
                 'bezeichnung': z.bezeichnung_de
             })
 
-        # ✅ PERFORMANCE FIX: Prefetch alle geplanten Module (1 Query statt N)
+        # PERFORMANCE FIX: Prefetch alle geplanten Module (1 Query statt N)
         alle_geplanten_modul_ids = set()
         if aktive_phase:
             geplante_query = db.session.query(GeplantesModul.modul_id).join(
@@ -963,14 +963,14 @@ def get_dozenten_planungsfortschritt():
         result = []
 
         for dozent in dozenten:
-            # ✅ PERFORMANCE FIX: Nutze prefetched Daten statt Query
+            # PERFORMANCE FIX: Nutze prefetched Daten statt Query
             verantwortliche_module = dozent_module_map.get(dozent.id, [])
             anzahl_zu_planen = len(verantwortliche_module)
 
             if anzahl_zu_planen == 0:
                 continue  # Skip Dozenten ohne Module in diesem Semester
 
-            # ✅ PERFORMANCE FIX: Filter aus prefetched Set
+            # PERFORMANCE FIX: Filter aus prefetched Set
             geplante_modul_ids = set(
                 m['id'] for m in verantwortliche_module
                 if m['id'] in alle_geplanten_modul_ids

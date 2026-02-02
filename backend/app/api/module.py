@@ -100,25 +100,25 @@ def modul_to_dict_robust(modul):
         except Exception as e:
             current_app.logger.error(f"[modul_to_dict] Error loading lehrformen for modul {modul.id}: {e}")
 
-        # ✅ Füge po_id hinzu (wichtig für Frontend!)
+        # Füge po_id hinzu (wichtig für Frontend!)
         po_id = modul.po_id if hasattr(modul, 'po_id') and modul.po_id else 1
 
         result = {
             'id': modul.id,
             'kuerzel': modul.kuerzel,
-            'po_id': po_id,  # ✅ PO-ID hinzugefügt
+            'po_id': po_id,  # PO-ID hinzugefügt
             'bezeichnung_de': modul.bezeichnung_de,
             'bezeichnung_en': modul.bezeichnung_en,
             'leistungspunkte': modul.leistungspunkte if modul.leistungspunkte else 0,
             'turnus': modul.turnus if modul.turnus else 'Nicht festgelegt',
             'sws_gesamt': calculate_sws_robust(modul),
-            'dozenten': dozenten_list,  # ✅ Dozenten hinzugefügt
-            'lehrformen': lehrformen_list  # ✅ Lehrformen hinzugefügt (für SWS-Berechnung!)
+            'dozenten': dozenten_list,  # Dozenten hinzugefügt
+            'lehrformen': lehrformen_list  # Lehrformen hinzugefügt (für SWS-Berechnung!)
         }
 
         return result
     except Exception as e:
-        current_app.logger.error(f"[modul_to_dict] ✗ Error converting modul: {e}")
+        current_app.logger.error(f"[modul_to_dict] Error converting modul: {e}")
         return None
 
 
@@ -197,7 +197,7 @@ def get_alle_module():
 
         # DEBUG logging entfernt für bessere Performance
 
-        current_app.logger.info(f"[ModuleAPI] ✅ Returning {len(items)} modules to client (total: {total})")
+        current_app.logger.info(f"[ModuleAPI] Returning {len(items)} modules to client (total: {total})")
         current_app.logger.info(f"[ModuleAPI] ========== GET ALL MODULES END ==========")
 
         return jsonify({
@@ -213,7 +213,7 @@ def get_alle_module():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"[ModuleAPI] ❌❌❌ Error: {e}", exc_info=True)
+        current_app.logger.error(f"[ModuleAPI] Error: {e}", exc_info=True)
         return jsonify({
             'success': False,
             'message': 'Fehler beim Laden',
@@ -471,7 +471,7 @@ def get_modul(modul_id: int):
         except Exception as e:
             current_app.logger.error(f"Error loading abhaengigkeiten: {e}")
         
-        current_app.logger.info(f"[ModuleAPI] ✓ Complete details loaded for module {modul_id}")
+        current_app.logger.info(f"[ModuleAPI] Complete details loaded for module {modul_id}")
         
         return jsonify({
             'success': True,

@@ -9,10 +9,10 @@ import { logger } from '../utils/logger';
  * VERSION: 2.0 - Sichere httpOnly Cookie-basierte Authentifizierung
  *
  * SECURITY FEATURES:
- * ✅ Tokens werden als httpOnly Cookies gespeichert (XSS-sicher)
- * ✅ Nur User-Daten werden in localStorage gespeichert
- * ✅ CSRF-Protection durch Double Submit Cookie Pattern
- * ✅ Keine sensiblen Daten im Frontend-Code
+ * - Tokens werden als httpOnly Cookies gespeichert (XSS-sicher)
+ * - Nur User-Daten werden in localStorage gespeichert
+ * - CSRF-Protection durch Double Submit Cookie Pattern
+ * - Keine sensiblen Daten im Frontend-Code
  */
 
 class AuthService {
@@ -68,7 +68,7 @@ class AuthService {
 
   /**
    * Logout
-   * ✅ SECURITY: Cookies werden vom Backend gelöscht
+   * SECURITY: Cookies werden vom Backend geloescht
    */
   async logout(): Promise<void> {
     try {
@@ -113,7 +113,7 @@ class AuthService {
 
   /**
    * Check if user is authenticated
-   * ✅ SECURITY: Prüft nur User-Daten und CSRF-Token
+   * SECURITY: Prueft nur User-Daten und CSRF-Token
    * Token-Validierung erfolgt serverseitig
    */
   isAuthenticated(): boolean {
@@ -190,7 +190,7 @@ class AuthService {
 
   /**
    * Verify token
-   * ✅ SECURITY: Cookie wird automatisch mitgesendet
+   * SECURITY: Cookie wird automatisch mitgesendet
    */
   async verifyToken(): Promise<boolean> {
     try {
@@ -209,7 +209,7 @@ class AuthService {
 
   /**
    * Refresh token
-   * ✅ SECURITY: Refresh-Token als httpOnly Cookie
+   * SECURITY: Refresh-Token als httpOnly Cookie
    */
   async refreshToken(): Promise<boolean> {
     try {

@@ -145,7 +145,7 @@ def get_meine_aktuelle_planung():
         # Hole aktive Planungsphase
         active_phase = Planungsphase.get_active_phase()
 
-        # ✅ WICHTIG: Hole oder erstelle Planung für aktuelle Phase
+        # WICHTIG: Hole oder erstelle Planung für aktuelle Phase
         planung, created = planung_service.get_or_create_planung(
             semester_id=planungs_semester.id,
             benutzer_id=user.id,
@@ -179,7 +179,7 @@ def get_professor_phasen_historie():
 
     Holt die Planungshistorie des Professors - gruppiert nach Planungsphasen.
 
-    ✅ Zeigt für jede Phase:
+    Zeigt für jede Phase:
        - Phase-Info (Name, Datum, Status)
        - Planung des Professors (falls vorhanden)
        - Einreichungsstatus
@@ -365,7 +365,7 @@ def create_planung():
         # Hole aktive Planungsphase
         active_phase = Planungsphase.get_active_phase()
 
-        # ✅ WICHTIG: Übergib planungsphase_id an Service
+        # WICHTIG: Übergib planungsphase_id an Service
         # Dadurch wird für jede Phase eine NEUE Planung erstellt
         planung, created = planung_service.get_or_create_planung(
             semester_id=semester_id,
@@ -535,12 +535,12 @@ def add_modul(planung_id: int):
             mitarbeiter_ids=data.get('mitarbeiter_ids'),
             anmerkungen=data.get('anmerkungen'),
             raumbedarf=data.get('raumbedarf'),
-            # ✨ NEW: Feature 4 - Raumplanung pro Lehrform
+            # Feature 4 - Raumplanung pro Lehrform
             raum_vorlesung=data.get('raum_vorlesung'),
             raum_uebung=data.get('raum_uebung'),
             raum_praktikum=data.get('raum_praktikum'),
             raum_seminar=data.get('raum_seminar'),
-            # ✨ NEW: Feature 4 - Kapazitäts-Anforderungen pro Lehrform
+            # Feature 4 - Kapazitäts-Anforderungen pro Lehrform
             kapazitaet_vorlesung=data.get('kapazitaet_vorlesung'),
             kapazitaet_uebung=data.get('kapazitaet_uebung'),
             kapazitaet_praktikum=data.get('kapazitaet_praktikum'),
@@ -1176,7 +1176,7 @@ def get_alle_planungen_dekan():
 
     Holt Planungen der aktiven Planungsphase (nur Dekan).
 
-    ✅ WICHTIG: Standardmäßig werden nur Planungen der AKTIVEN Phase gezeigt.
+    WICHTIG: Standardmäßig werden nur Planungen der AKTIVEN Phase gezeigt.
                Wenn keine Phase aktiv ist → leere Liste (Dashboard leer).
                Geschlossene Phasen gehören ins Archiv, nicht ins Dashboard!
 
@@ -1200,24 +1200,24 @@ def get_alle_planungen_dekan():
                 status_code=400
             )
 
-        # ✅ NEUE LOGIK: Standard = nur aktive Phase
+        # NEUE LOGIK: Standard = nur aktive Phase
         if planungsphase_id:
             # Spezifische Phase angefordert (z.B. für Archiv-Ansicht)
             planungen = planung_service.get_all(status=status)
             planungen = [p for p in planungen if p.planungsphase_id == planungsphase_id]
         else:
-            # ✅ STANDARD: Nur aktive Phase zeigen
+            # STANDARD: Nur aktive Phase zeigen
             active_phase = Planungsphase.get_active_phase()
 
             if not active_phase:
-                # 🔴 Keine aktive Phase = Dashboard leer (korrekt!)
+                # Keine aktive Phase = Dashboard leer (korrekt!)
                 planungen = []
             else:
-                # ✅ Zeige nur Planungen der aktiven Phase
+                # Zeige nur Planungen der aktiven Phase
                 planungen = planung_service.get_all(status=status)
                 planungen = [p for p in planungen if p.planungsphase_id == active_phase.id]
 
-        # Format - ✅ WICHTIG: include_module=True für Dekan-Ansicht mit vollständigen Daten
+        # Format - WICHTIG: include_module=True für Dekan-Ansicht mit vollständigen Daten
         items = [p.to_dict(include_module=True) for p in planungen]
 
         return ApiResponse.success(
@@ -1241,7 +1241,7 @@ def get_eingereichte_planungen():
 
     Holt eingereichte Planungen der aktiven Phase (nur Dekan).
 
-    ✅ WICHTIG: Zeigt nur Planungen der AKTIVEN Planungsphase.
+    WICHTIG: Zeigt nur Planungen der AKTIVEN Planungsphase.
                Wenn keine Phase aktiv ist → leere Liste (nichts zu prüfen!).
                Geschlossene Phasen gehören ins Archiv, nicht in "Planungen prüfen"!
 
@@ -1254,27 +1254,27 @@ def get_eingereichte_planungen():
     try:
         planungsphase_id = request.args.get('planungsphase_id', type=int)
 
-        # ✅ NEUE LOGIK: Standard = nur aktive Phase
+        # NEUE LOGIK: Standard = nur aktive Phase
         if planungsphase_id:
             # Spezifische Phase angefordert (z.B. für Archiv-Ansicht)
             planungen = planung_service.get_eingereichte(semester_id=None)
             planungen = [p for p in planungen if p.planungsphase_id == planungsphase_id]
         else:
-            # ✅ STANDARD: Nur aktive Phase zeigen
+            # STANDARD: Nur aktive Phase zeigen
             active_phase = Planungsphase.get_active_phase()
 
             if not active_phase:
-                # 🔴 Keine aktive Phase = nichts zu prüfen (korrekt!)
+                # Keine aktive Phase = nichts zu prüfen (korrekt!)
                 planungen = []
             else:
-                # ✅ Zeige nur eingereichte Planungen der aktiven Phase
+                # Zeige nur eingereichte Planungen der aktiven Phase
                 planungen = planung_service.get_eingereichte(semester_id=None)
                 planungen = [p for p in planungen if p.planungsphase_id == active_phase.id]
 
-        # Format mit Details - ✅ WICHTIG: include_module=True für vollständige Daten
+        # Format mit Details - WICHTIG: include_module=True für vollständige Daten
         items = []
         for p in planungen:
-            data = p.to_dict(include_module=True)  # ✅ Module einschließen!
+            data = p.to_dict(include_module=True)  # Module einschließen!
             data['anzahl_module'] = p.anzahl_module
             items.append(data)
 

@@ -100,7 +100,7 @@ const StepMitarbeiterZuordnen: React.FC<StepMitarbeiterZuordnenProps> = ({
         data.geplantModule.forEach((gm) => {
           // Nur zuordnen wenn noch keine Mitarbeiter zugeordnet sind
           if (!newZuordnungen.has(gm.modul_id) || newZuordnungen.get(gm.modul_id)?.length === 0) {
-            log.debug(' 👤 Auto-assigning professor to module:', gm.modul?.kuerzel);
+            log.debug('Auto-assigning professor to module:', gm.modul?.kuerzel);
             newZuordnungen.set(gm.modul_id, [dozentId]);
           }
         });
@@ -110,14 +110,14 @@ const StepMitarbeiterZuordnen: React.FC<StepMitarbeiterZuordnenProps> = ({
       }
 
     } catch (error) {
-      log.error(' Error loading data:', error);
+      log.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleZuordnungChange = (modulId: number, dozentenIds: number[]) => {
-    log.debug(' 📝 Updating assignment for module:', modulId, 'Dozenten:', dozentenIds);
+    log.debug('Updating assignment for module:', modulId, 'Dozenten:', dozentenIds);
     
     const newZuordnungen = new Map(zuordnungen);
     newZuordnungen.set(modulId, dozentenIds);

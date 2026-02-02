@@ -274,11 +274,11 @@ def get_dozent(dozent_id: int):
                             'po_id': modul.po_id if hasattr(modul, 'po_id') else None
                         })
 
-            current_app.logger.info(f"[DozentenAPI] ✓ Loaded {len(details['module'])} modules")
+            current_app.logger.info(f"[DozentenAPI] Loaded {len(details['module'])} modules")
         except Exception as e:
             current_app.logger.error(f"Error loading module: {e}", exc_info=True)
         
-        current_app.logger.info(f"[DozentenAPI] ✓ Complete details loaded for dozent {dozent_id}")
+        current_app.logger.info(f"[DozentenAPI] Complete details loaded for dozent {dozent_id}")
         
         return jsonify({
             'success': True,

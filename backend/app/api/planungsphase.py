@@ -260,13 +260,13 @@ def check_submission_status():
 
         professor_id = request.args.get('professor_id', type=int)
 
-        # 🔍 DEBUGGING: Log all values
+        # DEBUGGING: Log all values
         current_app.logger.info(f"[SubmissionStatus] user_id from JWT: {user_id}")
         current_app.logger.info(f"[SubmissionStatus] professor_id from query: {professor_id}")
         current_app.logger.info(f"[SubmissionStatus] user.dozent_id: {user.dozent_id if user else 'NO USER'}")
         current_app.logger.info(f"[SubmissionStatus] user.rolle: {user.rolle.name if user and user.rolle else 'NO ROLE'}")
 
-        # ✅ FIX: professor_id kann entweder user.id ODER user.dozent_id sein
+        # FIX: professor_id kann entweder user.id ODER user.dozent_id sein
         # Prüfe ob professor_id zum aktuellen User gehört
         is_own_request = (
             professor_id == user_id or

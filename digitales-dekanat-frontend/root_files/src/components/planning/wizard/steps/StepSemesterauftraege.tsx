@@ -99,9 +99,9 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
       const meineResponse = await auftragService.getMeineAuftraege(data.semesterId);
       setMeineAuftraege(meineResponse);
 
-      log.debug(' Loaded:', auftraegeResponse.length, 'aufträge,', meineResponse.length, 'meine');
+      log.debug('Loaded:', auftraegeResponse.length, 'auftraege,', meineResponse.length, 'meine');
     } catch (error: unknown) {
-      log.error(' Error loading data:', error);
+      log.error('Error loading data:', error);
       setError(getErrorMessage(error, 'Fehler beim Laden der Aufträge'));
     } finally {
       setLoading(false);
@@ -148,9 +148,9 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
       }
 
       handleCloseBeantragDialog();
-      log.debug(' ✅ Auftrag beantragt:', newAuftrag);
+      log.debug('Auftrag beantragt:', newAuftrag);
     } catch (error: unknown) {
-      log.error(' Error beantragen:', error);
+      log.error('Error beantragen:', error);
       setError(getErrorMessage(error, 'Fehler beim Beantragen'));
     } finally {
       setSubmitting(false);
@@ -173,9 +173,9 @@ const StepSemesterauftraege: React.FC<StepSemesterauftraegeProps> = ({
         await triggerRefresh(data.semesterId);
       }
 
-      log.debug(' ✅ Auftrag zurückgezogen:', semesterAuftragId);
+      log.debug('Auftrag zurueckgezogen:', semesterAuftragId);
     } catch (error: unknown) {
-      log.error(' Error deleting:', error);
+      log.error('Error deleting:', error);
       setError(getErrorMessage(error, 'Fehler beim Löschen'));
     }
   };

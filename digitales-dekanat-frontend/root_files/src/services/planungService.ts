@@ -39,7 +39,7 @@ class PlanungService {
     status?: string;
     nur_aktive_phase?: boolean;        }): Promise<ApiResponse<Semesterplanung[]>> {
     try {
-      log.debug(' Fetching planungen with params:', params);
+      log.debug('Fetching planungen with params:', params);
 
       const queryParams = new URLSearchParams();
       if (params?.semester_id) {
@@ -53,18 +53,18 @@ class PlanungService {
       }
 
       const url = `/planung${queryParams.toString() ? `?${queryParams}` : ''}`;
-      log.debug(' Request URL:', url);
+      log.debug('Request URL:', url);
 
       const response = await api.get<ApiResponse<Semesterplanung[]>>(url);
 
-      log.debug(' Response:', {
+      log.debug('Response:', {
         success: response.data.success,
         dataLength: response.data.data?.length || 0
       });
 
       return response.data;
     } catch (error) {
-      log.error(' Error fetching planungen:', error);
+      log.error('Error fetching planungen:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -74,14 +74,14 @@ class PlanungService {
    */
   async getMeinePlanungen(): Promise<ApiResponse<Semesterplanung[]>> {
     try {
-      log.debug(' Fetching meine planungen...');
-      
+      log.debug('Fetching meine planungen...');
+
       const response = await api.get<ApiResponse<Semesterplanung[]>>('/planung');
-      
-      log.debug(' Meine Planungen:', response.data.data?.length || 0);
+
+      log.debug('Meine Planungen:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      log.error(' Error fetching meine planungen:', error);
+      log.error('Error fetching meine planungen:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -91,14 +91,14 @@ class PlanungService {
    */
   async getMeineAktuellePlanung(): Promise<ApiResponse<Semesterplanung>> {
     try {
-      log.debug(' Fetching aktuelle planung...');
-      
+      log.debug('Fetching aktuelle planung...');
+
       const response = await api.get<ApiResponse<Semesterplanung>>('/planung/meine');
-      
-      log.debug(' Aktuelle Planung:', response.data.data?.id || 'keine');
+
+      log.debug('Aktuelle Planung:', response.data.data?.id || 'keine');
       return response.data;
     } catch (error) {
-      log.error(' Error fetching aktuelle planung:', error);
+      log.error('Error fetching aktuelle planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -108,14 +108,14 @@ class PlanungService {
    */
   async getPlanung(id: number): Promise<ApiResponse<Semesterplanung>> {
     try {
-      log.debug(' Fetching planung:', id);
-      
+      log.debug('Fetching planung:', id);
+
       const response = await api.get<ApiResponse<Semesterplanung>>(`/planung/${id}`);
-      
-      log.debug(' Planung loaded:', response.data.data?.status);
+
+      log.debug('Planung loaded:', response.data.data?.status);
       return response.data;
     } catch (error) {
-      log.error(' Error fetching planung:', error);
+      log.error('Error fetching planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -125,14 +125,14 @@ class PlanungService {
    */
   async createPlanung(data: CreatePlanungData): Promise<ApiResponse<Semesterplanung>> {
     try {
-      log.debug(' Creating planung:', data);
-      
+      log.debug('Creating planung:', data);
+
       const response = await api.post<ApiResponse<Semesterplanung>>('/planung', data);
-      
-      log.debug(' Planung created:', response.data.data?.id);
+
+      log.debug('Planung created:', response.data.data?.id);
       return response.data;
     } catch (error) {
-      log.error(' Error creating planung:', error);
+      log.error('Error creating planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -141,18 +141,18 @@ class PlanungService {
    * Update planung
    */
   async updatePlanung(
-    id: number, 
+    id: number,
     data: Partial<Semesterplanung>
   ): Promise<ApiResponse<Semesterplanung>> {
     try {
-      log.debug(' Updating planung:', id);
-      
+      log.debug('Updating planung:', id);
+
       const response = await api.put<ApiResponse<Semesterplanung>>(`/planung/${id}`, data);
-      
-      log.debug(' Planung updated');
+
+      log.debug('Planung updated');
       return response.data;
     } catch (error) {
-      log.error(' Error updating planung:', error);
+      log.error('Error updating planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -162,15 +162,15 @@ class PlanungService {
    */
   async deletePlanung(id: number, force: boolean = false): Promise<ApiResponse> {
     try {
-      log.debug(' Deleting planung:', id, 'force:', force);
-      
+      log.debug('Deleting planung:', id, 'force:', force);
+
       const url = `/planung/${id}${force ? '?force=true' : ''}`;
       const response = await api.delete<ApiResponse>(url);
-      
-      log.debug(' Planung deleted');
+
+      log.debug('Planung deleted');
       return response.data;
     } catch (error) {
-      log.error(' Error deleting planung:', error);
+      log.error('Error deleting planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -183,21 +183,21 @@ class PlanungService {
    * Add module to planung
    */
   async addModule(
-    planungId: number, 
+    planungId: number,
     data: AddModulData
   ): Promise<ApiResponse<GeplantesModul>> {
     try {
-      log.debug(' Adding module to planung:', planungId);
-      
+      log.debug('Adding module to planung:', planungId);
+
       const response = await api.post<ApiResponse<GeplantesModul>>(
         `/planung/${planungId}/modul`,
         data
       );
-      
-      log.debug(' Module added:', response.data.data?.id);
+
+      log.debug('Module added:', response.data.data?.id);
       return response.data;
     } catch (error) {
-      log.error(' Error adding module:', error);
+      log.error('Error adding module:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -211,17 +211,17 @@ class PlanungService {
     data: Partial<AddModulData>
   ): Promise<ApiResponse<GeplantesModul>> {
     try {
-      log.debug(' Updating module:', moduleId);
-      
+      log.debug('Updating module:', moduleId);
+
       const response = await api.put<ApiResponse<GeplantesModul>>(
         `/planung/${planungId}/modul/${moduleId}`,
         data
       );
-      
-      log.debug(' Module updated');
+
+      log.debug('Module updated');
       return response.data;
     } catch (error) {
-      log.error(' Error updating module:', error);
+      log.error('Error updating module:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -231,16 +231,16 @@ class PlanungService {
    */
   async removeModule(planungId: number, moduleId: number): Promise<ApiResponse> {
     try {
-      log.debug(' Removing module:', moduleId);
-      
+      log.debug('Removing module:', moduleId);
+
       const response = await api.delete<ApiResponse>(
         `/planung/${planungId}/modul/${moduleId}`
       );
-      
-      log.debug(' Module removed');
+
+      log.debug('Module removed');
       return response.data;
     } catch (error) {
-      log.error(' Error removing module:', error);
+      log.error('Error removing module:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -257,17 +257,17 @@ class PlanungService {
     data: { datum: string; grund?: string; ganztags?: boolean }
   ): Promise<ApiResponse> {
     try {
-      log.debug(' Adding wunsch tag to planung:', planungId);
-      
+      log.debug('Adding wunsch tag to planung:', planungId);
+
       const response = await api.post<ApiResponse>(
         `/planung/${planungId}/wunsch-tag`,
         data
       );
-      
-      log.debug(' Wunsch tag added');
+
+      log.debug('Wunsch tag added');
       return response.data;
     } catch (error) {
-      log.error(' Error adding wunsch tag:', error);
+      log.error('Error adding wunsch tag:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -277,16 +277,16 @@ class PlanungService {
    */
   async removeWunschTag(planungId: number, wunschId: number): Promise<ApiResponse> {
     try {
-      log.debug(' Removing wunsch tag:', wunschId);
+      log.debug('Removing wunsch tag:', wunschId);
 
       const response = await api.delete<ApiResponse>(
         `/planung/${planungId}/wunsch-tag/${wunschId}`
       );
 
-      log.debug(' Wunsch tag removed');
+      log.debug('Wunsch tag removed');
       return response.data;
     } catch (error) {
-      log.error(' Error removing wunsch tag:', error);
+      log.error('Error removing wunsch tag:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -309,18 +309,18 @@ class PlanungService {
     }
   ): Promise<ApiResponse<Semesterplanung>> {
     try {
-      log.debug(' Updating zusatzinfos for planung:', planungId);
-      log.debug(' Data:', data);
+      log.debug('Updating zusatzinfos for planung:', planungId);
+      log.debug('Data:', data);
 
       const response = await api.put<ApiResponse<Semesterplanung>>(
         `/planung/${planungId}/zusatzinfos`,
         data
       );
 
-      log.debug(' Zusatzinfos updated successfully');
+      log.debug('Zusatzinfos updated successfully');
       return response.data;
     } catch (error) {
-      log.error(' Error updating zusatzinfos:', error);
+      log.error('Error updating zusatzinfos:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -334,18 +334,18 @@ class PlanungService {
    */
   async submitPlanung(id: number): Promise<ApiResponse<Semesterplanung>> {
     try {
-      log.debug(' 📤 Submitting planung:', id);
-      
+      log.debug('Submitting planung:', id);
+
       const response = await api.post<ApiResponse<Semesterplanung>>(
         `/planung/${id}/einreichen`
       );
-      
-      log.debug(' ✅ Planung submitted successfully');
-      log.debug(' New status:', response.data.data?.status);
-      
+
+      log.debug('Planung submitted successfully');
+      log.debug('New status:', response.data.data?.status);
+
       return response.data;
     } catch (error) {
-      log.error(' ❌ Error submitting planung:', error);
+      log.error('Error submitting planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -355,18 +355,18 @@ class PlanungService {
    */
   async approvePlanung(id: number): Promise<ApiResponse<Semesterplanung>> {
     try {
-      log.debug(' ✅ Approving planung:', id);
-      
+      log.debug('Approving planung:', id);
+
       const response = await api.post<ApiResponse<Semesterplanung>>(
         `/planung/${id}/freigeben`
       );
-      
-      log.debug(' ✅ Planung approved successfully');
-      log.debug(' New status:', response.data.data?.status);
-      
+
+      log.debug('Planung approved successfully');
+      log.debug('New status:', response.data.data?.status);
+
       return response.data;
     } catch (error) {
-      log.error(' ❌ Error approving planung:', error);
+      log.error('Error approving planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -376,19 +376,19 @@ class PlanungService {
    */
   async rejectPlanung(id: number, grund: string): Promise<ApiResponse<Semesterplanung>> {
     try {
-      log.debug(' ❌ Rejecting planung:', id, 'Grund:', grund);
-      
+      log.debug('Rejecting planung:', id, 'Grund:', grund);
+
       const response = await api.post<ApiResponse<Semesterplanung>>(
         `/planung/${id}/ablehnen`,
         { grund }
       );
-      
-      log.debug(' ❌ Planung rejected');
-      log.debug(' New status:', response.data.data?.status);
-      
+
+      log.debug('Planung rejected');
+      log.debug('New status:', response.data.data?.status);
+
       return response.data;
     } catch (error) {
-      log.error(' ❌ Error rejecting planung:', error);
+      log.error('Error rejecting planung:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -405,7 +405,7 @@ class PlanungService {
     status?: string;
     nur_aktive_phase?: boolean;        }): Promise<ApiResponse<Semesterplanung[]>> {
     try {
-      log.debug(' [DEKAN] Fetching all planungen:', params);
+      log.debug('[DEKAN] Fetching all planungen:', params);
 
       const queryParams = new URLSearchParams();
       if (params?.semester_id) {
@@ -421,10 +421,10 @@ class PlanungService {
       const url = `/planung/dekan${queryParams.toString() ? `?${queryParams}` : ''}`;
       const response = await api.get<ApiResponse<Semesterplanung[]>>(url);
 
-      log.debug(' [DEKAN] Planungen loaded:', response.data.data?.length || 0);
+      log.debug('[DEKAN] Planungen loaded:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      log.error(' [DEKAN] Error fetching planungen:', error);
+      log.error('[DEKAN] Error fetching planungen:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -434,18 +434,18 @@ class PlanungService {
    */
   async getEingereichtePlanungen(semester_id?: number): Promise<ApiResponse<Semesterplanung[]>> {
     try {
-      log.debug(' [DEKAN] Fetching eingereichte planungen');
-      
-      const url = semester_id 
+      log.debug('[DEKAN] Fetching eingereichte planungen');
+
+      const url = semester_id
         ? `/planung/eingereicht?semester_id=${semester_id}`
         : '/planung/eingereicht';
-      
+
       const response = await api.get<ApiResponse<Semesterplanung[]>>(url);
-      
-      log.debug(' [DEKAN] Eingereichte Planungen:', response.data.data?.length || 0);
+
+      log.debug('[DEKAN] Eingereichte Planungen:', response.data.data?.length || 0);
       return response.data;
     } catch (error) {
-      log.error(' [DEKAN] Error fetching eingereichte planungen:', error);
+      log.error('[DEKAN] Error fetching eingereichte planungen:', error);
       throw new Error(handleApiError(error));
     }
   }
@@ -455,16 +455,16 @@ class PlanungService {
    */
   async calculateSWS(planungId: number): Promise<ApiResponse<{ gesamt_sws: number }>> {
     try {
-      log.debug(' Calculating SWS for planung:', planungId);
-      
+      log.debug('Calculating SWS for planung:', planungId);
+
       const response = await api.post<ApiResponse<{ gesamt_sws: number }>>(
         `/planung/${planungId}/berechne-sws`
       );
-      
-      log.debug(' SWS calculated:', response.data.data?.gesamt_sws);
+
+      log.debug('SWS calculated:', response.data.data?.gesamt_sws);
       return response.data;
     } catch (error) {
-      log.error(' Error calculating SWS:', error);
+      log.error('Error calculating SWS:', error);
       throw new Error(handleApiError(error));
     }
   }

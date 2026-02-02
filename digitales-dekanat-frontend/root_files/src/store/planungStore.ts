@@ -117,7 +117,7 @@ interface PlanungState extends WizardData {
 const getLocalStorageKey = (): string => {
   const user = useAuthStore.getState().user;
   if (!user || !user.id) {
-    log.warn(' ⚠ No user logged in, using fallback key');
+    log.warn('No user logged in, using fallback key');
     return 'planung_wizard_backup_anonymous';
   }
   return `planung_wizard_backup_user_${user.id}`;
@@ -150,7 +150,7 @@ const usePlanungStore = create<PlanungState>()(
       // =====================================================================
 
       setWizardData: (data) => {
-        log.debug(' 💾 Updating wizard data:', Object.keys(data));
+        log.debug('Updating wizard data:', Object.keys(data));
         set((state) => {
           // Handle mitarbeiterZuordnung: Convert object to Map if needed
           let processedData = { ...data };
@@ -159,13 +159,13 @@ const usePlanungStore = create<PlanungState>()(
             if (Array.isArray(data.mitarbeiterZuordnung)) {
               // Array format from JSON serialization: [[key, value], ...]
               processedData.mitarbeiterZuordnung = new Map(data.mitarbeiterZuordnung);
-              log.debug(' 🔄 Converted mitarbeiterZuordnung from Array to Map');
+              log.debug('Converted mitarbeiterZuordnung from Array to Map');
             } else if (typeof data.mitarbeiterZuordnung === 'object' && data.mitarbeiterZuordnung !== null) {
               // Plain object format: { "1": [2,3], "4": [5] }
               processedData.mitarbeiterZuordnung = new Map(
                 Object.entries(data.mitarbeiterZuordnung).map(([k, v]) => [Number(k), v as number[]])
               );
-              log.debug(' 🔄 Converted mitarbeiterZuordnung from Object to Map');
+              log.debug('Converted mitarbeiterZuordnung from Object to Map');
             }
           }
 
@@ -178,7 +178,7 @@ const usePlanungStore = create<PlanungState>()(
 
       // Step 1: Semester
       setSemester: (semester) => {
-        log.debug(' 📅 Setting semester:', semester.bezeichnung);
+        log.debug('Setting semester:', semester.bezeichnung);
         set({ 
           semester, 
           semesterId: semester.id,
@@ -189,13 +189,13 @@ const usePlanungStore = create<PlanungState>()(
 
       // Step 2: Module Selection
       setSelectedModules: (modules) => {
-        log.debug(' 📚 Setting selected modules:', modules.length);
+        log.debug('Setting selected modules:', modules.length);
         set({ selectedModules: modules, isDirty: true });
         debouncedSave(() => get().saveToLocalStorage());
       },
 
       addSelectedModule: (module) => {
-        log.debug(' ➕ Adding module:', module.kuerzel);
+        log.debug('Adding module:', module.kuerzel);
         set((state) => ({
           selectedModules: [...state.selectedModules, module],
           isDirty: true
@@ -204,7 +204,7 @@ const usePlanungStore = create<PlanungState>()(
       },
 
       removeSelectedModule: (moduleId) => {
-        log.debug(' ➖ Removing module:', moduleId);
+        log.debug('Removing module:', moduleId);
         set((state) => ({
           selectedModules: state.selectedModules.filter((m) => m.id !== moduleId),
           isDirty: true
@@ -214,13 +214,13 @@ const usePlanungStore = create<PlanungState>()(
 
       // Step 3: Geplante Module
       setGeplantModule: (modules) => {
-        log.debug(' 📋 Setting geplant module:', modules.length);
+        log.debug('Setting geplant module:', modules.length);
         set({ geplantModule: modules, isDirty: true });
         debouncedSave(() => get().saveToLocalStorage());
       },
 
       addGeplantesModul: (modul) => {
-        log.debug(' ➕ Adding geplantes modul:', modul.modul_id);
+        log.debug('Adding geplantes modul:', modul.modul_id);
         set((state) => ({
           geplantModule: [...state.geplantModule, modul],
           isDirty: true
@@ -229,7 +229,7 @@ const usePlanungStore = create<PlanungState>()(
       },
 
       updateGeplantesModul: (modul) => {
-        log.debug(' ✏️ Updating geplantes modul:', modul.id);
+        log.debug('Updating geplantes modul:', modul.id);
         set((state) => ({
           geplantModule: state.geplantModule.map((m) =>
             m.id === modul.id ? modul : m
@@ -240,7 +240,7 @@ const usePlanungStore = create<PlanungState>()(
       },
 
       removeGeplantesModul: (modulId) => {
-        log.debug(' 🗑️ Removing geplantes modul:', modulId);
+        log.debug('Removing geplantes modul:', modulId);
         set((state) => ({
           geplantModule: state.geplantModule.filter((m) => m.modul_id !== modulId),
           isDirty: true
@@ -250,7 +250,7 @@ const usePlanungStore = create<PlanungState>()(
 
       // Step 4: Mitarbeiter
       setMitarbeiterZuordnung: (zuordnung) => {
-        log.debug(' 👥 Setting mitarbeiter zuordnung');
+        log.debug('Setting mitarbeiter zuordnung');
         set({ mitarbeiterZuordnung: zuordnung, isDirty: true });
         debouncedSave(() => get().saveToLocalStorage());
       },
@@ -268,7 +268,7 @@ const usePlanungStore = create<PlanungState>()(
 
       // Step 7: Wunsch-freie Tage
       addWunschTag: (tag) => {
-        log.debug(' 📆 Adding wunsch tag');
+        log.debug('Adding wunsch tag');
         set((state) => ({
           wunschFreieTage: [...state.wunschFreieTage, tag],
           isDirty: true
@@ -277,7 +277,7 @@ const usePlanungStore = create<PlanungState>()(
       },
 
       removeWunschTag: (tagId) => {
-        log.debug(' 🗑️ Removing wunsch tag:', tagId);
+        log.debug('Removing wunsch tag:', tagId);
         set((state) => ({
           wunschFreieTage: state.wunschFreieTage.filter((t) => t.id !== tagId),
           isDirty: true
@@ -287,12 +287,12 @@ const usePlanungStore = create<PlanungState>()(
 
       // Meta actions
       setPlanungId: (id) => {
-        log.debug(' 🆔 Setting planung ID:', id);
+        log.debug('Setting planung ID:', id);
         set({ planungId: id });
       },
 
       setCurrentStep: (step) => {
-        log.debug(' 📍 Setting current step:', step);
+        log.debug('Setting current step:', step);
         set({ currentStep: step });
       },
 
@@ -309,7 +309,7 @@ const usePlanungStore = create<PlanungState>()(
       },
 
       setError: (error) => {
-        log.error(' ❌ Error:', error);
+        log.error('Error:', error);
         set({ error });
       },
 
@@ -328,7 +328,7 @@ const usePlanungStore = create<PlanungState>()(
 
           const user = useAuthStore.getState().user;
           if (!user || !user.id) {
-            log.warn(' ⚠ Cannot save - no user logged in');
+            log.warn('Cannot save - no user logged in');
             return;
           }
 
@@ -355,9 +355,9 @@ const usePlanungStore = create<PlanungState>()(
             isDirty: false
           });
 
-          log.debug(` 💾 Auto-saved to LocalStorage for user ${user.id}`);
+          log.debug(`Auto-saved to LocalStorage for user ${user.id}`);
         } catch (error) {
-          log.error(' ❌ Error saving to LocalStorage:', error);
+          log.error('Error saving to LocalStorage:', error);
         }
       },
 
@@ -365,7 +365,7 @@ const usePlanungStore = create<PlanungState>()(
         try {
           const user = useAuthStore.getState().user;
           if (!user || !user.id) {
-            log.warn(' ⚠ Cannot load - no user logged in');
+            log.warn('Cannot load - no user logged in');
             return false;
           }
 
@@ -373,7 +373,7 @@ const usePlanungStore = create<PlanungState>()(
           const saved = localStorage.getItem(storageKey);
 
           if (!saved) {
-            log.debug(` ℹ️ No saved data found for user ${user.id}`);
+            log.debug(`No saved data found for user ${user.id}`);
             return false;
           }
 
@@ -381,13 +381,13 @@ const usePlanungStore = create<PlanungState>()(
 
           // Validiere, dass die Daten zum aktuellen User gehören
           if (data.userId && data.userId !== user.id) {
-            log.warn(` ⚠ Data belongs to different user (${data.userId}), clearing...`);
+            log.warn(`Data belongs to different user (${data.userId}), clearing...`);
             localStorage.removeItem(storageKey);
             return false;
           }
 
-          log.debug(` 📂 Loading from LocalStorage for user ${user.id}...`);
-          log.debug(' Saved at:', data.savedAt);
+          log.debug(`Loading from LocalStorage for user ${user.id}...`);
+          log.debug('Saved at:', data.savedAt);
 
           set({
             semesterId: data.semesterId,
@@ -407,7 +407,7 @@ const usePlanungStore = create<PlanungState>()(
           log.debug('Data restored from LocalStorage');
           return true;
         } catch (error) {
-          log.error(' ❌ Error loading from LocalStorage:', error);
+          log.error('Error loading from LocalStorage:', error);
           return false;
         }
       },
@@ -416,9 +416,9 @@ const usePlanungStore = create<PlanungState>()(
         try {
           const storageKey = getLocalStorageKey();
           localStorage.removeItem(storageKey);
-          log.debug(' 🗑️ LocalStorage cleared for current user');
+          log.debug('LocalStorage cleared for current user');
         } catch (error) {
-          log.error(' ❌ Error clearing LocalStorage:', error);
+          log.error('Error clearing LocalStorage:', error);
         }
       },
 
@@ -438,7 +438,7 @@ const usePlanungStore = create<PlanungState>()(
       // =====================================================================
 
       resetWizard: () => {
-        log.debug(' 🔄 Resetting wizard');
+        log.debug('Resetting wizard');
         get().clearLocalStorage();
         set(initialState);
       },

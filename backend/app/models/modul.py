@@ -312,7 +312,7 @@ class ModulDozent(db.Model):
     )
     rolle = db.Column(db.String(50), nullable=False)  # 'verantwortlicher' oder 'lehrperson'
 
-    # ✨ NEW: Feature 1 - Vertreter & Zweitprüfer
+    # Feature 1 - Vertreter & Zweitprüfer
     vertreter_id = db.Column(
         db.Integer,
         db.ForeignKey('dozent.id', ondelete='SET NULL'),
@@ -328,12 +328,12 @@ class ModulDozent(db.Model):
 
     # Relationships
     modul = db.relationship('Modul', back_populates='dozent_zuordnungen')
-    # ✅ PERFORMANCE FIX: lazy='joined' für eager loading des Dozenten
+    # PERFORMANCE FIX: lazy='joined' für eager loading des Dozenten
     dozent = db.relationship('Dozent', back_populates='modul_zuordnungen', foreign_keys=[dozent_id], lazy='joined')
     pruefungsordnung = db.relationship('Pruefungsordnung')
     dozent_position = db.relationship('DozentPosition', back_populates='modul_zuordnungen')
 
-    # ✨ NEW: Vertreter & Zweitprüfer Relationships
+    # Vertreter & Zweitprüfer Relationships
     vertreter = db.relationship(
         'Dozent',
         foreign_keys=[vertreter_id],

@@ -179,7 +179,7 @@ const WizardView: React.FC = () => {
       loadPlanung(parseInt(id));
     } else {
       // Reset for new planung - aber lösche NICHT LocalStorage!
-      log.debug(' Starting new wizard');
+      log.debug('Starting new wizard');
       // Versuche aus LocalStorage zu laden
       const restored = loadFromLocalStorage();
       if (restored) {
@@ -219,14 +219,14 @@ const WizardView: React.FC = () => {
   const loadPlanung = async (planungId: number) => {
     setLoading(true);
     try {
-      log.debug(' 📥 Loading planung:', planungId);
-      
+      log.debug('Loading planung:', planungId);
+
       const response = await planungService.getPlanung(planungId);
-      
+
       if (response.success && response.data) {
         const planung = response.data;
-        
-        log.debug(' ✅ Planung loaded:', planung);
+
+        log.debug('Planung loaded:', planung);
         
         // Populate store from existing planung
         setWizardData({
@@ -241,7 +241,7 @@ const WizardView: React.FC = () => {
         setPlanungId(planung.id);
       }
     } catch (error: unknown) {
-      log.error(' ❌ Error loading planung:', error);
+      log.error('Error loading planung:', error);
       showToast(getErrorMessage(error, 'Fehler beim Laden der Planung'), 'error');
       setError(getErrorMessage(error));
     } finally {
@@ -273,18 +273,18 @@ const WizardView: React.FC = () => {
 
     try {
       const semesterTyp = getSemesterTyp();
-      log.debug(' Loading template for:', semesterTyp);
+      log.debug('Loading template for:', semesterTyp);
 
       const response = await templateService.getTemplateForSemester(semesterTyp);
       if (response.success && response.data) {
         setAvailableTemplate(response.data);
-        log.debug(' Template found:', response.data.name, 'with', response.data.anzahl_module, 'modules');
+        log.debug('Template found:', response.data.name, 'with', response.data.anzahl_module, 'modules');
       } else {
         setAvailableTemplate(null);
-        log.debug(' No template found for', semesterTyp);
+        log.debug('No template found for', semesterTyp);
       }
     } catch (error) {
-      log.error(' Error loading template:', error);
+      log.error('Error loading template:', error);
       setAvailableTemplate(null);
     }
   };
@@ -344,7 +344,7 @@ const WizardView: React.FC = () => {
 
     setApplyingTemplate(true);
     try {
-      log.debug(' Applying template:', availableTemplate.id, 'to planung:', planungId, 'goToSummary:', goToSummary);
+      log.debug('Applying template:', availableTemplate.id, 'to planung:', planungId, 'goToSummary:', goToSummary);
 
       const response = await templateService.applyToPlanung(
         availableTemplate.id,
@@ -369,7 +369,7 @@ const WizardView: React.FC = () => {
             mitarbeiterZuordnung: buildMitarbeiterMap(geplanteModule),
           });
 
-          log.debug(' Template data loaded:', {
+          log.debug('Template data loaded:', {
             moduleCount: geplanteModule.length,
             wunschTageCount: planungResponse.data.wunsch_freie_tage?.length || 0,
             hasAnmerkungen: !!planungResponse.data.anmerkungen,
@@ -407,7 +407,7 @@ const WizardView: React.FC = () => {
         }
       }
     } catch (error: unknown) {
-      log.error(' Error applying template:', error);
+      log.error('Error applying template:', error);
       showToast(getErrorMessage(error, 'Fehler beim Anwenden des Templates'), 'error');
     } finally {
       setApplyingTemplate(false);
@@ -477,7 +477,7 @@ const WizardView: React.FC = () => {
 
     setLoading(true);
     try {
-      log.debug(' 📤 Submitting planung:', planungId);
+      log.debug('Submitting planung:', planungId);
       
       const response = await planungService.submitPlanung(planungId!);
 
@@ -486,9 +486,9 @@ const WizardView: React.FC = () => {
         if (activePhase) {
           try {
             await recordNewSubmission(planungId!);
-            log.debug(' 📊 Submission recorded in phase system');
+            log.debug('Submission recorded in phase system');
           } catch (phaseError) {
-            log.error(' Error recording submission in phase:', phaseError);
+            log.error('Error recording submission in phase:', phaseError);
             // Continue even if phase recording fails - submission was successful
           }
         }
@@ -497,7 +497,7 @@ const WizardView: React.FC = () => {
 
         // Clear LocalStorage nach erfolgreichem Submit
         clearLocalStorage();
-        log.debug(' 🗑️ LocalStorage cleared after successful submit');
+        log.debug('LocalStorage cleared after successful submit');
 
         resetWizard();
         navigate('/semesterplanung');
@@ -507,7 +507,7 @@ const WizardView: React.FC = () => {
         setError(response.message || 'Fehler beim Einreichen');
       }
     } catch (error: unknown) {
-      log.error(' ❌ Error submitting planung:', error);
+      log.error('Error submitting planung:', error);
       showToast(getErrorMessage(error, 'Fehler beim Einreichen der Planung'), 'error');
       setError(getErrorMessage(error));
     } finally {
@@ -516,13 +516,13 @@ const WizardView: React.FC = () => {
   };
 
   const handleStepUpdate = (data: Partial<WizardData>) => {
-    log.debug(' 💾 Step update:', Object.keys(data));
+    log.debug('Step update:', Object.keys(data));
     setWizardData(data);
     // Auto-Save läuft automatisch im Store
   };
 
   const handleStepNext = () => {
-    log.debug(' ➡️ Next step');
+    log.debug('Next step');
     nextStep();
   };
 
