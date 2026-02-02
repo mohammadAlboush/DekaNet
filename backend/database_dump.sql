@@ -9878,6 +9878,7 @@ INSERT INTO public.studiengang (id, kuerzel, bezeichnung, abschluss, fachbereich
 INSERT INTO public.studiengang (id, kuerzel, bezeichnung, abschluss, fachbereich, regelstudienzeit, ects_gesamt, aktiv, created_at) VALUES (4, 'MI', 'Medieninformatik', 'Master', 'Informatik und Kommunikation', 4, 120, true, '2025-10-09 15:29:06');
 INSERT INTO public.studiengang (id, kuerzel, bezeichnung, abschluss, fachbereich, regelstudienzeit, ects_gesamt, aktiv, created_at) VALUES (6, 'IN_MA', 'Informatik', 'Master', 'Informatik und Kommunikation', 4, 120, true, '2026-01-27 18:22:52.999272');
 INSERT INTO public.studiengang (id, kuerzel, bezeichnung, abschluss, fachbereich, regelstudienzeit, ects_gesamt, aktiv, created_at) VALUES (7, 'WI_MA', 'Wirtschaftsinformatik', 'Master', 'Informatik und Kommunikation', 4, 120, true, '2026-01-27 18:22:53.006246');
+INSERT INTO public.studiengang (id, kuerzel, bezeichnung, abschluss, fachbereich, regelstudienzeit, ects_gesamt, aktiv, created_at) VALUES (8, 'MI_MA', 'Medieninformatik', 'Master', 'Informatik und Kommunikation', 4, 120, true, '2026-02-02 12:11:08.053138');
 
 
 --
