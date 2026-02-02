@@ -6,9 +6,9 @@
 root_files/node_modules/
 node_modules/
 
-# Build Output - TEMPORARILY REMOVED FOR DEPLOYMENT
-# root_files/dist/
-# dist/
+# Build Output
+root_files/dist/
+dist/
 
 # Environment Files (KRITISCH: NIEMALS committen!)
 .env

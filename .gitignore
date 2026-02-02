@@ -152,7 +152,7 @@ docker/postgres_data/
 docker/redis_data/
 
 # Build output
-# TEMPORARILY REMOVED TO DEPLOY: digitales-dekanat-frontend/root_files/dist/
+digitales-dekanat-frontend/root_files/dist/
 
 # Migration scripts (already migrated)
 backend/migrate_*.py
