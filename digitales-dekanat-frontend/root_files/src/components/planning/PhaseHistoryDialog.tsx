@@ -210,7 +210,7 @@ const PhaseHistoryDialog: React.FC<PhaseHistoryDialogProps> = ({ open, onClose }
                             <Grid item xs={12} md={6}>
                               <Typography variant="caption" color="textSecondary">
                                 <TrendingUp sx={{ fontSize: 14, mr: 0.5 }} />
-                                {entry.statistik.einreichungsquote.toFixed(0)}% Einreichungsquote
+                                {(Number(entry.statistik.einreichungsquote) || 0).toFixed(0)}% Einreichungsquote
                               </Typography>
                             </Grid>
                           </Grid>
@@ -269,7 +269,7 @@ const PhaseHistoryDialog: React.FC<PhaseHistoryDialogProps> = ({ open, onClose }
                                         Genehmigungsquote
                                       </Typography>
                                       <Typography variant="h6">
-                                        {entry.statistik.genehmigungsquote.toFixed(1)}%
+                                        {(Number(entry.statistik.genehmigungsquote) || 0).toFixed(1)}%
                                       </Typography>
                                     </Paper>
                                   </Grid>
@@ -281,7 +281,7 @@ const PhaseHistoryDialog: React.FC<PhaseHistoryDialogProps> = ({ open, onClose }
                                         Ø Bearbeitungszeit
                                       </Typography>
                                       <Typography variant="h6">
-                                        {entry.statistik.durchschnittliche_bearbeitungszeit.toFixed(1)}h
+                                        {(Number(entry.statistik.durchschnittliche_bearbeitungszeit) || 0).toFixed(1)}h
                                   </Typography>
                                 </Paper>
                               </Grid>

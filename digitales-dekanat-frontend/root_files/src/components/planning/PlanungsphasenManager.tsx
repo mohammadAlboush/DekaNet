@@ -459,19 +459,19 @@ const PlanungsphasenManager: React.FC = () => {
             <Grid container spacing={3}>
               <Grid item xs={12} md={4}>
                 <Paper sx={{ p: 2 }}>
-                  <Typography variant="h6">{currentPhaseStatistics.einreichungsquote.toFixed(1)}%</Typography>
+                  <Typography variant="h6">{(Number(currentPhaseStatistics.einreichungsquote) || 0).toFixed(1)}%</Typography>
                   <Typography variant="caption">Einreichungsquote</Typography>
                 </Paper>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Paper sx={{ p: 2 }}>
-                  <Typography variant="h6">{currentPhaseStatistics.genehmigungsquote.toFixed(1)}%</Typography>
+                  <Typography variant="h6">{(Number(currentPhaseStatistics.genehmigungsquote) || 0).toFixed(1)}%</Typography>
                   <Typography variant="caption">Genehmigungsquote</Typography>
                 </Paper>
               </Grid>
               <Grid item xs={12} md={4}>
                 <Paper sx={{ p: 2 }}>
-                  <Typography variant="h6">{currentPhaseStatistics.durchschnittliche_bearbeitungszeit.toFixed(1)}h</Typography>
+                  <Typography variant="h6">{(Number(currentPhaseStatistics.durchschnittliche_bearbeitungszeit) || 0).toFixed(1)}h</Typography>
                   <Typography variant="caption">Ø Bearbeitungszeit</Typography>
                 </Paper>
               </Grid>
